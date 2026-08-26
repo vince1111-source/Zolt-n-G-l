@@ -1,0 +1,11 @@
+# Valódi ügyféladat SOHA nem kerül a repóba (GDPR).
+szamlaolvasas/szamlak/*
+!szamlaolvasas/szamlak/.gitkeep
+szamlaolvasas/kimenet/*
+!szamlaolvasas/kimenet/.gitkeep
+szamlaolvasas/igazsag.csv
+nav/kimenet/
+hang/felvetelek/
+hang/eredmeny/
+.env
+node_modules/

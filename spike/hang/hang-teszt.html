@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CÉGEM.AI — magyar hangfelismerés mérés</title>
+<style>
+:root{
+  --ground:#f1f1ef; --surface:#fff; --surface-2:#e9e9e5; --line:#d6d6d0;
+  --ink:#1a1a17; --ink-2:#4a4a44; --muted:#7a7a72;
+  --accent:#8a6a10; --ok:#2f6b45; --rossz:#a03a28; --kozepes:#8a6a10;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --ground:#16161a; --surface:#1e1e22; --surface-2:#26262b; --line:#33333a;
+    --ink:#ecece8; --ink-2:#b8b8b0; --muted:#8a8a82;
+    --accent:#d4a843; --ok:#6fbf8f; --rossz:#e08b76; --kozepes:#d4a843;
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--ink);
+  font:16px/1.6 "Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.wrap{max-width:60rem;margin:0 auto;padding:2rem 1.25rem 5rem}
+h1{font-size:1.6rem;margin:0 0 .3rem;letter-spacing:-.02em}
+.sub{color:var(--ink-2);margin:0 0 1.5rem}
+.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+.fig{background:#f6ecd2;color:#5a4409;border:1px solid #d9c48a;border-radius:4px;
+  padding:.8rem 1rem;font-size:.9rem;margin-bottom:1.5rem}
+@media (prefers-color-scheme: dark){.fig{background:#2b2412;color:#e2c987;border-color:#4d411f}}
+.osszeg{display:grid;gap:.75rem;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));margin-bottom:1.5rem}
+.kartya{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:.9rem 1rem}
+.kartya .cim{font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);
+  font-family:"IBM Plex Mono",monospace}
+.kartya .ert{font-size:1.5rem;font-weight:600;font-variant-numeric:tabular-nums}
+.csoport{font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);
+  font-family:"IBM Plex Mono",monospace;margin:1.75rem 0 .5rem}
+.sor{background:var(--surface);border:1px solid var(--line);border-radius:4px;
+  padding:.85rem 1rem;margin-bottom:.5rem}
+.sor.fut{border-color:var(--accent);box-shadow:0 0 0 2px rgba(138,106,16,.18)}
+.fej{display:flex;gap:.75rem;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}
+.ref{font-weight:500;flex:1 1 22rem;min-width:0}
+.gombok{display:flex;gap:.4rem;flex-shrink:0}
+button{font:inherit;font-size:.85rem;padding:.35rem .8rem;border-radius:3px;cursor:pointer;
+  border:1px solid var(--line);background:var(--surface-2);color:var(--ink)}
+button.fo{background:var(--accent);border-color:var(--accent);color:#fff}
+button:disabled{opacity:.45;cursor:not-allowed}
+.eredmeny{margin-top:.6rem;padding-top:.6rem;border-top:1px solid var(--line);font-size:.9rem}
+.hallott{font-family:"IBM Plex Mono",monospace;font-size:.85rem;color:var(--ink-2);
+  word-break:break-word;margin-bottom:.4rem}
+.jelek{display:flex;gap:1.2rem;flex-wrap:wrap;font-size:.8rem;font-family:"IBM Plex Mono",monospace}
+.j-ok{color:var(--ok)} .j-rossz{color:var(--rossz)} .j-kozep{color:var(--kozepes)}
+.also{position:sticky;bottom:0;background:var(--ground);border-top:1px solid var(--line);
+  padding:.9rem 0;margin-top:2rem;display:flex;gap:.5rem;flex-wrap:wrap;align-items:center}
+.megj{font-size:.85rem;color:var(--muted)}
+input[type=text]{font:inherit;font-size:.85rem;padding:.35rem .6rem;border:1px solid var(--line);
+  border-radius:3px;background:var(--surface);color:var(--ink);min-width:12rem}
+.hiba{color:var(--rossz);font-size:.9rem;margin:.5rem 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<h1>Magyar hangfelismerés — mérés</h1>
+<p class="sub">CÉGEM.AI · 0. fázis spike / 3. kérdés</p>
+
+<div class="fig">
+  <strong>Chrome kell hozzá</strong>, közvetlenül megnyitva (nem beágyazva), és engedélyezett mikrofonnal.
+  Firefox és Safari nem támogatja a <span class="mono">webkitSpeechRecognition</span>-t.
+  Ez a lap a Web Speech API-t méri — az ingyenes, böngészőbe épített megoldást.
+  A felvett hangot letöltheted, és ugyanazokat a hangfájlokat átküldheted más
+  szolgáltatóhoz (ElevenLabs Scribe, Deepgram, Speechmatics), majd az átiratokat
+  a <span class="mono">wer.mjs</span> szkripttel hasonlíthatod össze.
+</div>
+
+<div class="osszeg">
+  <div class="kartya"><div class="cim">Felvett mondat</div><div class="ert mono" id="k-db">0 / 0</div></div>
+  <div class="kartya"><div class="cim">Átlagos szóhiba (WER)</div><div class="ert mono" id="k-wer">—</div></div>
+  <div class="kartya"><div class="cim">Szándék eltalálva</div><div class="ert mono" id="k-szandek">—</div></div>
+  <div class="kartya"><div class="cim">Kulcsadat eltalálva</div><div class="ert mono" id="k-entitas">—</div></div>
+</div>
+
+<div>
+  <span class="megj">Környezet, amiben most mérsz:</span>
+  <input type="text" id="kornyezet" placeholder="pl. iroda, csendes / autó, motor jár / építkezés">
+</div>
+
+<div id="lista"></div>
+
+<div class="also">
+  <button class="fo" id="mentes">Eredmény mentése (JSON)</button>
+  <button id="hangok">Felvételek letöltése</button>
+  <button id="torles">Mérés újrakezdése</button>
+  <span class="megj" id="allapot"></span>
+</div>
+
+</div>
+
+<script>
+/* ------------------------------------------------------------------ adatok */
+
+/* A tesztmondatok. A `szandek` az az ág, amit a prototípus handle() függvénye
+   fel kellene ismerjen. Az `entitasok` a mondat kulcsadatai: minden belső tömb
+   egy elfogadható alakhalmaz (pl. a szám számjegyként és kimondva is jó). */
+const MONDATOK = [
+  { csoport: "Cégnevek — a legnehezebb eset",
+    tetelek: [
+      { szoveg: "Mutasd a Kovács Építő Kft-t", szandek: "partner", entitasok: [["kovacs"], ["epito"]] },
+      { szoveg: "Mi a helyzet a Szabó Ingatlan Zrt-vel?", szandek: "partner", entitasok: [["szabo"], ["ingatlan"]] },
+      { szoveg: "Nyisd meg a Zöld Kert Bt. adatlapját", szandek: "partner", entitasok: [["zold"], ["kert"]] },
+      { szoveg: "Hogy állunk a BauMax Trade Kft-vel?", szandek: "partner", entitasok: [["baumax", "bau max"]] },
+    ]},
+  { csoport: "Összegek és mennyiségek",
+    tetelek: [
+      { szoveg: "Készíts ajánlatot a Kovács Kft-nek nyolcszáz négyzetméter térkövezésre",
+        szandek: "ajanlat", entitasok: [["800", "nyolcszaz"], ["negyzetmeter", "nm", "m2"]] },
+      { szoveg: "Készíts ajánlatot százhúsz négyzetméter antik térkőre",
+        szandek: "ajanlat", entitasok: [["120", "szazhusz"], ["antik"]] },
+      { szoveg: "Egymillió-kétszázezer forintos részszámlát kérek",
+        szandek: null, entitasok: [["1200000", "1 200 000", "egymillio ketszazezer", "egymilliokettszazezer"]] },
+      { szoveg: "Kilencvenkét folyóméter szegélykő kell hozzá",
+        szandek: null, entitasok: [["92", "kilencvenketto", "kilencvenket"], ["szegely"]] },
+    ]},
+  { csoport: "Valódi napi parancsok",
+    tetelek: [
+      { szoveg: "Mi a helyzet a cégemben?", szandek: "osszefoglalo", entitasok: [] },
+      { szoveg: "Intézd el a mai sürgős dolgaimat", szandek: "agent", entitasok: [] },
+      { szoveg: "Mutasd a lejárt számláimat", szandek: "lejart", entitasok: [] },
+      { szoveg: "Mennyit kell kifizetnünk ezen a héten?", szandek: "fizetendo", entitasok: [] },
+      { szoveg: "Jövő kedden emlékeztess, hogy hívjam fel a Kovács Kft-t", szandek: "feladat",
+        entitasok: [["jovo kedd"], ["kovacs"]] },
+      { szoveg: "Mi a lényeg a szerződésben?", szandek: "szerzodes", entitasok: [] },
+    ]},
+  { csoport: "Terepen, ahogy tényleg elhangzik",
+    tetelek: [
+      { szoveg: "Írd fel hogy holnap reggel hívjam vissza a Nagy családot", szandek: "feladat",
+        entitasok: [["holnap"], ["nagy"]] },
+      { szoveg: "Küldj fizetési felszólítást a Zöld Kertnek", szandek: "felszolitas",
+        entitasok: [["zold"], ["kert"]] },
+      { szoveg: "Mennyibe kerül a szürke térkő négyzetmétere?", szandek: "arlista",
+        entitasok: [["szurke"], ["terko"]] },
+    ]},
+];
+
+/* A prototípus szándékfelismerője, egy az egyben. Ha ott bővül, itt is bővítsd. */
+const norm = s => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+const PARTNEREK = ["kovacs", "szabo", "nagy", "baumax", "zold", "kohalo"];
+
+function szandekFelismeres(szoveg){
+  const t = norm(szoveg || "");
+  if(!t) return null;
+  if(/(intezd el|csinald meg helyettem|surgos dolgaim|mit kell ma|intezz el|vegyuk sorra)/.test(t)) return "agent";
+  if(/(ajanlat|arajanlat)/.test(t) && /(keszits|csinalj|kerek|kellene|keszitsd)/.test(t)) return "ajanlat";
+  if(/(lejart|kintlevo|tartoznak|kinnlevo|nem fizetett|hatralek)/.test(t)) return "lejart";
+  if(/(mennyit kell|kifizet|fizetnunk|utalni|bejovo szaml)/.test(t)) return "fizetendo";
+  if(/(mai teendo|mi a dolgom|teendoim|mi van ma|mai feladat|napirend)/.test(t)) return "teendo";
+  if(/(helyzet a cegemben|hogy allunk|osszefoglal|hogy all a ceg|vezetoi)/.test(t)) return "osszefoglalo";
+  if(/(felszolit|emlekezteto|fizetesi emlek)/.test(t)) return "felszolitas";
+  if(/(emlekeztess|jegyezd fel|vegyel fel|allits be|rogzits|ird fel)/.test(t)) return "feladat";
+  if(/(szerzodes|kotber|mi a lenyeg|elemezd|dokumentum)/.test(t)) return "szerzodes";
+  if(/(arlista|mennyibe kerul|mi az ara|termek)/.test(t)) return "arlista";
+  if(PARTNEREK.some(p => t.includes(p)) && /(mutasd|nyisd|hozd|mi a helyzet|hogy all)/.test(t)) return "partner";
+  return null;
+}
+
+/* ------------------------------------------------------------------- mérés */
+
+const szavak = s => norm(s).replace(/[^\p{L}\p{N}\s]/gu, " ").split(/\s+/).filter(Boolean);
+
+/* Szószintű szerkesztési távolság → WER */
+function wer(referencia, hallott){
+  const a = szavak(referencia), b = szavak(hallott);
+  if(!a.length) return b.length ? 1 : 0;
+  const d = Array.from({length: a.length + 1}, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for(let j = 0; j <= b.length; j++) d[0][j] = j;
+  for(let i = 1; i <= a.length; i++)
+    for(let j = 1; j <= b.length; j++)
+      d[i][j] = Math.min(d[i-1][j] + 1, d[i][j-1] + 1, d[i-1][j-1] + (a[i-1] === b[j-1] ? 0 : 1));
+  return d[a.length][b.length] / a.length;
+}
+
+function entitasTalalat(tetel, hallott){
+  if(!tetel.entitasok.length) return null;
+  const t = norm(hallott || "");
+  const jo = tetel.entitasok.filter(alt => alt.some(v => t.includes(norm(v)))).length;
+  return { jo, ossz: tetel.entitasok.length };
+}
+
+/* -------------------------------------------------------------- felismerés */
+
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const eredmenyek = new Map();   // index -> mérési sor
+const hangok = new Map();       // index -> Blob
+let futoIndex = null;
+
+function tetelLista(){
+  return MONDATOK.flatMap((cs, ci) => cs.tetelek.map((t, ti) => ({ ...t, csoport: cs.csoport, id: ci + "." + ti })));
+}
+const TETELEK = tetelLista();
+
+function rajzol(){
+  const lista = document.getElementById("lista");
+  lista.innerHTML = MONDATOK.map((cs, ci) => `
+    <div class="csoport">${cs.csoport}</div>
+    ${cs.tetelek.map((t, ti) => sorHtml(ci + "." + ti, t)).join("")}
+  `).join("");
+  lista.querySelectorAll("[data-felvesz]").forEach(b =>
+    b.addEventListener("click", () => felvetel(b.dataset.felvesz)));
+  osszegzes();
+}
+
+function sorHtml(id, t){
+  const e = eredmenyek.get(id);
+  return `<div class="sor${futoIndex === id ? " fut" : ""}" id="sor-${id}">
+    <div class="fej">
+      <div class="ref">${t.szoveg}</div>
+      <div class="gombok">
+        <button data-felvesz="${id}" ${futoIndex ? "disabled" : ""}>${e ? "Újra" : "Felvétel"}</button>
+      </div>
+    </div>
+    ${e ? eredmenyHtml(t, e) : ""}
+  </div>`;
+}
+
+function eredmenyHtml(t, e){
+  if(e.hiba) return `<div class="hiba">${e.hiba}</div>`;
+  const w = Math.round(e.wer * 100);
+  const wOszt = w === 0 ? "j-ok" : w <= 20 ? "j-kozep" : "j-rossz";
+  const sz = e.szandek === t.szandek;
+  const ent = e.entitas;
+  return `<div class="eredmeny">
+    <div class="hallott">„${e.hallott || "(nem ismerte fel)"}”</div>
+    <div class="jelek">
+      <span class="${wOszt}">szóhiba ${w}%</span>
+      ${t.szandek ? `<span class="${sz ? "j-ok" : "j-rossz"}">szándék ${sz ? "ok" : (e.szandek || "nincs")}</span>` : ""}
+      ${ent ? `<span class="${ent.jo === ent.ossz ? "j-ok" : "j-rossz"}">kulcsadat ${ent.jo}/${ent.ossz}</span>` : ""}
+      <span style="color:var(--muted)">zaj ${e.zaj} dBFS · ${e.ms} ms</span>
+    </div>
+  </div>`;
+}
+
+async function felvetel(id){
+  if(!SR){
+    eredmenyek.set(id, { hiba: "Ez a böngésző nem támogatja a beszédfelismerést. Használj Chrome-ot." });
+    rajzol(); return;
+  }
+  const tetel = TETELEK.find(t => t.id === id);
+  futoIndex = id;
+  rajzol();
+  allapot("Beszélj… a felismerés magától leáll, ha elhallgatsz.");
+
+  let stream = null, rec = null, darabok = [], zajCsucs = -100, audioCtx = null;
+  try{
+    stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    rec = new MediaRecorder(stream);
+    rec.ondataavailable = ev => ev.data.size && darabok.push(ev.data);
+    rec.onstop = () => { if(darabok.length) hangok.set(id, new Blob(darabok, { type: rec.mimeType || "audio/webm" })); };
+    rec.start();
+
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const forras = audioCtx.createMediaStreamSource(stream);
+    const analiz = audioCtx.createAnalyser();
+    analiz.fftSize = 2048;
+    forras.connect(analiz);
+    const puffer = new Float32Array(analiz.fftSize);
+    var zajFigyelo = setInterval(() => {
+      analiz.getFloatTimeDomainData(puffer);
+      let osszeg = 0;
+      for(const v of puffer) osszeg += v * v;
+      const db = 20 * Math.log10(Math.sqrt(osszeg / puffer.length) + 1e-9);
+      if(db > zajCsucs) zajCsucs = db;
+    }, 100);
+  }catch(e){
+    futoIndex = null;
+    eredmenyek.set(id, { hiba: "A mikrofon nem érhető el: " + e.message });
+    rajzol(); allapot(""); return;
+  }
+
+  const kezdet = Date.now();
+  const felismero = new SR();
+  felismero.lang = "hu-HU";
+  felismero.interimResults = false;
+  felismero.maxAlternatives = 3;
+
+  const zar = (hallott, valtozatok, hiba) => {
+    clearInterval(zajFigyelo);
+    try{ rec.state !== "inactive" && rec.stop(); }catch(_){}
+    stream.getTracks().forEach(t => t.stop());
+    futoIndex = null;
+    eredmenyek.set(id, hiba ? { hiba } : {
+      hallott,
+      valtozatok,
+      wer: wer(tetel.szoveg, hallott),
+      szandek: szandekFelismeres(hallott),
+      entitas: entitasTalalat(tetel, hallott),
+      zaj: Math.round(zajCsucs),
+      ms: Date.now() - kezdet,
+    });
+    rajzol();
+    allapot("");
+  };
+
+  felismero.onresult = ev => {
+    const r = ev.results[0];
+    zar(r[0].transcript, Array.from(r).map(a => a.transcript));
+  };
+  felismero.onerror = ev => zar(null, null,
+    ev.error === "not-allowed" ? "A mikrofon használata le van tiltva." :
+    ev.error === "no-speech" ? "Nem hallottam beszédet." : "Felismerési hiba: " + ev.error);
+  felismero.onend = () => { if(futoIndex === id) zar("", []); };
+  felismero.start();
+}
+
+function osszegzes(){
+  const jok = [...eredmenyek.values()].filter(e => !e.hiba);
+  const sz = (a, b) => b ? Math.round(100 * a / b) + "%" : "—";
+  document.getElementById("k-db").textContent = `${jok.length} / ${TETELEK.length}`;
+  document.getElementById("k-wer").textContent =
+    jok.length ? Math.round(100 * jok.reduce((s, e) => s + e.wer, 0) / jok.length) + "%" : "—";
+
+  const szandekosak = TETELEK.filter(t => t.szandek && eredmenyek.get(t.id) && !eredmenyek.get(t.id).hiba);
+  document.getElementById("k-szandek").textContent =
+    sz(szandekosak.filter(t => eredmenyek.get(t.id).szandek === t.szandek).length, szandekosak.length);
+
+  const ent = jok.map(e => e.entitas).filter(Boolean);
+  document.getElementById("k-entitas").textContent =
+    sz(ent.reduce((s, e) => s + e.jo, 0), ent.reduce((s, e) => s + e.ossz, 0));
+}
+
+const allapot = s => document.getElementById("allapot").textContent = s;
+
+/* ------------------------------------------------------------------ mentés */
+
+function letolt(nev, blob){
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = nev;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+document.getElementById("mentes").addEventListener("click", () => {
+  const sorok = TETELEK.map(t => {
+    const e = eredmenyek.get(t.id) || {};
+    return {
+      id: t.id, csoport: t.csoport, referencia: t.szoveg, entitasok: t.entitasok,
+      szolgaltato: "web-speech-api",
+      hallott: e.hallott ?? null, valtozatok: e.valtozatok ?? null,
+      wer: e.wer != null ? Number(e.wer.toFixed(3)) : null,
+      vart_szandek: t.szandek, felismert_szandek: e.szandek ?? null,
+      kulcsadat: e.entitas ?? null, zaj_dbfs: e.zaj ?? null, ms: e.ms ?? null,
+      hiba: e.hiba ?? null,
+    };
+  });
+  letolt("hang-eredmeny-web-speech.json", new Blob(
+    [JSON.stringify({
+      keszult: new Date().toISOString(),
+      kornyezet: document.getElementById("kornyezet").value || null,
+      bongeszo: navigator.userAgent,
+      sorok,
+    }, null, 2)], { type: "application/json" }));
+});
+
+document.getElementById("hangok").addEventListener("click", () => {
+  if(!hangok.size){ allapot("Még nincs elmentett felvétel."); return; }
+  [...hangok.entries()].forEach(([id, blob], i) =>
+    setTimeout(() => letolt(`hang-${id.replace(".", "-")}.webm`, blob), i * 400));
+  allapot(`${hangok.size} felvétel letöltése…`);
+});
+
+document.getElementById("torles").addEventListener("click", () => {
+  eredmenyek.clear(); hangok.clear(); rajzol(); allapot("");
+});
+
+rajzol();
+if(!SR) allapot("Ez a böngésző nem támogatja a beszédfelismerést — használj Chrome-ot.");
+</script>
+</body>
+</html>

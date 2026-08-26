@@ -24,11 +24,21 @@ Magyar nyelvű AI vállalkozói asszisztens kisvállalkozásoknak. Elv: *„Mond
 
 ## Hol tartunk
 
-**0. fázis — Spike.** A prototípus kész (`prototype/CEGEM-AI-prototipus.html`). A következő három kérdés eldöntése kód előtt:
+**0. fázis — Spike, mérés alatt.** A prototípus kész (`prototype/CEGEM-AI-prototipus.html`),
+és a három spike-kérdés **mérőeszközei is elkészültek** (`spike/`). Ami hiányzik, az az
+adat és a hozzáférés — ezt Vince tudja megadni, nem az AI:
 
-1. Működik-e a NAV `queryInvoiceDigest` INBOUND lekérdezés saját technikai felhasználóval?
-2. Mennyire pontos a magyar számlaolvasás 50–100 valódi számlán?
-3. Használható-e a magyar hangfelismerés valós zajban?
+| # | Kérdés | Eszköz | Mire vár |
+|---|---|---|---|
+| 1 | Működik-e a NAV `queryInvoiceDigest` INBOUND lekérdezés? | `spike/nav/` | NAV technikai felhasználó regisztrációjára |
+| 2 | Mennyire pontos a magyar számlaolvasás? | `spike/szamlaolvasas/` | 50–100 valódi számlára + API kulcsra |
+| 3 | Használható-e a magyar hangfelismerés valós zajban? | `spike/hang/` | 20 perc mérésre Chrome-ban |
+
+A 2. spike fő mérőszáma nem a nyers pontosság, hanem a **csendes hiba**: rossz érték,
+amit a modell nem jelölt be. A 3. spike fő mérőszáma nem a WER, hanem a
+**szándékpontosság** — hogy a helyes művelet indul-e el.
+
+Az eredményeket a `spike/eredmenyek/EREDMENY-SABLON.md` másolatába kell írni.
 
 Ne kezdj MVP-fejlesztésbe, amíg ezek nyitottak — a válaszuk megváltoztatja a scope-ot.
 
@@ -47,9 +57,19 @@ HANDOVER.md                       teljes projektátadás — olvasd el elsőkén
 CLAUDE.md                         ez a fájl
 docs/megvalosithatosagi-terv.html megnyitható felmérés (nap- és költségbecslések)
 docs/screenshots/                 a prototípus képernyőképei
+docs/parancsok.md                 a prototípus felismert parancsai
 prototype/CEGEM-AI-prototipus.html  önálló HTML, nincs build
 prototype/artifact-body.html      ugyanaz Artifact-publikáláshoz (burok nélkül)
+spike/                            0. fázis mérőeszközei — lásd spike/README.md
+  nav/                            NAV bejövő számla lekérdezés (1. kérdés)
+  szamlaolvasas/                  kiolvasási pontosság mérése (2. kérdés)
+  hang/                           magyar hangfelismerés mérése (3. kérdés)
+  eredmenyek/                     ide kerülnek a riportok és a döntési lap
 ```
+
+A `spike/` nem termékkód, és nem is válik azzá: egyszeri méréshez készült.
+Valódi ügyféladat (számla, NAV-válasz, hangfelvétel, `.env`) nem kerülhet a repóba —
+a `spike/.gitignore` ezt kizárja.
 
 ## A prototípus módosítása
 

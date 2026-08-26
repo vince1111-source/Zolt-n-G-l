@@ -149,7 +149,7 @@ Tapasztalt fejlesztő becsült munkanapjai, front-end + back-end + teszt együtt
 
 ## 5. Ütemterv
 
-### 0. fázis — Spike (1–2 hét) ← **ITT TARTUNK, EZ A KÖVETKEZŐ**
+### 0. fázis — Spike (1–2 hét) ← **ITT TARTUNK**
 
 Három kérdés eldöntése **kód írása előtt**:
 
@@ -157,7 +157,20 @@ Három kérdés eldöntése **kód írása előtt**:
 2. Mennyire pontos a magyar számlaolvasás 50–100 valódi számlán?
 3. Használható-e a magyar hangfelismerés a célközönség valós körülményei között?
 
-Kimenet: eldől, mekkora az MVP.
+**A mérőeszközök elkészültek** — lásd `spike/README.md`. Mindhárom kérdéshez van
+futtatható szkript, ami a végén nem nyers adatot ad, hanem azt a mérőszámot,
+ami alapján a döntés meghozható:
+
+| # | Eszköz | Fő mérőszám | Mi hiányzik hozzá |
+|---|---|---|---|
+| 1 | `spike/nav/nav-lekerdezes.mjs` | mezőnkénti kitöltöttség a NAV válaszában | NAV technikai felhasználó (1–3 hét regisztráció) |
+| 2 | `spike/szamlaolvasas/` | **csendes hiba** — rossz érték, amit a modell nem jelölt be | 50–100 valódi számla + Anthropic API kulcs |
+| 3 | `spike/hang/hang-teszt.html` | **szándékpontosság** — a helyes művelet indul-e el | 20 perc mérés Chrome-ban, több környezetben |
+
+A 2. és 3. spike ma elvégezhető. Az 1. regisztrációját érdemes ma elindítani,
+mert az a leghosszabb átfutású.
+
+Kimenet: eldől, mekkora az MVP. A döntési lap: `spike/eredmenyek/EREDMENY-SABLON.md`.
 
 ### 1. fázis — MVP (3–4 hónap)
 
@@ -313,9 +326,20 @@ Playwright headless Chromiummal: mind a 9 példaparancs, a teljes 4 lépéses j�
 
 ### A) Spike-ok (ezek a legfontosabbak, kód előtt)
 
-- [ ] **NAV technikai felhasználó regisztrálása** egy saját teszt-adószámra, majd `queryInvoiceDigest` INBOUND próba. Kimenet: működik-e, milyen jogosultsággal, milyen adatmélységgel.
-- [ ] **50–100 valódi magyar bejövő számla összegyűjtése** (fotó és PDF vegyesen, köztük rossz minőségűek), és a kiolvasási pontosság mérése. Mérőszám: mezőnkénti pontosság (kiállító, számlaszám, összeg, dátumok, adószám), és hogy mikor kell megerősítést kérni.
-- [ ] **Magyar hangfelismerés mérése** valós körülmények között: cégnevek, összegek („nyolcszáz négyzetméter”), építkezési háttérzaj. Legalább 3 szolgáltató összehasonlítása.
+A mérőeszközök készen állnak a `spike/` mappában; ami hátravan, az hozzáférés és adat.
+
+- [x] ~~Mérőeszközök elkészítése mindhárom kérdéshez~~ — `spike/README.md`
+- [ ] **NAV technikai felhasználó regisztrálása** egy saját teszt-adószámra, majd
+      `node spike/nav/nav-lekerdezes.mjs --muvelet bejovo`. Kimenet: működik-e, milyen
+      jogosultsággal, milyen adatmélységgel. **Ezt indítsd el először**, 1–3 hét átfutás.
+- [ ] **50–100 valódi magyar bejövő számla összegyűjtése** (fotó és PDF vegyesen, köztük
+      rossz minőségűek) a `spike/szamlaolvasas/szamlak/` mappába, majd `kiolvas.mjs` +
+      `ertekel.mjs`. Fő mérőszám a **csendes hiba**: rossz érték, amit a modell nem jelölt be.
+- [ ] **Magyar hangfelismerés mérése** a `spike/hang/hang-teszt.html` lappal, legalább két
+      környezetben (csendes iroda és zajos helyszín), majd ugyanazokat a felvételeket
+      legalább két másik szolgáltatóhoz átküldve `wer.mjs`-sel összevetni.
+- [ ] **A döntési lap kitöltése:** `spike/eredmenyek/EREDMENY-SABLON.md`, és a jelen
+      dokumentum 5. fejezetének frissítése az eredmények alapján.
 
 ### B) Termékdöntések (a spike eredménye után)
 
