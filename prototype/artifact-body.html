@@ -1,0 +1,1203 @@
+<title>CÉGEM.AI prototípus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&display=swap">
+
+<style>
+:root{
+  --ground:#f1f1ef; --surface:#ffffff; --surface-2:#e9e9e5; --surface-3:#f7f7f5;
+  --line:#d6d6d0; --line-soft:#e6e6e1;
+  --ink:#191917; --ink-2:#4a4a45; --muted:#7a7a72;
+  --accent:#9a6a12; --accent-2:#b8831f; --accent-soft:#f2e8d3;
+  --ok:#2c6e46; --ok-soft:#dceadf;
+  --warn:#8a6410; --warn-soft:#f4ebd4;
+  --crit:#a32b21; --crit-soft:#f4dedb;
+  --shadow-sm:0 1px 2px rgba(25,25,23,.06);
+  --shadow:0 2px 4px rgba(25,25,23,.05),0 10px 28px rgba(25,25,23,.07);
+  --shadow-lg:0 -2px 8px rgba(25,25,23,.05),0 -18px 48px rgba(25,25,23,.10);
+  --r:4px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#131311; --surface:#1b1b19; --surface-2:#242421; --surface-3:#1f1f1d;
+    --line:#33332f; --line-soft:#282825;
+    --ink:#eceae5; --ink-2:#b6b4ad; --muted:#87857d;
+    --accent:#d8a542; --accent-2:#e8b95c; --accent-soft:#332a15;
+    --ok:#6cbb8c; --ok-soft:#1a2c21;
+    --warn:#d8b45c; --warn-soft:#2e2716;
+    --crit:#e08076; --crit-soft:#33201d;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.4);
+    --shadow:0 2px 4px rgba(0,0,0,.3),0 10px 28px rgba(0,0,0,.35);
+    --shadow-lg:0 -2px 8px rgba(0,0,0,.3),0 -18px 48px rgba(0,0,0,.45);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#131311; --surface:#1b1b19; --surface-2:#242421; --surface-3:#1f1f1d;
+  --line:#33332f; --line-soft:#282825;
+  --ink:#eceae5; --ink-2:#b6b4ad; --muted:#87857d;
+  --accent:#d8a542; --accent-2:#e8b95c; --accent-soft:#332a15;
+  --ok:#6cbb8c; --ok-soft:#1a2c21;
+  --warn:#d8b45c; --warn-soft:#2e2716;
+  --crit:#e08076; --crit-soft:#33201d;
+  --shadow-sm:0 1px 2px rgba(0,0,0,.4);
+  --shadow:0 2px 4px rgba(0,0,0,.3),0 10px 28px rgba(0,0,0,.35);
+  --shadow-lg:0 -2px 8px rgba(0,0,0,.3),0 -18px 48px rgba(0,0,0,.45);
+}
+
+*{box-sizing:border-box}
+body{
+  background:var(--ground); color:var(--ink);
+  font-family:Archivo,system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:15px; line-height:1.55; margin:0; -webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit;font-size:inherit;cursor:pointer;border:none;background:none;color:inherit}
+button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+input,textarea{font-family:inherit;font-size:inherit;color:inherit}
+.mono{font-family:"IBM Plex Mono",ui-monospace,monospace;font-variant-numeric:tabular-nums}
+.num{font-variant-numeric:tabular-nums}
+
+/* ============ shell ============ */
+.app{display:grid;grid-template-columns:15rem 1fr;min-height:100vh}
+.rail{
+  background:var(--surface);border-right:1px solid var(--line);
+  display:flex;flex-direction:column;position:sticky;top:0;height:100vh;overflow-y:auto;
+}
+.brand{padding:1.1rem 1.1rem .9rem;border-bottom:1px solid var(--line-soft);display:flex;flex-direction:column;gap:.15rem}
+.brand .logo{font-weight:700;font-size:1.05rem;letter-spacing:-.02em}
+.brand .logo em{font-style:normal;color:var(--accent)}
+.brand .co{font-size:.78rem;color:var(--muted)}
+nav{padding:.6rem;display:flex;flex-direction:column;gap:1px;flex:1}
+.navbtn{
+  display:flex;align-items:center;gap:.6rem;padding:.5rem .65rem;border-radius:var(--r);
+  color:var(--ink-2);font-size:.9rem;font-weight:500;text-align:left;width:100%;
+}
+.navbtn svg{width:16px;height:16px;flex:none;opacity:.75}
+.navbtn:hover{background:var(--surface-2);color:var(--ink)}
+.navbtn[aria-current="true"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.navbtn[aria-current="true"] svg{opacity:1}
+.navbtn .badge{
+  margin-left:auto;font-family:"IBM Plex Mono",monospace;font-size:.68rem;
+  background:var(--crit-soft);color:var(--crit);padding:.05em .35em;border-radius:2px;
+}
+.railfoot{padding:.75rem 1.1rem 1rem;border-top:1px solid var(--line-soft);display:flex;flex-direction:column;gap:.5rem}
+.aidisclosure{font-size:.72rem;color:var(--muted);line-height:1.4}
+.toggle{display:flex;align-items:center;gap:.45rem;font-size:.78rem;color:var(--ink-2)}
+.toggle input{accent-color:var(--accent);width:14px;height:14px}
+
+.main{min-width:0;display:flex;flex-direction:column}
+.protobar{
+  background:var(--warn-soft);color:var(--warn);border-bottom:1px solid var(--line);
+  padding:.45rem 1.5rem;font-size:.78rem;display:flex;gap:.5rem;align-items:center;
+}
+.protobar strong{font-weight:600}
+.page{padding:1.75rem 1.5rem 13rem;max-width:64rem;width:100%}
+
+h1.title{font-size:1.5rem;font-weight:600;letter-spacing:-.02em;margin:0 0 .2rem}
+.sub{color:var(--muted);font-size:.88rem;margin:0 0 1.5rem}
+h2.sect{
+  font-family:"IBM Plex Mono",monospace;font-size:.72rem;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--muted);font-weight:500;margin:2rem 0 .7rem;
+}
+.sub + h2.sect{margin-top:0}
+
+/* ============ cards / tiles ============ */
+.tiles{display:grid;gap:.85rem;grid-template-columns:repeat(auto-fit,minmax(11.5rem,1fr))}
+.tile{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  padding:.9rem 1rem;display:flex;flex-direction:column;gap:.15rem;box-shadow:var(--shadow-sm);
+  border-top:2px solid var(--line);
+}
+.tile.crit{border-top-color:var(--crit)}
+.tile.ok{border-top-color:var(--ok)}
+.tile.warn{border-top-color:var(--warn)}
+.tile.acc{border-top-color:var(--accent)}
+.tile .lbl{font-size:.75rem;color:var(--muted);letter-spacing:.01em}
+.tile .val{font-size:1.45rem;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.2}
+.tile .val.crit{color:var(--crit)} .tile .val.ok{color:var(--ok)}
+.tile .note{font-size:.75rem;color:var(--muted)}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow-sm)}
+.card-h{padding:.7rem 1rem;border-bottom:1px solid var(--line-soft);display:flex;align-items:center;justify-content:space-between;gap:1rem}
+.card-h h3{margin:0;font-size:.92rem;font-weight:600}
+.card-b{padding:1rem}
+
+/* ============ tables ============ */
+.scroller{overflow-x:auto;border:1px solid var(--line);border-radius:var(--r);background:var(--surface);box-shadow:var(--shadow-sm)}
+table{border-collapse:collapse;width:100%;min-width:38rem;font-size:.87rem}
+th,td{text-align:left;padding:.6rem .8rem;border-bottom:1px solid var(--line-soft);vertical-align:middle}
+thead th{
+  font-family:"IBM Plex Mono",monospace;font-size:.67rem;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--muted);font-weight:500;background:var(--surface-3);border-bottom:1px solid var(--line);white-space:nowrap;
+}
+tbody tr:last-child td{border-bottom:none}
+tbody tr.click{cursor:pointer}
+tbody tr.click:hover{background:var(--surface-3)}
+td.r,th.r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+td.strong{font-weight:600}
+
+.pill{
+  display:inline-flex;align-items:center;gap:.3rem;font-family:"IBM Plex Mono",monospace;
+  font-size:.68rem;letter-spacing:.04em;padding:.15em .45em;border-radius:2px;white-space:nowrap;border:1px solid transparent;
+}
+.p-crit{background:var(--crit-soft);color:var(--crit);border-color:var(--crit)}
+.p-warn{background:var(--warn-soft);color:var(--warn);border-color:var(--warn)}
+.p-ok{background:var(--ok-soft);color:var(--ok);border-color:var(--ok)}
+.p-mute{background:var(--surface-2);color:var(--muted);border-color:var(--line)}
+.p-acc{background:var(--accent-soft);color:var(--accent);border-color:var(--accent)}
+
+/* ============ buttons ============ */
+.btn{
+  display:inline-flex;align-items:center;gap:.4rem;padding:.45rem .8rem;border-radius:var(--r);
+  border:1px solid var(--line);background:var(--surface);color:var(--ink);font-size:.85rem;font-weight:500;
+}
+.btn:hover{background:var(--surface-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+:root[data-theme="dark"] .btn.primary,
+:root:not([data-theme="light"]) .btn.primary{color:#1a1508}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]) .btn.primary{color:#fff}}
+.btn.primary:hover{background:var(--accent-2);border-color:var(--accent-2)}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--muted)}
+.btn.ghost:hover{background:var(--surface-2);color:var(--ink)}
+.btn.sm{padding:.28rem .55rem;font-size:.78rem}
+.btn svg{width:14px;height:14px}
+
+/* ============ assistant dock ============ */
+.dock{
+  position:fixed;left:15rem;right:0;bottom:0;z-index:40;
+  background:var(--surface);border-top:1px solid var(--line);box-shadow:var(--shadow-lg);
+}
+.dockinner{max-width:64rem;padding:0 1.5rem 1rem}
+.answer{
+  max-height:min(52vh,30rem);overflow-y:auto;padding:1.1rem 0 .4rem;
+  display:none;flex-direction:column;gap:.85rem;
+}
+.answer.on{display:flex}
+.said{
+  font-family:"Source Serif 4",Georgia,serif;font-size:1.06rem;line-height:1.5;
+  color:var(--ink);max-width:44rem;
+}
+.said .hl{color:var(--accent);font-weight:600}
+.heard{
+  font-family:"IBM Plex Mono",monospace;font-size:.72rem;color:var(--muted);
+  letter-spacing:.03em;display:flex;gap:.45rem;align-items:center;
+}
+.heard::before{content:"";width:5px;height:5px;border-radius:50%;background:var(--accent);flex:none}
+
+.bar{display:flex;align-items:center;gap:.7rem;padding-top:.6rem;border-top:1px solid var(--line-soft)}
+.mic{
+  width:46px;height:46px;flex:none;border-radius:50%;background:var(--accent);color:#fff;
+  display:grid;place-items:center;position:relative;transition:transform .15s;
+}
+:root[data-theme="dark"] .mic,:root:not([data-theme="light"]) .mic{color:#1a1508}
+@media (prefers-color-scheme: light){:root:not([data-theme="dark"]) .mic{color:#fff}}
+.mic svg{width:20px;height:20px}
+.mic:hover{transform:scale(1.05)}
+.mic.live{background:var(--crit);color:#fff}
+.mic.live::after{
+  content:"";position:absolute;inset:-6px;border-radius:50%;border:2px solid var(--crit);
+  animation:pulse 1.2s ease-out infinite;
+}
+@keyframes pulse{0%{transform:scale(.85);opacity:.9}100%{transform:scale(1.25);opacity:0}}
+@media (prefers-reduced-motion:reduce){.mic.live::after{animation:none;opacity:.5}*{transition:none!important}}
+.cmdwrap{flex:1;display:flex;align-items:center;gap:.5rem;background:var(--surface-3);border:1px solid var(--line);border-radius:24px;padding:.35rem .5rem .35rem 1rem}
+.cmdwrap:focus-within{border-color:var(--accent)}
+#cmd{flex:1;border:none;background:transparent;outline:none;font-size:.95rem;padding:.35rem 0;min-width:0}
+#cmd::placeholder{color:var(--muted)}
+.chips{display:flex;gap:.4rem;overflow-x:auto;padding:.65rem 0 0;scrollbar-width:thin}
+.chip{
+  flex:none;font-size:.78rem;padding:.3rem .65rem;border-radius:20px;border:1px solid var(--line);
+  background:var(--surface-3);color:var(--ink-2);white-space:nowrap;
+}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.micnote{font-size:.74rem;color:var(--crit);padding-top:.5rem;display:none}
+.micnote.on{display:block}
+
+/* ============ approval gate ============ */
+.gate{
+  border:1px solid var(--accent);border-radius:var(--r);background:var(--surface-3);
+  overflow:hidden;max-width:44rem;
+}
+.gate-h{
+  background:var(--accent-soft);padding:.5rem .85rem;display:flex;align-items:center;gap:.5rem;
+  font-family:"IBM Plex Mono",monospace;font-size:.7rem;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);
+}
+.gate-b{padding:.9rem}
+.gate-b .draft{
+  background:var(--surface);border:1px solid var(--line-soft);border-radius:2px;padding:.8rem .9rem;
+  font-family:"Source Serif 4",Georgia,serif;font-size:.94rem;white-space:pre-wrap;line-height:1.55;
+}
+.gate-b .meta{font-size:.8rem;color:var(--muted);margin-bottom:.6rem}
+.gate-f{display:flex;gap:.5rem;padding:.75rem .9rem;border-top:1px solid var(--line-soft);flex-wrap:wrap;align-items:center}
+.gate-f .step{margin-left:auto;font-family:"IBM Plex Mono",monospace;font-size:.72rem;color:var(--muted)}
+
+/* ============ quote document ============ */
+.doc{
+  background:#fff;color:#1a1a18;border:1px solid var(--line);border-radius:2px;
+  padding:2.2rem 2.4rem;box-shadow:var(--shadow);max-width:46rem;
+  font-family:"Source Serif 4",Georgia,serif;
+}
+.doc-h{display:flex;justify-content:space-between;gap:2rem;border-bottom:2px solid #1a1a18;padding-bottom:1rem;margin-bottom:1.4rem;flex-wrap:wrap}
+.doc-logo{
+  font-family:Archivo,sans-serif;font-weight:700;font-size:1.2rem;letter-spacing:-.02em;
+  display:flex;align-items:center;gap:.5rem;
+}
+.doc-logo .mark{width:30px;height:30px;background:#9a6a12;border-radius:3px;display:grid;place-items:center;color:#fff;font-size:.85rem}
+.doc-co{font-family:Archivo,sans-serif;font-size:.74rem;line-height:1.5;color:#55554e;text-align:right}
+.doc h4{font-family:Archivo,sans-serif;font-size:1.15rem;margin:0 0 .1rem;letter-spacing:-.01em}
+.doc .docmeta{font-family:"IBM Plex Mono",monospace;font-size:.72rem;color:#6b6b62;margin-bottom:1.2rem}
+.doc .to{margin-bottom:1.3rem;font-size:.92rem}
+.doc .to .lab{font-family:"IBM Plex Mono",monospace;font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:#6b6b62;display:block;margin-bottom:.2rem}
+.doc table{min-width:0;font-family:Archivo,sans-serif;font-size:.82rem;width:100%}
+.doc thead th{background:#f2f1ed;color:#55554e;border-bottom:1px solid #cfcfc7}
+.doc td,.doc th{border-bottom:1px solid #e8e7e1;padding:.45rem .5rem}
+.doc tfoot td{border-bottom:none;padding:.3rem .5rem}
+.doc tfoot tr.grand td{border-top:2px solid #1a1a18;font-weight:700;font-size:1rem;padding-top:.55rem}
+.doc .terms{margin-top:1.6rem;font-size:.8rem;color:#55554e;font-family:Archivo,sans-serif;line-height:1.6}
+.doc .terms strong{color:#1a1a18}
+.assump{
+  background:var(--warn-soft);border:1px solid var(--warn);border-radius:var(--r);
+  padding:.7rem .85rem;font-size:.83rem;color:var(--warn);max-width:46rem;margin-bottom:.9rem;
+}
+.assump strong{display:block;font-family:"IBM Plex Mono",monospace;font-size:.68rem;letter-spacing:.08em;text-transform:uppercase;margin-bottom:.25rem}
+
+/* ============ partner detail ============ */
+.phead{display:flex;gap:1rem;align-items:flex-start;flex-wrap:wrap;margin-bottom:1.25rem}
+.avatar{
+  width:44px;height:44px;border-radius:var(--r);background:var(--accent-soft);color:var(--accent);
+  display:grid;place-items:center;font-weight:700;font-size:1rem;flex:none;
+}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:.3rem 1rem;font-size:.86rem}
+.kv dt{color:var(--muted)}
+.kv dd{margin:0;font-weight:500}
+.timeline{display:flex;flex-direction:column;gap:0}
+.tl{display:grid;grid-template-columns:5.5rem 1fr;gap:.9rem;padding:.6rem 0;border-bottom:1px solid var(--line-soft);font-size:.86rem}
+.tl:last-child{border-bottom:none}
+.tl .d{font-family:"IBM Plex Mono",monospace;font-size:.74rem;color:var(--muted)}
+.tl .t strong{font-weight:600}
+
+.aisum{
+  background:var(--accent-soft);border-left:3px solid var(--accent);border-radius:var(--r);
+  padding:.9rem 1rem;font-family:"Source Serif 4",Georgia,serif;font-size:.98rem;
+  line-height:1.55;color:var(--ink);margin-bottom:1.25rem;max-width:44rem;
+}
+.aisum .tag{
+  font-family:"IBM Plex Mono",monospace;font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--accent);display:block;margin-bottom:.35rem;
+}
+
+/* ============ log ============ */
+.logrow{display:grid;grid-template-columns:4.5rem 1fr auto;gap:.9rem;padding:.65rem 0;border-bottom:1px solid var(--line-soft);font-size:.85rem;align-items:start}
+.logrow:last-child{border-bottom:none}
+.logrow .ts{font-family:"IBM Plex Mono",monospace;font-size:.74rem;color:var(--muted)}
+.logrow .what strong{font-weight:600}
+.logrow .what span{color:var(--muted);display:block;font-size:.8rem}
+
+.empty{color:var(--muted);font-size:.88rem;padding:1.5rem 0;text-align:center}
+
+/* ============ toast ============ */
+#toast{
+  position:fixed;top:3.25rem;left:50%;transform:translateX(-50%) translateY(-.6rem);
+  background:var(--ink);color:var(--ground);padding:.6rem 1rem;border-radius:var(--r);
+  font-size:.85rem;z-index:80;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;
+  box-shadow:var(--shadow);max-width:90vw;
+}
+#toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+/* ============ responsive ============ */
+@media (max-width:56rem){
+  .app{grid-template-columns:1fr}
+  .rail{position:static;height:auto;flex-direction:row;align-items:center;overflow-x:auto;border-right:none;border-bottom:1px solid var(--line)}
+  .brand{border-bottom:none;border-right:1px solid var(--line-soft);flex:none;padding:.7rem 1rem}
+  nav{flex-direction:row;padding:.4rem;flex:none}
+  .navbtn{white-space:nowrap}
+  .navbtn span.lbl{display:none}
+  .railfoot{display:none}
+  .dock{left:0}
+  .page{padding:1.25rem 1rem 14rem}
+  .dockinner{padding:0 1rem 1rem}
+}
+</style>
+
+<div class="app">
+  <aside class="rail">
+    <div class="brand">
+      <div class="logo">CÉGEM<em>.AI</em></div>
+      <div class="co">Kőháló Kft. · térkövezés</div>
+    </div>
+    <nav id="nav"></nav>
+    <div class="railfoot">
+      <label class="toggle"><input type="checkbox" id="ttsOn" checked> Hangos válasz</label>
+      <p class="aidisclosure">A válaszokat mesterséges intelligencia állítja elő. Külső műveletet csak jóváhagyás után hajt végre.</p>
+    </div>
+  </aside>
+
+  <div class="main">
+    <div class="protobar">
+      <strong>Prototípus.</strong> Kitalált mintaadatok. Semmi nem kerül kiküldésre és semmi nem tárolódik.
+    </div>
+    <div class="page" id="page"></div>
+  </div>
+</div>
+
+<div class="dock">
+  <div class="dockinner">
+    <div class="answer" id="answer"></div>
+    <div class="bar">
+      <button class="mic" id="mic" aria-label="Beszéd indítása" title="Beszélj hozzám (magyarul)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg>
+      </button>
+      <div class="cmdwrap">
+        <input id="cmd" autocomplete="off" placeholder="Mondd el, mit intézzek el helyetted…">
+        <button class="btn sm primary" id="send">Küldés</button>
+      </div>
+    </div>
+    <div class="chips" id="chips"></div>
+    <div class="micnote" id="micnote"></div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+
+/* ================= adatok ================= */
+const TODAY = new Date(2026,7,25); // 2026-08-25
+const Ft = n => new Intl.NumberFormat("hu-HU").format(Math.round(n)) + " Ft";
+const dstr = d => d.toLocaleDateString("hu-HU",{year:"numeric",month:"2-digit",day:"2-digit"});
+const D = s => { const p=s.split("-").map(Number); return new Date(p[0],p[1]-1,p[2]); };
+const days = (a,b) => Math.round((a-b)/86400000);
+
+const CO = {
+  nev:"Kőháló Kft.", adoszam:"26845913-2-13", cim:"2040 Budaörs, Kőfaragó u. 12.",
+  bank:"10300002-10512345-49020018", email:"iroda@kohalo.hu", tel:"+36 30 412 8890", afa:27
+};
+
+const partnerek = [
+  {id:"p1", nev:"Kovács Építő Kft.", ado:"12345678-2-42", cim:"1119 Budapest, Fehérvári út 84.",
+   kapcs:"Kovács Péter", email:"p.kovacs@kovacsepito.hu", tel:"+36 20 335 1177",
+   fizetes:"30 nap", kedvezmeny:3, megj:"Törzsvevő 2021 óta. Nagy volumen, lassú fizetés."},
+  {id:"p2", nev:"Szabó Ingatlan Zrt.", ado:"23456789-2-41", cim:"1054 Budapest, Alkotmány u. 9.",
+   kapcs:"Szabó Judit", email:"j.szabo@szaboingatlan.hu", tel:"+36 30 887 2204",
+   fizetes:"15 nap", kedvezmeny:0, megj:"Új partner. Társasházi projektek."},
+  {id:"p3", nev:"Nagy család", ado:"—", cim:"2040 Budaörs, Kőszirt u. 4.",
+   kapcs:"Nagy Tamás", email:"nagy.tamas84@gmail.com", tel:"+36 70 221 5566",
+   fizetes:"Készpénz / átutalás", kedvezmeny:0, megj:"Magánmegrendelő. Kertkapcsolat, medence körüli burkolat."},
+  {id:"p4", nev:"BauMax Trade Kft.", ado:"34567890-2-13", cim:"2049 Diósd, Ipari park 3.",
+   kapcs:"Tóth Gábor", email:"rendeles@baumaxtrade.hu", tel:"+36 23 555 100",
+   fizetes:"8 nap", kedvezmeny:0, megj:"Fő térkő-beszállító.", szallito:true},
+  {id:"p5", nev:"Zöld Kert Bt.", ado:"45678901-1-13", cim:"2030 Érd, Bagoly u. 21.",
+   kapcs:"Fekete Ilona", email:"info@zoldkert.hu", tel:"+36 20 445 9932",
+   fizetes:"30 nap", kedvezmeny:0, megj:"Kertépítő alvállalkozó, kölcsönös munkák."},
+  {id:"p6", nev:"Kavics-Trans Kft.", ado:"56789012-2-13", cim:"2045 Törökbálint, Fuvaros u. 8.",
+   kapcs:"Molnár Zsolt", email:"diszpecser@kavicstrans.hu", tel:"+36 23 411 780",
+   fizetes:"15 nap", kedvezmeny:0, megj:"Zúzottkő és homok szállítás.", szallito:true},
+  {id:"p7", nev:"Mobil Konténer Bt.", ado:"67890123-1-13", cim:"2040 Budaörs, Gyár u. 2.",
+   kapcs:"Varga Ede", email:"rendeles@mobilkontener.hu", tel:"+36 70 990 1145",
+   fizetes:"8 nap", kedvezmeny:0, megj:"Sittkonténer, elszállítás.", szallito:true}
+];
+
+const arlista = [
+  {id:"t1", nev:"Térkő lerakás, normál kötés", cikk:"MU-101", me:"m²", besz:3200, ar:4800, afa:27, kat:"munkadíj"},
+  {id:"t2", nev:"Térkő lerakás, mintás/díszkötés", cikk:"MU-102", me:"m²", besz:4100, ar:6500, afa:27, kat:"munkadíj"},
+  {id:"t3", nev:"Alapozás, zúzottkő ágyazat", cikk:"MU-110", me:"m²", besz:1900, ar:2900, afa:27, kat:"munkadíj"},
+  {id:"t4", nev:"Szegélykő elhelyezés", cikk:"MU-120", me:"fm", besz:2200, ar:3400, afa:27, kat:"munkadíj"},
+  {id:"t5", nev:"Bontás, régi burkolat", cikk:"MU-130", me:"m²", besz:1100, ar:1800, afa:27, kat:"munkadíj"},
+  {id:"t6", nev:"Földmunka, gépi kiemelés", cikk:"MU-140", me:"m³", besz:3800, ar:5500, afa:27, kat:"munkadíj"},
+  {id:"t7", nev:"Térkő anyag, szürke 6 cm", cikk:"AN-201", me:"m²", besz:2980, ar:3950, afa:27, kat:"anyag"},
+  {id:"t8", nev:"Térkő anyag, antik 6 cm", cikk:"AN-202", me:"m²", besz:3900, ar:5200, afa:27, kat:"anyag"},
+  {id:"t9", nev:"Szegélykő, süttői 100×20", cikk:"AN-210", me:"fm", besz:1450, ar:2100, afa:27, kat:"anyag"},
+  {id:"t10", nev:"Konténer, sitt elszállítás", cikk:"SZ-301", me:"db", besz:31000, ar:42000, afa:27, kat:"szolgáltatás"},
+  {id:"t11", nev:"Kiszállás, munkakezdés", cikk:"SZ-310", me:"alk.", besz:0, ar:25000, afa:27, kat:"szolgáltatás"}
+];
+
+const szamlak = [
+  {sz:"SZ-2025/0388", partner:"p1", irany:"ki", netto:3811024, brutto:4840000, kelt:"2025-11-14", hatarido:"2025-12-14", statusz:"fizetve"},
+  {sz:"SZ-2026/0091", partner:"p1", irany:"ki", netto:2417323, brutto:3070000, kelt:"2026-04-08", hatarido:"2026-05-08", statusz:"fizetve"},
+  {sz:"SZ-2026/0142", partner:"p1", irany:"ki", netto:976378, brutto:1240000, kelt:"2026-07-25", hatarido:"2026-08-17", statusz:"nyitott"},
+  {sz:"SZ-2026/0151", partner:"p2", irany:"ki", netto:2740157, brutto:3480000, kelt:"2026-08-20", hatarido:"2026-09-04", statusz:"nyitott"},
+  {sz:"SZ-2026/0138", partner:"p5", irany:"ki", netto:488189, brutto:620000, kelt:"2026-07-06", hatarido:"2026-08-05", statusz:"nyitott"},
+  {sz:"SZ-2026/0155", partner:"p3", irany:"ki", netto:700787, brutto:890000, kelt:"2026-08-11", hatarido:"2026-08-21", statusz:"fizetve"},
+  {sz:"BM-2026/9921", partner:"p4", irany:"be", netto:1688976, brutto:2145000, kelt:"2026-08-20", hatarido:"2026-08-28", statusz:"nyitott", forras:"NAV lekérdezés"},
+  {sz:"KT-2026/455", partner:"p6", irany:"be", netto:303150, brutto:385000, kelt:"2026-08-22", hatarido:"2026-09-02", statusz:"nyitott", forras:"NAV lekérdezés"},
+  {sz:"MK-2026/118", partner:"p7", irany:"be", netto:99213, brutto:126000, kelt:"2026-07-28", hatarido:"2026-08-20", statusz:"nyitott", forras:"fotó feltöltés"}
+];
+
+const ajanlatok = [
+  {sz:"AJ-2026/031", partner:"p2", osszeg:4250000, datum:"2026-08-16", statusz:"kiküldve", targy:"Társasházi parkoló, 640 m²"},
+  {sz:"AJ-2026/029", partner:"p3", osszeg:1180000, datum:"2026-08-04", statusz:"elfogadva", targy:"Medence körüli burkolat, 145 m²"},
+  {sz:"AJ-2026/034", partner:"p5", osszeg:760000, datum:"2026-08-22", statusz:"kiküldve", targy:"Kerti járda, 92 fm"}
+];
+
+let feladatok = [
+  {id:"f1", cim:"Kovács Építő Kft. — fizetési felszólítás", hatarido:"2026-08-25", prio:"sürgős", kesz:false, partner:"p1"},
+  {id:"f2", cim:"Szabó Ingatlan Zrt. — ajánlat utánkövetése", hatarido:"2026-08-25", prio:"fontos", kesz:false, partner:"p2"},
+  {id:"f3", cim:"Konténer rendelés — Rákosmente projekt", hatarido:"2026-08-26", prio:"normál", kesz:false},
+  {id:"f4", cim:"Helyszíni felmérés — Nagy család, Budaörs 10:00", hatarido:"2026-08-27", prio:"fontos", kesz:false, partner:"p3"},
+  {id:"f5", cim:"BauMax számla kifizetése (2 145 000 Ft)", hatarido:"2026-08-28", prio:"fontos", kesz:false, partner:"p4"}
+];
+
+let naplo = [];
+let seq = {aj:35, fel:6};
+
+/* ================= segédek ================= */
+const P = id => partnerek.find(x=>x.id===id) || {nev:"—"};
+const norm = s => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+const esc = s => String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+const lejartKi = () => szamlak.filter(s=>s.irany==="ki"&&s.statusz==="nyitott"&&days(TODAY,D(s.hatarido))>0);
+const nyitottKi = () => szamlak.filter(s=>s.irany==="ki"&&s.statusz==="nyitott");
+const nyitottBe = () => szamlak.filter(s=>s.irany==="be"&&s.statusz==="nyitott");
+const sum = (a,f) => a.reduce((t,x)=>t+f(x),0);
+const maiFeladatok = () => feladatok.filter(f=>!f.kesz && days(TODAY,D(f.hatarido))>=0);
+
+function log(cim, reszlet, statusz){
+  naplo.unshift({ts:new Date(), cim, reszlet, statusz});
+}
+function toast(msg){
+  const t=document.getElementById("toast"); t.textContent=msg; t.classList.add("on");
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove("on"),2600);
+}
+
+/* ================= nézetek ================= */
+const NAV = [
+  {id:"home", nev:"Asszisztens", ico:'<path d="M3 12l9-9 9 9"/><path d="M5 10v10h14V10"/>'},
+  {id:"partnerek", nev:"Partnerek", ico:'<circle cx="9" cy="8" r="3"/><path d="M2 20a7 7 0 0 1 14 0"/><path d="M17 6a3 3 0 0 1 0 6"/><path d="M19 20a6 6 0 0 0-3-5"/>'},
+  {id:"penzugy", nev:"Pénzügyek", ico:'<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>'},
+  {id:"ajanlatok", nev:"Ajánlatok", ico:'<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 14h6"/>'},
+  {id:"arlista", nev:"Árlista", ico:'<path d="M4 6h16"/><path d="M4 12h16"/><path d="M4 18h10"/>'},
+  {id:"feladatok", nev:"Feladatok", ico:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="M9 15l2 2 4-4"/>'},
+  {id:"naplo", nev:"AI napló", ico:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>'}
+];
+
+let view = "home";
+let selected = null;
+let quote = null;
+
+function renderNav(){
+  document.getElementById("nav").innerHTML = NAV.map(n=>{
+    const b = n.id==="feladatok" ? maiFeladatok().length : (n.id==="penzugy" ? lejartKi().length : 0);
+    return `<button class="navbtn" data-view="${n.id}" aria-current="${view===n.id}">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${n.ico}</svg>
+      <span class="lbl">${n.nev}</span>${b?`<span class="badge">${b}</span>`:""}</button>`;
+  }).join("");
+}
+
+function go(v, id){ view=v; if(id!==undefined) selected=id; renderNav(); render(); window.scrollTo({top:0,behavior:"instant"}); }
+
+function render(){
+  const el = document.getElementById("page");
+  el.innerHTML = ({home:vHome, partnerek:vPartnerek, penzugy:vPenzugy, ajanlatok:vAjanlatok,
+                   arlista:vArlista, feladatok:vFeladatok, naplo:vNaplo}[view] || vHome)();
+}
+
+/* ---- home ---- */
+function vHome(){
+  const lej = lejartKi(), lejOsszeg = sum(lej,s=>s.brutto);
+  const kint = sum(nyitottKi(),s=>s.brutto);
+  const fiz = sum(nyitottBe().filter(s=>days(D(s.hatarido),TODAY)<=7),s=>s.brutto);
+  const nyAj = ajanlatok.filter(a=>a.statusz==="kiküldve");
+  return `
+  <h1 class="title">Jó reggelt, Kőháló Kft.</h1>
+  <p class="sub">2026. augusztus 25., kedd · vezetői összefoglaló</p>
+  <div class="tiles">
+    <div class="tile crit"><span class="lbl">Lejárt követelés</span><span class="val crit">${Ft(lejOsszeg)}</span><span class="note">${lej.length} számla</span></div>
+    <div class="tile acc"><span class="lbl">Összes kintlévőség</span><span class="val">${Ft(kint)}</span><span class="note">${nyitottKi().length} nyitott számla</span></div>
+    <div class="tile warn"><span class="lbl">Fizetendő 7 napon belül</span><span class="val">${Ft(fiz)}</span><span class="note">${nyitottBe().filter(s=>days(D(s.hatarido),TODAY)<=7).length} bejövő számla</span></div>
+    <div class="tile ok"><span class="lbl">Nyitott ajánlat</span><span class="val">${Ft(sum(nyAj,a=>a.osszeg))}</span><span class="note">${nyAj.length} db válaszra vár</span></div>
+  </div>
+
+  <h2 class="sect">Mai teendők</h2>
+  <div class="card"><div class="card-b" style="padding:.4rem 1rem">
+    ${maiFeladatok().map(f=>`<div class="tl" style="grid-template-columns:auto 1fr auto">
+      <span class="pill ${f.prio==="sürgős"?"p-crit":f.prio==="fontos"?"p-warn":"p-mute"}">${f.prio}</span>
+      <span class="t">${esc(f.cim)}</span>
+      <span class="d mono">${dstr(D(f.hatarido))}</span></div>`).join("") || '<p class="empty">Nincs mai teendő.</p>'}
+  </div></div>
+
+  <h2 class="sect">Figyelmet igényel</h2>
+  <div class="scroller"><table><thead><tr>
+    <th>Partner</th><th>Ügy</th><th class="r">Összeg</th><th>Állapot</th></tr></thead><tbody>
+    ${lej.map(s=>`<tr class="click" data-goto="partner:${s.partner}">
+      <td class="strong">${esc(P(s.partner).nev)}</td><td>${s.sz} számla</td>
+      <td class="r">${Ft(s.brutto)}</td>
+      <td><span class="pill p-crit">${days(TODAY,D(s.hatarido))} napja lejárt</span></td></tr>`).join("")}
+    ${nyAj.map(a=>`<tr class="click" data-goto="partner:${a.partner}">
+      <td class="strong">${esc(P(a.partner).nev)}</td><td>${a.sz} — ${esc(a.targy)}</td>
+      <td class="r">${Ft(a.osszeg)}</td>
+      <td><span class="pill p-warn">${days(TODAY,D(a.datum))} napja kiküldve</span></td></tr>`).join("")}
+  </tbody></table></div>`;
+}
+
+/* ---- partnerek ---- */
+function vPartnerek(){
+  if(selected) return vPartner(selected);
+  return `<h1 class="title">Partnerek</h1><p class="sub">${partnerek.length} partner · kattints a részletekért</p>
+  <div class="scroller"><table><thead><tr>
+  <th>Név</th><th>Kapcsolattartó</th><th>Fizetés</th><th class="r">Nyitott</th><th>Állapot</th></tr></thead><tbody>
+  ${partnerek.map(p=>{
+    const ny = szamlak.filter(s=>s.partner===p.id&&s.irany==="ki"&&s.statusz==="nyitott");
+    const l = ny.filter(s=>days(TODAY,D(s.hatarido))>0);
+    return `<tr class="click" data-goto="partner:${p.id}">
+      <td class="strong">${esc(p.nev)}${p.szallito?' <span class="pill p-mute">szállító</span>':""}</td>
+      <td>${esc(p.kapcs)}</td><td>${esc(p.fizetes)}</td>
+      <td class="r">${ny.length?Ft(sum(ny,s=>s.brutto)):"—"}</td>
+      <td>${l.length?'<span class="pill p-crit">lejárt tartozás</span>':'<span class="pill p-ok">rendben</span>'}</td></tr>`;
+  }).join("")}</tbody></table></div>`;
+}
+
+function vPartner(id){
+  const p = P(id);
+  const ki = szamlak.filter(s=>s.partner===id&&s.irany==="ki");
+  const be = szamlak.filter(s=>s.partner===id&&s.irany==="be");
+  const aj = ajanlatok.filter(a=>a.partner===id);
+  const fel = feladatok.filter(f=>f.partner===id&&!f.kesz);
+  const forgalom = sum(ki,s=>s.brutto);
+  const lej = ki.filter(s=>s.statusz==="nyitott"&&days(TODAY,D(s.hatarido))>0);
+  const ny = ki.filter(s=>s.statusz==="nyitott");
+
+  let ossz;
+  if(p.szallito){
+    ossz = `<strong>${esc(p.nev)}</strong> beszállító. Jelenleg <strong>${Ft(sum(be.filter(s=>s.statusz==="nyitott"),s=>s.brutto))}</strong> kifizetetlen bejövő számla van tőle, a legközelebbi esedékesség ${dstr(D("2026-08-28"))}. Fizetési feltétel ${esc(p.fizetes)} — érdemes időben utalni, mert az anyagrendelés ettől függ.`;
+  } else {
+    const utolso = aj.concat(ki.map(s=>({datum:s.kelt}))).map(x=>D(x.datum)).sort((a,b)=>b-a)[0];
+    ossz = `<strong>${esc(p.nev)}</strong> eddigi forgalma <strong>${Ft(forgalom)}</strong> ${ki.length} számlán. `
+      + (lej.length
+          ? `Jelenleg <strong>${Ft(sum(lej,s=>s.brutto))}</strong> lejárt tartozása van, a legrégebbi ${days(TODAY,D(lej[0].hatarido))} napja. `
+          : ny.length ? `Nincs lejárt tartozása, ${Ft(sum(ny,s=>s.brutto))} van még határidőn belül. ` : `Nincs nyitott tartozása. `)
+      + (aj.filter(a=>a.statusz==="kiküldve").length
+          ? `${aj.filter(a=>a.statusz==="kiküldve").length} ajánlat vár válaszra. ` : "")
+      + `Utolsó kapcsolat: ${dstr(utolso)}.`
+      + (lej.length ? ` <span class="hl">Következő teendő: fizetési emlékeztető.</span>` : ` <span class="hl">Következő teendő: utánkövetés.</span>`);
+  }
+
+  const tl = []
+    .concat(ki.map(s=>({d:s.kelt,t:`<strong>${s.sz}</strong> kimenő számla — ${Ft(s.brutto)} (${s.statusz})`})))
+    .concat(be.map(s=>({d:s.kelt,t:`<strong>${s.sz}</strong> bejövő számla — ${Ft(s.brutto)}${s.forras?` <span class="pill p-mute">${esc(s.forras)}</span>`:""}`})))
+    .concat(aj.map(a=>({d:a.datum,t:`<strong>${a.sz}</strong> ajánlat — ${esc(a.targy)}, ${Ft(a.osszeg)} (${a.statusz})`})))
+    .sort((a,b)=>D(b.d)-D(a.d));
+
+  return `<button class="btn ghost sm" data-goto="lista:partnerek" style="margin-bottom:.8rem">← Összes partner</button>
+  <div class="phead">
+    <div class="avatar">${esc(p.nev.slice(0,2).toUpperCase())}</div>
+    <div style="flex:1;min-width:14rem">
+      <h1 class="title">${esc(p.nev)}</h1>
+      <p class="sub" style="margin-bottom:0">${esc(p.cim)} · ${esc(p.ado)}</p>
+    </div>
+  </div>
+
+  <div class="aisum"><span class="tag">AI-összefoglaló</span>${ossz}</div>
+
+  <div style="display:grid;gap:1rem;grid-template-columns:repeat(auto-fit,minmax(16rem,1fr))">
+    <div class="card"><div class="card-h"><h3>Adatok</h3></div><div class="card-b">
+      <dl class="kv">
+        <dt>Kapcsolattartó</dt><dd>${esc(p.kapcs)}</dd>
+        <dt>E-mail</dt><dd>${esc(p.email)}</dd>
+        <dt>Telefon</dt><dd class="mono">${esc(p.tel)}</dd>
+        <dt>Fizetés</dt><dd>${esc(p.fizetes)}</dd>
+        <dt>Kedvezmény</dt><dd>${p.kedvezmeny?p.kedvezmeny+"%":"—"}</dd>
+      </dl>
+      <p style="font-size:.83rem;color:var(--muted);margin:.8rem 0 0">${esc(p.megj)}</p>
+    </div></div>
+    <div class="card"><div class="card-h"><h3>Nyitott feladatok</h3></div><div class="card-b">
+      ${fel.length?fel.map(f=>`<div style="display:flex;gap:.5rem;align-items:center;padding:.3rem 0;font-size:.87rem">
+        <span class="pill ${f.prio==="sürgős"?"p-crit":"p-warn"}">${f.prio}</span>${esc(f.cim)}</div>`).join("")
+        :'<p style="color:var(--muted);font-size:.87rem;margin:0">Nincs nyitott feladat.</p>'}
+    </div></div>
+  </div>
+
+  <h2 class="sect">Előzmények</h2>
+  <div class="card"><div class="card-b">
+    <div class="timeline">${tl.map(x=>`<div class="tl"><span class="d">${dstr(D(x.d))}</span><span class="t">${x.t}</span></div>`).join("")}</div>
+  </div></div>`;
+}
+
+/* ---- pénzügy ---- */
+function vPenzugy(){
+  const row = s => {
+    const d = days(TODAY,D(s.hatarido));
+    const st = s.statusz==="fizetve" ? '<span class="pill p-ok">fizetve</span>'
+      : d>0 ? `<span class="pill p-crit">${d} napja lejárt</span>`
+      : `<span class="pill p-mute">${-d} nap múlva</span>`;
+    return `<tr class="click" data-goto="partner:${s.partner}">
+      <td class="mono">${s.sz}</td><td class="strong">${esc(P(s.partner).nev)}</td>
+      <td class="mono" style="font-size:.78rem">${dstr(D(s.hatarido))}</td>
+      <td class="r">${Ft(s.brutto)}</td><td>${st}</td>
+      <td>${s.forras?`<span class="pill p-acc">${esc(s.forras)}</span>`:""}</td></tr>`;
+  };
+  return `<h1 class="title">Pénzügyek</h1><p class="sub">Kintlévőségek és fizetendő számlák egy helyen</p>
+  <div class="tiles">
+    <div class="tile crit"><span class="lbl">Lejárt követelés</span><span class="val crit">${Ft(sum(lejartKi(),s=>s.brutto))}</span></div>
+    <div class="tile acc"><span class="lbl">Összes kintlévőség</span><span class="val">${Ft(sum(nyitottKi(),s=>s.brutto))}</span></div>
+    <div class="tile warn"><span class="lbl">Fizetendő összesen</span><span class="val">${Ft(sum(nyitottBe(),s=>s.brutto))}</span></div>
+    <div class="tile ok"><span class="lbl">Egyenleg</span><span class="val ok">${Ft(sum(nyitottKi(),s=>s.brutto)-sum(nyitottBe(),s=>s.brutto))}</span></div>
+  </div>
+  <h2 class="sect">Kimenő számlák</h2>
+  <div class="scroller"><table><thead><tr><th>Szám</th><th>Partner</th><th>Határidő</th><th class="r">Bruttó</th><th>Állapot</th><th>Forrás</th></tr></thead>
+  <tbody>${szamlak.filter(s=>s.irany==="ki").map(row).join("")}</tbody></table></div>
+  <h2 class="sect">Bejövő számlák</h2>
+  <div class="scroller"><table><thead><tr><th>Szám</th><th>Partner</th><th>Határidő</th><th class="r">Bruttó</th><th>Állapot</th><th>Forrás</th></tr></thead>
+  <tbody>${szamlak.filter(s=>s.irany==="be").map(row).join("")}</tbody></table></div>
+  <p style="font-size:.8rem;color:var(--muted);margin-top:.7rem;max-width:40rem">A „NAV lekérdezés” forrású tételek automatikusan érkeznének az Online Számla rendszerből, a „fotó feltöltés” forrásúak kézi feltöltésből — utóbbiakat az AI olvassa ki és megerősítést kér.</p>`;
+}
+
+/* ---- ajánlatok ---- */
+function vAjanlatok(){
+  if(quote) return vQuoteDoc();
+  return `<h1 class="title">Ajánlatok</h1><p class="sub">Mondd a mikrofonba: „Készíts ajánlatot a Kovács Kft-nek 800 négyzetméter térkövezésre”</p>
+  <div class="scroller"><table><thead><tr><th>Szám</th><th>Partner</th><th>Tárgy</th><th>Dátum</th><th class="r">Összeg</th><th>Állapot</th></tr></thead><tbody>
+  ${ajanlatok.map(a=>`<tr class="click" data-goto="partner:${a.partner}">
+    <td class="mono">${a.sz}</td><td class="strong">${esc(P(a.partner).nev)}</td><td>${esc(a.targy)}</td>
+    <td class="mono" style="font-size:.78rem">${dstr(D(a.datum))}</td><td class="r">${Ft(a.osszeg)}</td>
+    <td><span class="pill ${a.statusz==="elfogadva"?"p-ok":"p-warn"}">${a.statusz}</span></td></tr>`).join("")}
+  </tbody></table></div>`;
+}
+
+function vQuoteDoc(){
+  const q = quote, p = P(q.partnerId);
+  return `<button class="btn ghost sm" data-act="closequote" style="margin-bottom:.8rem">← Ajánlatok listája</button>
+  <h1 class="title">${q.sz}</h1><p class="sub">Az AI által készített ajánlat — kiküldés előtt jóváhagyást kér</p>
+  <div class="assump"><strong>Amit feltételeztem — ellenőrizd</strong>${q.assump.map(a=>"• "+esc(a)).join("<br>")}</div>
+  <div class="doc">
+    <div class="doc-h">
+      <div class="doc-logo"><span class="mark">KH</span> Kőháló Kft.</div>
+      <div class="doc-co">${esc(CO.cim)}<br>Adószám: ${CO.adoszam}<br>${esc(CO.email)} · ${esc(CO.tel)}<br>${CO.bank}</div>
+    </div>
+    <h4>Árajánlat</h4>
+    <div class="docmeta">${q.sz} · Kelt: ${dstr(TODAY)} · Érvényes: ${dstr(new Date(TODAY.getTime()+30*86400000))}</div>
+    <div class="to"><span class="lab">Megrendelő</span><strong>${esc(p.nev)}</strong><br>${esc(p.cim)}${p.ado!=="—"?"<br>Adószám: "+esc(p.ado):""}<br>${esc(p.kapcs)}</div>
+    <div class="to"><span class="lab">Tárgy</span>${esc(q.targy)}</div>
+    <table><thead><tr><th>#</th><th>Megnevezés</th><th class="r">Mennyiség</th><th class="r">Egységár</th><th class="r">Nettó</th></tr></thead>
+    <tbody>${q.tetelek.map((t,i)=>`<tr><td>${i+1}</td><td>${esc(t.nev)}<br><span style="color:#7a7a72;font-size:.75rem">${t.cikk}</span></td>
+      <td class="r">${new Intl.NumberFormat("hu-HU").format(t.db)} ${t.me}</td>
+      <td class="r">${Ft(t.ar)}</td><td class="r">${Ft(t.db*t.ar)}</td></tr>`).join("")}</tbody>
+    <tfoot>
+      <tr><td colspan="4" class="r">Nettó összesen</td><td class="r">${Ft(q.netto)}</td></tr>
+      ${q.kedv?`<tr><td colspan="4" class="r">Törzsvevői kedvezmény ${q.kedvPct}%</td><td class="r">−${Ft(q.kedv)}</td></tr>
+      <tr><td colspan="4" class="r">Kedvezményes nettó</td><td class="r">${Ft(q.nettoK)}</td></tr>`:""}
+      <tr><td colspan="4" class="r">ÁFA 27%</td><td class="r">${Ft(q.afa)}</td></tr>
+      <tr class="grand"><td colspan="4" class="r">Fizetendő bruttó</td><td class="r">${Ft(q.brutto)}</td></tr>
+    </tfoot></table>
+    <div class="terms">
+      <strong>Fizetési feltétel:</strong> ${esc(p.fizetes)}, 40% előleg a munkakezdéskor.<br>
+      <strong>Vállalási határidő:</strong> a megrendeléstől számított 3 hét, időjárás függvényében.<br>
+      <strong>Garancia:</strong> a burkolatra 5 év, az anyagra a gyártói garancia szerint.<br>
+      <strong>Az ajánlat nem tartalmazza:</strong> a meglévő burkolat bontását, a föld elszállítását, valamint az esetleges közműkiváltást.
+    </div>
+  </div>
+  <div style="display:flex;gap:.5rem;margin-top:1rem;flex-wrap:wrap">
+    <button class="btn primary" data-act="sendquote">Jóváhagyom és kiküldöm</button>
+    <button class="btn" data-act="printquote">Nyomtatás / PDF</button>
+    <button class="btn ghost" data-act="closequote">Elvetem</button>
+  </div>`;
+}
+
+/* ---- árlista ---- */
+function vArlista(){
+  return `<h1 class="title">Termékek és szolgáltatások</h1><p class="sub">Az AI ezekből az árakból számol minden ajánlatot</p>
+  <div class="scroller"><table><thead><tr><th>Cikkszám</th><th>Megnevezés</th><th>Kategória</th><th>Me.</th>
+  <th class="r">Beszerzés</th><th class="r">Eladás</th><th class="r">Árrés</th></tr></thead><tbody>
+  ${arlista.map(t=>`<tr><td class="mono">${t.cikk}</td><td class="strong">${esc(t.nev)}</td>
+    <td><span class="pill p-mute">${t.kat}</span></td><td>${t.me}</td>
+    <td class="r">${t.besz?Ft(t.besz):"—"}</td><td class="r strong">${Ft(t.ar)}</td>
+    <td class="r">${t.besz?Math.round((1-t.besz/t.ar)*100)+"%":"—"}</td></tr>`).join("")}
+  </tbody></table></div>`;
+}
+
+/* ---- feladatok ---- */
+function vFeladatok(){
+  const sorted = feladatok.slice().sort((a,b)=>D(a.hatarido)-D(b.hatarido));
+  return `<h1 class="title">Feladatok és határidők</h1><p class="sub">Mondd: „Jövő kedden emlékeztess, hogy hívjam fel a Kovács Kft-t”</p>
+  <div class="card"><div class="card-b">
+  ${sorted.map(f=>{
+    const d = days(D(f.hatarido),TODAY);
+    return `<div class="tl" style="grid-template-columns:auto auto 1fr auto;align-items:center">
+      <input type="checkbox" data-done="${f.id}" ${f.kesz?"checked":""} style="accent-color:var(--accent);width:15px;height:15px">
+      <span class="pill ${f.prio==="sürgős"?"p-crit":f.prio==="fontos"?"p-warn":"p-mute"}">${f.prio}</span>
+      <span class="t" style="${f.kesz?"text-decoration:line-through;color:var(--muted)":""}">${esc(f.cim)}
+        ${f.partner?`<span style="color:var(--muted);font-size:.8rem"> · ${esc(P(f.partner).nev)}</span>`:""}</span>
+      <span class="d mono">${d===0?"ma":d<0?Math.abs(d)+" napja":d+" nap múlva"}</span></div>`;
+  }).join("")}
+  </div></div>`;
+}
+
+/* ---- napló ---- */
+function vNaplo(){
+  return `<h1 class="title">AI napló</h1>
+  <p class="sub">Minden AI-művelet naplózva: mit látott, mit javasolt, mit hagytál jóvá. Ez nem extra — enélkül nem lehet felelősséget tisztázni, és az AI Act átláthatósági követelménye sem teljesíthető.</p>
+  <div class="card"><div class="card-b">
+  ${naplo.length ? naplo.map(l=>`<div class="logrow">
+    <span class="ts">${l.ts.toLocaleTimeString("hu-HU",{hour:"2-digit",minute:"2-digit",second:"2-digit"})}</span>
+    <span class="what"><strong>${esc(l.cim)}</strong><span>${esc(l.reszlet)}</span></span>
+    <span class="pill ${l.statusz==="végrehajtva"?"p-ok":l.statusz==="elvetve"?"p-crit":l.statusz==="javasolt"?"p-warn":"p-mute"}">${l.statusz}</span>
+  </div>`).join("") : '<p class="empty">Még nincs bejegyzés. Adj egy utasítást az asszisztensnek.</p>'}
+  </div></div>`;
+}
+
+/* ================= asszisztens ================= */
+const answerEl = document.getElementById("answer");
+
+function say(html, opts){
+  opts = opts || {};
+  html = html.replace(/\.{2,}/g, ".").replace(/\.\s*,/g, ",");
+  answerEl.classList.add("on");
+  answerEl.innerHTML =
+    (opts.heard?`<div class="heard">Hallottam: „${esc(opts.heard)}”</div>`:"") +
+    `<div class="said">${html}</div>` + (opts.extra||"");
+  answerEl.scrollTop = 0;
+  if(opts.speak !== false) speak(stripTags(html));
+}
+const stripTags = h => h.replace(/<[^>]+>/g," ").replace(/\s+/g," ").replace(/\s+([.,])/g,"$1").replace(/\.{2,}/g,".").trim();
+
+/* --- beszédszintézis --- */
+let voices = [];
+function loadVoices(){ voices = window.speechSynthesis ? speechSynthesis.getVoices() : []; }
+if(window.speechSynthesis){ loadVoices(); speechSynthesis.onvoiceschanged = loadVoices; }
+function speak(text){
+  if(!document.getElementById("ttsOn").checked) return;
+  if(!window.speechSynthesis) return;
+  try{
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text.slice(0,420));
+    u.lang = "hu-HU"; u.rate = 1.03;
+    const hu = voices.find(v=>/^hu/i.test(v.lang));
+    if(hu) u.voice = hu;
+    speechSynthesis.speak(u);
+  }catch(e){}
+}
+
+/* --- beszédfelismerés --- */
+const micBtn = document.getElementById("mic");
+const micNote = document.getElementById("micnote");
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null, listening = false;
+
+function micFail(msg){
+  micNote.textContent = msg;
+  micNote.classList.add("on");
+  micBtn.classList.remove("live");
+  listening = false;
+}
+
+micBtn.addEventListener("click", ()=>{
+  if(!SR){
+    micFail("Ez a böngésző nem támogatja a beszédfelismerést. Chrome-ban működik — addig írd be a parancsot.");
+    document.getElementById("cmd").focus();
+    return;
+  }
+  if(listening){ try{rec.stop();}catch(e){} return; }
+  try{
+    rec = new SR();
+    rec.lang = "hu-HU"; rec.interimResults = true; rec.continuous = false;
+    rec.onstart = ()=>{ listening=true; micBtn.classList.add("live"); micNote.classList.remove("on");
+      answerEl.classList.add("on"); answerEl.innerHTML = '<div class="heard">Hallgatlak…</div>'; };
+    rec.onresult = e => {
+      let txt = "";
+      for(let i=0;i<e.results.length;i++) txt += e.results[i][0].transcript;
+      answerEl.innerHTML = `<div class="heard">${esc(txt)}</div>`;
+      if(e.results[e.results.length-1].isFinal){ handle(txt.trim(), true); }
+    };
+    rec.onerror = e => {
+      const m = {"not-allowed":"A mikrofon nincs engedélyezve ebben a nézetben. Nyisd meg a letöltött fájlt Chrome-ban, vagy írd be a parancsot.",
+                 "service-not-allowed":"A böngésző letiltotta a beszédfelismerést ebben a beágyazott nézetben. Írd be a parancsot, vagy nyisd meg a fájlt közvetlenül Chrome-ban.",
+                 "no-speech":"Nem hallottam semmit. Próbáld újra."}[e.error]
+                 || "A beszédfelismerés nem indult el ("+e.error+"). Írd be a parancsot.";
+      micFail(m);
+    };
+    rec.onend = ()=>{ listening=false; micBtn.classList.remove("live"); };
+    rec.start();
+  }catch(err){
+    micFail("A mikrofon nem érhető el ebben a nézetben. Nyisd meg a letöltött fájlt Chrome-ban, vagy írd be a parancsot.");
+  }
+});
+
+/* ================= parancsértelmezés ================= */
+function findPartner(t){
+  const n = norm(t);
+  let best = null;
+  partnerek.forEach(p=>{
+    const key = norm(p.nev).replace(/\b(kft|zrt|bt|nyrt|kkt)\b\.?/g,"").trim();
+    const first = key.split(/\s+/)[0];
+    if(first.length>2 && n.includes(first)) best = p;
+  });
+  if(!best && /kovacs/.test(n)) best = P("p1");
+  return best;
+}
+
+function buildQuote(partnerId, m2, variant, targy){
+  const p = P(partnerId);
+  const kerulet = Math.round(4*Math.sqrt(m2)/5)*5; // négyzetes területet feltételezve
+  const anyag = variant==="antik" ? arlista.find(t=>t.id==="t8") : arlista.find(t=>t.id==="t7");
+  const munka = variant==="mintas" ? arlista.find(t=>t.id==="t2") : arlista.find(t=>t.id==="t1");
+  const alap = arlista.find(t=>t.id==="t3"), szeg = arlista.find(t=>t.id==="t4"),
+        szegAny = arlista.find(t=>t.id==="t9"), kisz = arlista.find(t=>t.id==="t11");
+  const vagas = Math.ceil(m2*1.05);
+  const tetelek = [
+    {nev:alap.nev, cikk:alap.cikk, db:m2, me:alap.me, ar:alap.ar},
+    {nev:anyag.nev+" (5% vágási ráhagyással)", cikk:anyag.cikk, db:vagas, me:anyag.me, ar:anyag.ar},
+    {nev:munka.nev, cikk:munka.cikk, db:m2, me:munka.me, ar:munka.ar},
+    {nev:szegAny.nev, cikk:szegAny.cikk, db:kerulet, me:szegAny.me, ar:szegAny.ar},
+    {nev:szeg.nev, cikk:szeg.cikk, db:kerulet, me:szeg.me, ar:szeg.ar},
+    {nev:kisz.nev, cikk:kisz.cikk, db:1, me:kisz.me, ar:kisz.ar}
+  ];
+  const netto = sum(tetelek,t=>t.db*t.ar);
+  const kedvPct = p.kedvezmeny||0;
+  const kedv = Math.round(netto*kedvPct/100);
+  const nettoK = netto-kedv;
+  const afa = Math.round(nettoK*0.27);
+  seq.aj++;
+  return {
+    sz:"AJ-2026/0"+seq.aj, partnerId, targy: targy || `${new Intl.NumberFormat("hu-HU").format(m2)} m² térkő burkolat kivitelezése`,
+    tetelek, netto, kedvPct, kedv, nettoK, afa, brutto:nettoK+afa, m2, kerulet,
+    assump:[
+      `${new Intl.NumberFormat("hu-HU").format(m2)} m² burkolandó felület, ${variant==="antik"?"antik":variant==="mintas"?"mintás kötésű":"szürke, normál kötésű"} 6 cm-es térkővel.`,
+      `${kerulet} fm szegélyt számoltam, közel négyzetes területet feltételezve. Ha hosszúkás a terület, ez több lesz.`,
+      `5% vágási ráhagyás az anyagnál.`,
+      `Nem tartalmaz bontást, földmunkát és sittelszállítást — ha kell, mondd, és beteszem.`,
+      kedvPct?`${kedvPct}% törzsvevői kedvezményt alkalmaztam ${esc(p.nev)} adatlapja alapján.`:`Nincs rögzített kedvezmény ennél a partnernél.`
+    ]
+  };
+}
+
+/* --- jóváhagyási kapu --- */
+let pending = null;
+
+function gate(o){
+  pending = o;
+  log(o.cim, o.log, "javasolt");
+  return `<div class="gate">
+    <div class="gate-h">
+      <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l8 4v6c0 5-3.5 8.5-8 10-4.5-1.5-8-5-8-10V6z"/></svg>
+      Jóváhagyás szükséges · ${esc(o.cim)}
+    </div>
+    <div class="gate-b">
+      ${o.meta?`<div class="meta">${o.meta}</div>`:""}
+      <div class="draft">${esc(o.draft)}</div>
+    </div>
+    <div class="gate-f">
+      <button class="btn primary" data-act="approve">${esc(o.okLabel||"Jóváhagyom")}</button>
+      <button class="btn" data-act="skip">Kihagyom</button>
+      <button class="btn ghost" data-act="reject">Elvetem</button>
+      ${o.step?`<span class="step">${o.step}</span>`:""}
+    </div>
+  </div>`;
+}
+
+/* --- 16. modul: sorban végigvezetés --- */
+let agentQueue = [], agentIdx = 0;
+
+function buildAgentQueue(){
+  const q = [];
+  lejartKi().forEach(s=>{
+    const p = P(s.partner);
+    q.push({
+      cim:`Fizetési emlékeztető — ${p.nev}`,
+      meta:`Címzett: ${esc(p.email)} · ${s.sz} · ${Ft(s.brutto)} · ${days(TODAY,D(s.hatarido))} napja lejárt`,
+      log:`${s.sz} számla, ${Ft(s.brutto)}, ${days(TODAY,D(s.hatarido))} napja lejárt`,
+      okLabel:"Jóváhagyom és küldöm",
+      draft:`Tárgy: Fizetési emlékeztető — ${s.sz} számla\n\nKedves ${p.kapcs}!\n\n`
+        +`A ${s.sz} sorszámú, ${Ft(s.brutto)} összegű számlánk fizetési határideje ${dstr(D(s.hatarido))} volt, `
+        +`a kiegyenlítés ${days(TODAY,D(s.hatarido))} napja késik.\n\n`
+        +`Kérem, szíveskedjenek az összeget a ${CO.bank} számlaszámra átutalni, vagy jelezni, ha a számlával kapcsolatban bármi kérdés merült fel.\n\n`
+        +`Amennyiben az utalás időközben megtörtént, kérem tekintsék tárgytalannak.\n\nÜdvözlettel,\nKőháló Kft.\n${CO.tel}`,
+      done:()=>{ toast("Emlékeztető kiküldve (prototípus — valójában nem ment ki)"); }
+    });
+  });
+  ajanlatok.filter(a=>a.statusz==="kiküldve" && days(TODAY,D(a.datum))>=5).forEach(a=>{
+    const p = P(a.partner);
+    q.push({
+      cim:`Ajánlat utánkövetése — ${p.nev}`,
+      meta:`Címzett: ${esc(p.email)} · ${a.sz} · ${Ft(a.osszeg)} · ${days(TODAY,D(a.datum))} napja kiküldve`,
+      log:`${a.sz} ajánlat, ${Ft(a.osszeg)}, ${days(TODAY,D(a.datum))} napja nincs válasz`,
+      okLabel:"Jóváhagyom és küldöm",
+      draft:`Tárgy: ${a.sz} árajánlat — ${a.targy}\n\nKedves ${p.kapcs}!\n\n`
+        +`${dstr(D(a.datum))}-én küldtem Önöknek árajánlatot a következő munkára: ${a.targy}. `
+        +`Szeretném megkérdezni, hogy sikerült-e áttekinteni, és van-e olyan pontja, amit érdemes átbeszélnünk.\n\n`
+        +`Az ajánlat az abban megjelölt határidőig érvényes. Amennyiben a mennyiség vagy a kivitelezés módja változott, szívesen készítek módosított változatot.\n\n`
+        +`Üdvözlettel,\nKőháló Kft.\n${CO.tel}`,
+      done:()=>{ toast("Utánkövető levél kiküldve (prototípus)"); }
+    });
+  });
+  const surgosBe = nyitottBe().filter(s=>days(D(s.hatarido),TODAY)<=5)
+                              .sort((a,b)=>days(TODAY,D(a.hatarido))>0 && days(TODAY,D(b.hatarido))<=0 ? -1 : D(a.hatarido)-D(b.hatarido));
+  const be = surgosBe[0];
+  if(be){
+    const p = P(be.partner);
+    const d = days(D(be.hatarido),TODAY);
+    const mikor = d<0 ? `${Math.abs(d)} napja lejárt` : d===0 ? "ma esedékes" : `${d} nap múlva esedékes`;
+    q.push({
+      cim:`Kifizetés előkészítése — ${p.nev}`,
+      meta:`${be.sz} · ${Ft(be.brutto)} · ${mikor}`,
+      log:`${be.sz} bejövő számla, ${Ft(be.brutto)}, ${mikor}`,
+      okLabel:"Rögzítem a feladatot",
+      draft:`Utalási feladat rögzítése\n\nKedvezményezett: ${p.nev}\nSzámla: ${be.sz}\nÖsszeg: ${Ft(be.brutto)}\n`
+        +`Esedékesség: ${dstr(D(be.hatarido))} — ${mikor}\n\n`
+        +`Emlékeztetőt teszek a listádra. Utalást a rendszer nem indít — azt a banknál Neked kell elvégezned.`,
+      done:()=>{ seq.fel++; feladatok.push({id:"f"+seq.fel, cim:`Utalás — ${p.nev} ${be.sz} (${Ft(be.brutto)})`,
+                 hatarido:d<0?"2026-08-25":be.hatarido, prio:d<=1?"sürgős":"fontos", kesz:false, partner:be.partner});
+                 toast("Feladat rögzítve"); renderNav(); }
+    });
+  }
+  return q;
+}
+
+function showAgentStep(){
+  if(agentIdx >= agentQueue.length){
+    pending = null;
+    say(`Végigmentünk mindenen. <span class="hl">${agentQueue.length} ügyet</span> néztem át. Amit jóváhagytál, azt elvégeztem, a többi a feladatlistán maradt. Nézd meg az <strong>AI naplót</strong>, ha látni akarod, mi történt pontosan.`);
+    return;
+  }
+  const it = agentQueue[agentIdx];
+  it.step = `${agentIdx+1} / ${agentQueue.length}`;
+  say(`<strong>${esc(it.cim)}</strong> — ezt készültem tenni. Nézd át, és döntsd el.`,
+      {extra: gate(it), speak:true});
+}
+
+/* ================= fő értelmező ================= */
+function handle(text, fromVoice){
+  if(!text) return;
+  // új utasítás megszakítja a folyamatban lévő végigvezetést
+  if(!/(intezd el|csinald meg helyettem|surgos dolgaim|intezz el|vegyuk sorra)/.test(norm(text))){
+    agentQueue = []; agentIdx = 0; pending = null;
+  }
+  const t = norm(text);
+  const heard = fromVoice ? text : null;
+  const O = h => ({heard});
+
+  /* 16. modul */
+  if(/(intezd el|csinald meg helyettem|surgos dolgaim|mit kell ma|intezz el|vegyuk sorra)/.test(t)){
+    agentQueue = buildAgentQueue(); agentIdx = 0;
+    go("naplo");
+    say(`Összeszedtem a mai sürgős ügyeket, fontossági sorrendben: <span class="hl">${agentQueue.length} tétel</span>. `
+      + agentQueue.map((x,i)=>`${i+1}. ${esc(x.cim)}`).join(" · ")
+      + `. Egyenként végigmegyünk rajtuk. Semmit nem küldök ki a jóváhagyásod nélkül.`, O());
+    setTimeout(showAgentStep, 900);
+    return;
+  }
+
+  /* ajánlat */
+  if(/(ajanlat|arajanlat)/.test(t) && /(keszits|csinalj|kerek|kellene|keszitsd)/.test(t)){
+    const p = findPartner(text);
+    const m = t.match(/(\d[\d\s.]*)\s*(negyzetmeter|nm|m2|m²|negyzet)/);
+    const m2 = m ? parseInt(m[1].replace(/[\s.]/g,""),10) : null;
+    if(!p){ say(`Melyik partnernek készítsem? Nem találtam a nevet a partnerlistában. Mondd például: <span class="hl">„Készíts ajánlatot a Kovács Kft-nek 800 négyzetméter térkövezésre.”</span>`, O()); return; }
+    if(!m2){ say(`Hány négyzetméterre készítsem az ajánlatot ${esc(p.nev)} részére?`, O()); return; }
+    const variant = /antik/.test(t) ? "antik" : /(mintas|diszkotes|dísz)/.test(t) ? "mintas" : "normal";
+    quote = buildQuote(p.id, m2, variant);
+    log("Árajánlat készítése", `${p.nev} · ${m2} m² · ${Ft(quote.brutto)} bruttó`, "elkészítve");
+    go("ajanlatok");
+    say(`Elkészítettem az ajánlatot <span class="hl">${esc(p.nev)}</span> részére ${new Intl.NumberFormat("hu-HU").format(m2)} m² térkövezésre. `
+      + `Végösszeg <span class="hl">${Ft(quote.brutto)}</span> bruttó, ${quote.tetelek.length} tételben, a saját árlistád alapján. `
+      + `Feltételeztem néhány dolgot — sárga sávban jelöltem őket a lap tetején. Kiküldés előtt jóváhagyást kérek.`, O());
+    return;
+  }
+
+  /* lejárt / kintlévőség */
+  if(/(lejart|kintlevo|tartoznak|kinnlevo|nem fizetett|hatralek)/.test(t)){
+    const lej = lejartKi();
+    go("penzugy");
+    say(`Jelenleg <span class="hl">${Ft(sum(lej,s=>s.brutto))}</span> lejárt követelésed van ${lej.length} számlán. `
+      + lej.map(s=>`${P(s.partner).nev}: ${Ft(s.brutto)}, ${days(TODAY,D(s.hatarido))} napja`).join(". ") + ". "
+      + `Összes kintlévőség ${Ft(sum(nyitottKi(),s=>s.brutto))}. Készítsek fizetési emlékeztetőt?`,
+      O());
+    answerEl.insertAdjacentHTML("beforeend",
+      `<div style="display:flex;gap:.5rem;flex-wrap:wrap"><button class="btn primary sm" data-act="reminders">Igen, készítsd el</button>
+       <button class="btn sm ghost" data-act="dismiss">Most nem</button></div>`);
+    return;
+  }
+
+  /* fizetendő */
+  if(/(mennyit kell|kifizet|fizetnunk|utalni|bejovo szaml)/.test(t)){
+    const be = nyitottBe();
+    const het = be.filter(s=>days(D(s.hatarido),TODAY)<=7);
+    const lejBe = het.filter(s=>days(TODAY,D(s.hatarido))>0);
+    go("penzugy");
+    say(`Ezen a héten <span class="hl">${Ft(sum(het,s=>s.brutto))}</span> kifizetés esedékes ${het.length} számlán. `
+      + het.map(s=>{
+          const d = days(D(s.hatarido),TODAY);
+          return `${P(s.partner).nev} ${Ft(s.brutto)} — ${d<0?Math.abs(d)+" napja lejárt":d===0?"ma":d+" nap múlva"}`;
+        }).join(", ")
+      + `. Összes fizetendő ${Ft(sum(be,s=>s.brutto))}`
+      + (lejBe.length?`. <span class="hl">Figyelj: ${Ft(sum(lejBe,s=>s.brutto))} már lejárt</span>, ezt érdemes ma rendezni.`:"."), O());
+    return;
+  }
+
+  /* mai teendő */
+  if(/(mai teendo|mi a dolgom|teendoim|mi van ma|mai feladat|napirend)/.test(t)){
+    const f = maiFeladatok();
+    go("feladatok");
+    say(`Mára <span class="hl">${f.length} teendőd</span> van. `
+      + f.map(x=>`${x.prio==="sürgős"?"Sürgős: ":""}${x.cim}`).join(". ") + ". "
+      + `A legfontosabb a Kovács Építő felszólítása — ${Ft(1240000)} nyolc napja lejárt.`, O());
+    return;
+  }
+
+  /* vezetői összefoglaló */
+  if(/(helyzet a cegemben|hogy allunk|osszefoglal|hogy all a ceg|vezetoi)/.test(t)){
+    go("home");
+    const lej = lejartKi(), nyAj = ajanlatok.filter(a=>a.statusz==="kiküldve");
+    say(`Röviden a mai állás. Kintlévőség <span class="hl">${Ft(sum(nyitottKi(),s=>s.brutto))}</span>, ebből ${Ft(sum(lej,s=>s.brutto))} már lejárt — ez a legsürgősebb. `
+      + `Kifizetendő ${Ft(sum(nyitottBe(),s=>s.brutto))}, a legközelebbi a BauMax három nap múlva. `
+      + `${nyAj.length} ajánlat vár válaszra ${Ft(sum(nyAj,a=>a.osszeg))} értékben, a Szabó Ingatlané már ${days(TODAY,D("2026-08-16"))} napja. `
+      + `Mára ${maiFeladatok().length} teendőd van. `
+      + `<span class="hl">Ha akarod, végigmegyünk a sürgős ügyeken egyenként</span> — mondd: „Intézd el a mai sürgős dolgaimat.”`, O());
+    return;
+  }
+
+  /* felszólítás */
+  if(/(felszolit|emlekezteto|fizetesi emlek)/.test(t)){
+    agentQueue = buildAgentQueue().filter(x=>/Fizetési emlékeztető/.test(x.cim));
+    agentIdx = 0;
+    if(!agentQueue.length){ say("Most nincs lejárt számlád, nincs kinek felszólítást küldeni.", O()); return; }
+    showAgentStep();
+    return;
+  }
+
+  /* feladat rögzítése */
+  if(/(emlekeztess|jegyezd fel|vegyel fel|allits be|rogzits)/.test(t)){
+    const p = findPartner(text);
+    let hat = "2026-08-26", cimke = "holnap";
+    if(/jovo kedd/.test(t)){ hat="2026-09-01"; cimke="jövő kedden"; }
+    else if(/jovo het/.test(t)){ hat="2026-09-01"; cimke="jövő héten"; }
+    else if(/holnap/.test(t)){ hat="2026-08-26"; cimke="holnap"; }
+    else if(/penteken/.test(t)){ hat="2026-08-28"; cimke="pénteken"; }
+    const targy = p ? `Felhívni: ${p.nev}` : text.replace(/^.*?(hogy|arra,? hogy)\s*/i,"").trim() || "Új feladat";
+    seq.fel++;
+    const uj = {id:"f"+seq.fel, cim:targy, hatarido:hat, prio:"normál", kesz:false, partner:p?p.id:undefined};
+    feladatok.push(uj);
+    log("Feladat rögzítése", `${targy} · ${dstr(D(hat))}`, "végrehajtva");
+    renderNav(); go("feladatok");
+    say(`Rögzítettem: <span class="hl">${esc(targy)}</span>, ${cimke} — ${dstr(D(hat))}. Szólok időben.`, O());
+    return;
+  }
+
+  /* szerződéselemzés */
+  if(/(szerzodes|kotber|mi a lenyeg|elemezd|dokumentum)/.test(t)){
+    say(`A feltöltött szerződésből ezt emeltem ki:<br><br>`
+      + `<strong>Fizetési határidő:</strong> 45 nap a teljesítésigazolástól — ez hosszabb, mint a szokásos 30 napod.<br>`
+      + `<strong>Kötbér:</strong> késedelmi kötbér a nettó vállalási ár 0,5%-a naponta, legfeljebb 15%.<br>`
+      + `<strong>Garancia:</strong> 5 év a burkolatra, 2 év az alépítményre.<br>`
+      + `<strong>Lejárat:</strong> 2027. március 31.<br><br>`
+      + `<span class="hl">Rögzítsem a 45 napos fizetési határidőt és a lejáratot a naptárba?</span>`, O());
+    answerEl.insertAdjacentHTML("beforeend",
+      `<p style="font-size:.78rem;color:var(--muted);max-width:40rem;margin:0">Ez kivonat és figyelemfelhívás, nem jogi tanácsadás. Aláírás előtt ügyvéddel egyeztess.</p>`);
+    return;
+  }
+
+  /* árlista */
+  if(/(arlista|mennyibe kerul|mi az ara|termek)/.test(t)){
+    go("arlista");
+    say(`${arlista.length} tétel van az árlistádban. A normál kötésű térkő lerakás ${Ft(4800)} per négyzetméter, `
+      + `a szürke 6 centis anyag ${Ft(3950)}. Ezekből számolok minden ajánlatot.`, O());
+    return;
+  }
+
+  /* partner megjelenítés */
+  const p = findPartner(text);
+  if(p && /(mutasd|nyisd|hozd|mi a helyzet|hogy all)/.test(t)){
+    go("partnerek", p.id);
+    const lej = szamlak.filter(s=>s.partner===p.id&&s.irany==="ki"&&s.statusz==="nyitott"&&days(TODAY,D(s.hatarido))>0);
+    say(`Itt van <span class="hl">${esc(p.nev)}</span> — `
+      + `Eddigi forgalom ${Ft(sum(szamlak.filter(s=>s.partner===p.id&&s.irany==="ki"),s=>s.brutto))}. `
+      + (lej.length?`Jelenleg ${Ft(sum(lej,s=>s.brutto))} lejárt tartozása van, ${days(TODAY,D(lej[0].hatarido))} napja. `:`Nincs lejárt tartozása. `)
+      + `Az adatlapon minden előzmény egy helyen van.`, O());
+    return;
+  }
+  if(p){ go("partnerek", p.id); say(`Megnyitottam <span class="hl">${esc(p.nev)}</span> adatlapját.`, O()); return; }
+
+  /* fallback */
+  say(`Ezt még nem értem — ez egy prototípus, korlátozott parancskészlettel. Próbáld például ezeket:<br><br>`
+    + `„Mutasd a lejárt számláimat” · „Mi a mai teendőm?” · „Készíts ajánlatot a Kovács Kft-nek 800 négyzetméterre” · `
+    + `„Mi a helyzet a cégemben?” · „Intézd el a mai sürgős dolgaimat” · „Jövő kedden emlékeztess, hogy hívjam fel a Kovács Kft-t”`,
+    {heard, speak:false});
+}
+
+/* ================= interakció ================= */
+const CHIPS = [
+  "Mi a helyzet a cégemben?",
+  "Intézd el a mai sürgős dolgaimat",
+  "Készíts ajánlatot a Kovács Kft-nek 800 négyzetméter térkövezésre",
+  "Mutasd a lejárt számláimat",
+  "Mi a mai teendőm?",
+  "Mutasd a Kovács Kft-t",
+  "Mennyit kell kifizetnünk ezen a héten?",
+  "Jövő kedden emlékeztess, hogy hívjam fel a Kovács Kft-t",
+  "Mi a lényeg a szerződésben?"
+];
+document.getElementById("chips").innerHTML = CHIPS.map(c=>`<button class="chip">${esc(c)}</button>`).join("");
+
+const cmd = document.getElementById("cmd");
+function submit(){ const v = cmd.value.trim(); if(!v) return; cmd.value=""; handle(v,false); }
+document.getElementById("send").addEventListener("click", submit);
+cmd.addEventListener("keydown", e=>{ if(e.key==="Enter") submit(); });
+
+document.addEventListener("click", e=>{
+  const chip = e.target.closest(".chip");
+  if(chip){ handle(chip.textContent,false); return; }
+
+  const nav = e.target.closest(".navbtn");
+  if(nav){ quote=null; selected=null; go(nav.dataset.view); return; }
+
+  const gt = e.target.closest("[data-goto]");
+  if(gt){
+    const [kind,val] = gt.dataset.goto.split(":");
+    if(kind==="partner"){ quote=null; go("partnerek", val); }
+    else { selected=null; go("partnerek"); }
+    return;
+  }
+
+  const act = e.target.closest("[data-act]");
+  if(act){
+    const a = act.dataset.act;
+    if(a==="approve" && pending){
+      log(pending.cim, pending.log, "végrehajtva");
+      if(pending.done) pending.done();
+      const cur = pending; pending=null;
+      if(agentQueue.length){ agentIdx++; render(); setTimeout(showAgentStep,450); }
+      else { render(); say(`Kész: <span class="hl">${esc(cur.cim)}</span>. Bejegyeztem az AI naplóba.`); }
+    }
+    else if((a==="skip"||a==="reject") && pending){
+      log(pending.cim, pending.log, a==="skip"?"kihagyva":"elvetve");
+      pending=null;
+      if(agentQueue.length){ agentIdx++; render(); setTimeout(showAgentStep,300); }
+      else { render(); say("Rendben, ezt kihagytam. A feladatlistán marad."); }
+    }
+    else if(a==="reminders"){
+      agentQueue = buildAgentQueue().filter(x=>/Fizetési emlékeztető/.test(x.cim));
+      agentIdx=0; showAgentStep();
+    }
+    else if(a==="dismiss"){ answerEl.classList.remove("on"); }
+    else if(a==="sendquote"){
+      ajanlatok.unshift({sz:quote.sz, partner:quote.partnerId, osszeg:quote.brutto,
+        datum:"2026-08-25", statusz:"kiküldve", targy:quote.targy});
+      log("Árajánlat kiküldése", `${quote.sz} · ${P(quote.partnerId).nev} · ${Ft(quote.brutto)}`, "végrehajtva");
+      seq.fel++;
+      feladatok.push({id:"f"+seq.fel, cim:`Utánkövetés — ${quote.sz} ajánlat`, hatarido:"2026-09-01",
+        prio:"normál", kesz:false, partner:quote.partnerId});
+      toast("Ajánlat kiküldve (prototípus — valójában nem ment ki)");
+      quote=null; renderNav(); go("ajanlatok");
+      say(`Kiküldtem, és felvettem egy <span class="hl">utánkövetési feladatot</span> egy hét múlvára. Ha addig nincs válasz, szólok.`);
+    }
+    else if(a==="printquote"){ try{window.print();}catch(err){toast("A nyomtatás ebben a nézetben nem elérhető.");} }
+    else if(a==="closequote"){ quote=null; render(); }
+    return;
+  }
+});
+
+document.addEventListener("change", e=>{
+  const cb = e.target.closest("[data-done]");
+  if(cb){
+    const f = feladatok.find(x=>x.id===cb.dataset.done);
+    if(f){ f.kesz = cb.checked; log("Feladat állapota", f.cim + (f.kesz?" — kész":" — visszanyitva"), "végrehajtva"); renderNav(); render(); }
+  }
+});
+
+/* start */
+renderNav(); render();
+say(`Jó reggelt! Ma <span class="hl">${Ft(sum(lejartKi(),s=>s.brutto))}</span> lejárt követelésed van és ${maiFeladatok().length} teendőd. `
+  + `Nyomd meg a mikrofont és mondd el, mit intézzek el helyetted — vagy válassz az alábbi példák közül.`, {speak:false});
+
+if(!SR){ micNote.textContent = "Ez a böngésző nem támogatja a magyar beszédfelismerést. Chrome-ban működik. Addig írd be a parancsot."; micNote.classList.add("on"); }
+})();
+</script>

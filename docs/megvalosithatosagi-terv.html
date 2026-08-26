@@ -1,0 +1,398 @@
+<title>CÉGEM.AI megvalósítási terv</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Serif:wght@500;600&display=swap">
+
+<style>
+  :root {
+    --ground: #f6f8f7;
+    --surface: #ffffff;
+    --surface-2: #eef2f1;
+    --line: #d8e0de;
+    --line-soft: #e6ecea;
+    --ink: #14201e;
+    --ink-2: #3c4b48;
+    --muted: #6d7d79;
+    --accent: #0e6a5b;
+    --accent-soft: #d9ebe6;
+    --flag: #9c4a17;
+    --flag-soft: #f4e5d9;
+    --warn: #8a6a10;
+    --warn-soft: #f5eed6;
+    --shadow: 0 1px 2px rgba(20,32,30,.05), 0 8px 24px rgba(20,32,30,.05);
+    --maxw: 66rem;
+    --prose: 40rem;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground: #0d1413;
+      --surface: #141d1b;
+      --surface-2: #1a2523;
+      --line: #2b3634;
+      --line-soft: #222c2a;
+      --ink: #e6ece9;
+      --ink-2: #b3c0bc;
+      --muted: #849690;
+      --accent: #52bda8;
+      --accent-soft: #16302b;
+      --flag: #d68a56;
+      --flag-soft: #33231a;
+      --warn: #d4b45a;
+      --warn-soft: #2e2917;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #0d1413;
+    --surface: #141d1b;
+    --surface-2: #1a2523;
+    --line: #2b3634;
+    --line-soft: #222c2a;
+    --ink: #e6ece9;
+    --ink-2: #b3c0bc;
+    --muted: #849690;
+    --accent: #52bda8;
+    --accent-soft: #16302b;
+    --flag: #d68a56;
+    --flag-soft: #33231a;
+    --warn: #d4b45a;
+    --warn-soft: #2e2917;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.25);
+  }
+
+  body {
+    background: var(--ground);
+    color: var(--ink);
+    font-family: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 16px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 1.5rem 6rem; }
+
+  /* ---------- header ---------- */
+  .masthead {
+    border-bottom: 1px solid var(--line);
+    padding: 3.5rem 0 2.25rem;
+    margin-bottom: 3rem;
+    display: flex; flex-direction: column; gap: 1.1rem;
+  }
+  .eyebrow {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .74rem; letter-spacing: .13em; text-transform: uppercase;
+    color: var(--muted);
+  }
+  h1 {
+    font-family: "IBM Plex Serif", Georgia, serif;
+    font-weight: 600; font-size: clamp(2rem, 5vw, 3rem);
+    line-height: 1.12; letter-spacing: -.02em; text-wrap: balance; margin: 0;
+  }
+  .standfirst { max-width: var(--prose); color: var(--ink-2); font-size: 1.06rem; margin: 0; }
+
+  /* ---------- verdict cards ---------- */
+  .verdicts { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr)); margin-bottom: 3.5rem; }
+  .verdict {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 3px;
+    padding: 1.25rem 1.3rem; display: flex; flex-direction: column; gap: .5rem; box-shadow: var(--shadow);
+  }
+  .verdict .q { font-family: "IBM Plex Mono", monospace; font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+  .verdict .a { font-family: "IBM Plex Serif", Georgia, serif; font-size: 1.32rem; line-height: 1.25; color: var(--accent); font-weight: 600; }
+  .verdict p { margin: 0; font-size: .92rem; color: var(--ink-2); }
+
+  /* ---------- sections ---------- */
+  section { margin-bottom: 3.5rem; scroll-margin-top: 2rem; }
+  h2 {
+    font-family: "IBM Plex Serif", Georgia, serif; font-weight: 600;
+    font-size: 1.55rem; line-height: 1.2; letter-spacing: -.012em;
+    margin: 0 0 1rem; text-wrap: balance;
+    display: flex; align-items: baseline; gap: .7rem;
+  }
+  h2 .num {
+    font-family: "IBM Plex Mono", monospace; font-size: .8rem; font-weight: 500;
+    color: var(--accent); letter-spacing: .05em;
+  }
+  h3 {
+    font-family: "IBM Plex Sans", sans-serif; font-weight: 600; font-size: 1rem;
+    margin: 1.75rem 0 .5rem; letter-spacing: -.005em;
+  }
+  p, li { max-width: var(--prose); }
+  section > p, section > ul, section > ol { color: var(--ink-2); }
+  ul, ol { padding-left: 1.15rem; display: flex; flex-direction: column; gap: .4rem; margin: .75rem 0; }
+  li::marker { color: var(--accent); }
+  strong { color: var(--ink); font-weight: 600; }
+  code {
+    font-family: "IBM Plex Mono", monospace; font-size: .87em;
+    background: var(--surface-2); padding: .1em .35em; border-radius: 2px; color: var(--ink);
+  }
+  a { color: var(--accent); text-underline-offset: .2em; }
+  a:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+  /* ---------- table ---------- */
+  .scroller { overflow-x: auto; border: 1px solid var(--line); border-radius: 3px; background: var(--surface); box-shadow: var(--shadow); }
+  table { border-collapse: collapse; width: 100%; min-width: 46rem; font-size: .9rem; }
+  th, td { text-align: left; padding: .7rem .85rem; border-bottom: 1px solid var(--line-soft); vertical-align: top; max-width: none; }
+  thead th {
+    font-family: "IBM Plex Mono", monospace; font-size: .69rem; letter-spacing: .1em;
+    text-transform: uppercase; color: var(--muted); font-weight: 500;
+    background: var(--surface-2); border-bottom: 1px solid var(--line); position: sticky; top: 0;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.n { font-family: "IBM Plex Mono", monospace; color: var(--muted); font-variant-numeric: tabular-nums; width: 2.2rem; }
+  td.name { font-weight: 600; color: var(--ink); white-space: nowrap; }
+  td.days { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--ink); }
+  tbody tr.total td { background: var(--surface-2); font-weight: 600; color: var(--ink); border-top: 1px solid var(--line); }
+
+  .chip {
+    display: inline-block; font-family: "IBM Plex Mono", monospace; font-size: .68rem;
+    letter-spacing: .06em; padding: .18em .5em; border-radius: 2px; white-space: nowrap;
+    border: 1px solid transparent;
+  }
+  .c-mvp { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+  .c-v1  { background: var(--surface-2); color: var(--ink-2); border-color: var(--line); }
+  .c-v2  { background: var(--flag-soft); color: var(--flag); border-color: var(--flag); }
+
+  /* ---------- gates ---------- */
+  .gates { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); }
+  .gate {
+    background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--flag);
+    border-radius: 3px; padding: 1.1rem 1.2rem; display: flex; flex-direction: column; gap: .45rem;
+  }
+  .gate h3 { margin: 0; font-size: .98rem; }
+  .gate p { margin: 0; font-size: .9rem; color: var(--ink-2); max-width: none; }
+  .gate .lead {
+    font-family: "IBM Plex Mono", monospace; font-size: .7rem; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--flag);
+  }
+
+  /* ---------- phases ---------- */
+  .phases { display: flex; flex-direction: column; gap: 0; margin-top: 1rem; }
+  .phase {
+    display: grid; grid-template-columns: 8.5rem 1fr; gap: 1.5rem;
+    padding: 1.4rem 0; border-top: 1px solid var(--line);
+  }
+  .phase:last-child { border-bottom: 1px solid var(--line); }
+  .phase .meta { display: flex; flex-direction: column; gap: .2rem; }
+  .phase .tag { font-family: "IBM Plex Serif", Georgia, serif; font-size: 1.1rem; font-weight: 600; color: var(--ink); }
+  .phase .dur { font-family: "IBM Plex Mono", monospace; font-size: .78rem; color: var(--accent); font-variant-numeric: tabular-nums; }
+  .phase .body p { margin: 0 0 .5rem; font-size: .95rem; color: var(--ink-2); max-width: var(--prose); }
+  .phase .body p:last-child { margin-bottom: 0; }
+  .phase .mods { font-family: "IBM Plex Mono", monospace; font-size: .76rem; color: var(--muted); letter-spacing: .03em; }
+  @media (max-width: 40rem) { .phase { grid-template-columns: 1fr; gap: .5rem; } }
+
+  /* ---------- callout ---------- */
+  .callout {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 3px;
+    padding: 1.3rem 1.4rem; box-shadow: var(--shadow); margin: 1.5rem 0;
+  }
+  .callout p:last-child { margin-bottom: 0; }
+  .callout p { max-width: none; }
+  .callout.accent { border-left: 3px solid var(--accent); }
+
+  .rate { font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums; color: var(--ink); }
+
+  .footnote { font-size: .84rem; color: var(--muted); max-width: var(--prose); }
+  .footnote a { color: var(--muted); }
+
+  hr.rule { border: none; border-top: 1px solid var(--line); margin: 0 0 3rem; }
+
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+
+<div class="wrap">
+
+  <header class="masthead">
+    <div class="eyebrow">Megvalósíthatósági felmérés · 2026. augusztus 25.</div>
+    <h1>CÉGEM.AI — mi kell hozzá, és mennyi idő</h1>
+    <p class="standfirst">A 16 modulos leírás egy komplett termékvíziót ír le, nem egy alkalmazást. Ez az anyag azt bontja szét, hogy mi ebből szoftverfejlesztés, mi engedély és szerződés, és hol van a legrövidebb út egy eladható első verzióhoz.</p>
+  </header>
+
+  <div class="verdicts">
+    <div class="verdict">
+      <div class="q">Meg lehet építeni?</div>
+      <div class="a">Igen, technikailag</div>
+      <p>Nincs benne olyan elem, ami ma ne lenne megoldható. A nehézség nem az AI, hanem az integrációk és a magyar adminisztratív szabályok.</p>
+    </div>
+    <div class="verdict">
+      <div class="q">Mind a 16 modul egyszerre?</div>
+      <div class="a">Nem. Ez hiba lenne</div>
+      <p>A teljes rendszer nagyságrendileg <strong>350–500 fejlesztői nap</strong>. Ez 2 fejlesztővel 9–12 hónap, mielőtt egyetlen fizető ügyfél lenne.</p>
+    </div>
+    <div class="verdict">
+      <div class="q">Nekem mennyi idő?</div>
+      <div class="a">Prototípus: órák</div>
+      <p>Működő, kattintható demó egy munkamenetben. Használható MVP váz néhány munkamenet. Éles, fizetős termék nem egyedül — lásd lentebb.</p>
+    </div>
+  </div>
+
+  <hr class="rule">
+
+  <section>
+    <h2><span class="num">01</span> Mi ez valójában</h2>
+    <p>A leírás négy külön szoftverterméket fog össze: egy <strong>CRM-et</strong> (3, 4, 9), egy <strong>pénzügyi/számlakezelőt</strong> (5, 6, 7, 8), egy <strong>ajánlatkészítőt árlistával</strong> (13, 14), és egy <strong>AI-ügynököt</strong>, ami mindezt vezérli (1, 12, 16). Mindegyikből létezik magyar piaci szereplő. A CÉGEM.AI-ban az újdonság a negyedik réteg — hogy nem menüben kell megkeresni a funkciót.</p>
+    <p>Ez fontos következménnyel jár: <strong>az első háromból amit lehet, ne építs, hanem integrálj.</strong> Számlázást különösen ne. Egy saját számlázóprogramnak meg kell felelnie a 23/2014. (VI. 30.) NGM rendeletnek, adóhatósági ellenőrzési adatszolgáltatással, és tényleg nem éri meg — a Számlázz.hu Számla Agent vagy a Billingo API mögé bújva a NAV-adatszolgáltatás az ő gondjuk marad.</p>
+    <div class="callout accent">
+      <p><strong>Egy technikai nyeremény, amit érdemes kihasználni:</strong> a NAV Online Számla API nem csak beküldésre való. A <code>queryInvoiceDigest</code> hívás <code>INBOUND</code> iránnyal elvileg lekérdezi azokat a számlákat, amiket <em>a te adószámodra</em> állítottak ki. Ha ez a gyakorlatban is működik a cég saját technikai felhasználójával, akkor a 6. modul jelentős része megoldható fotózás nélkül, automatikusan. Ezt érdemes az első héten kipróbálni, mert az egész bejövő-számla ág scope-ját eldönti.</p>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">02</span> Modulonkénti bontás</h2>
+    <p>A napok egy tapasztalt fejlesztő becsült munkanapjai, front-end + back-end + teszt együtt. Az ütem oszlop az általam javasolt sorrend.</p>
+    <div class="scroller">
+      <table>
+        <thead>
+          <tr>
+            <th></th><th>Modul</th><th>Mit igényel valójában</th><th>Nap</th><th>Ütem</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td class="n">—</td><td class="name">Alapplatform</td><td>Multi-tenant adatbázis sorszintű izolációval, belépés, jogosultságok, audit napló, előfizetés-kezelés, üzemeltetés, dizájnrendszer. Nincs a listádon, de nélküle semmi sincs.</td><td class="days">60–90</td><td><span class="chip c-mvp">MVP</span></td></tr>
+          <tr><td class="n">2</td><td class="name">Céges AI</td><td>Cégprofil, sablonok, logó, beállítások. Ez adja a kontextust minden AI-hívásnak. Egyszerű, de mindent érint.</td><td class="days">15–20</td><td><span class="chip c-mvp">MVP</span></td></tr>
+          <tr><td class="n">3</td><td class="name">Partnerek</td><td>Klasszikus adatrögzítés. Érdemes NAV adószám-ellenőrzéssel kiegészíteni, hogy egy adószámból kitöltse a cégadatokat.</td><td class="days">10–15</td><td><span class="chip c-mvp">MVP</span></td></tr>
+          <tr><td class="n">14</td><td class="name">Árlista</td><td>Termék, cikkszám, mértékegység, beszerzés, eladás, áfa, ügyfélár. Unalmas, de a 13. modul enélkül nem működik.</td><td class="days">10–15</td><td><span class="chip c-mvp">MVP</span></td></tr>
+          <tr><td class="n">13</td><td class="name">Ajánlatkészítés</td><td>Természetes nyelvű bemenet → tételes kalkuláció → logózott PDF → kiküldés → utánkövetés. <strong>A legmeggyőzőbb demó a listán</strong>, és nem függ semmilyen külső engedélytől.</td><td class="days">25–35</td><td><span class="chip c-mvp">MVP</span></td></tr>
+          <tr><td class="n">1</td><td class="name">AI-főképernyő</td><td>Szövegesen 8–10 nap. A hangvezérlés külön tétel: magyar beszédfelismerés, zajos környezetben, cégnevekkel és számokkal — ezt tesztelni kell, nem feltételezni.</td><td class="days">15–25</td><td><span class="chip c-mvp">MVP</span></td></tr>
+          <tr><td class="n">6</td><td class="name">Bejövő számlák</td><td>Fotó/PDF → adatkinyerés. LLM-mel a nyers kiolvasás ma jó, a nehéz rész a <strong>megerősítő folyamat</strong> és a partnerhez párosítás. Plusz a NAV-lekérdezés, ha működik.</td><td class="days">20–30</td><td><span class="chip c-mvp">MVP</span></td></tr>
+          <tr><td class="n">11</td><td class="name">Feladatok, határidők</td><td>Belső feladatkezelés + emlékeztetők egyszerű. A külső naptár-szinkron (Google/Microsoft) külön 10–15 nap.</td><td class="days">15–25</td><td><span class="chip c-mvp">MVP</span></td></tr>
+          <tr><td class="n">12</td><td class="name">Vezetői összefoglaló</td><td>Az MVP-ben egy egyszerű reggeli összegzés. A „mi a helyzet a cégemben” akkor lesz jó, ha már van mögötte adat.</td><td class="days">15–20</td><td><span class="chip c-mvp">MVP</span></td></tr>
+          <tr><td class="n">7</td><td class="name">Kimenő számlák</td><td>Számlázó API-integráció + fizetési határidők figyelése + emlékeztető-generálás. Fizetési státusz csak banki adat vagy kézi jelölés alapján pontos.</td><td class="days">20–30</td><td><span class="chip c-v1">V1</span></td></tr>
+          <tr><td class="n">5</td><td class="name">Pénzügyi áttekintő</td><td>Nagyrészt a 6+7 adataiból áll össze. A „mennyivel tartoznak nekünk” akkor hiteles, ha a bank is be van kötve.</td><td class="days">15–25</td><td><span class="chip c-v1">V1</span></td></tr>
+          <tr><td class="n">9</td><td class="name">Partnerközpont</td><td>Nagyrészt megjelenítés a meglévő adatokból. Olcsó modul, nagy érzékelt érték.</td><td class="days">10–15</td><td><span class="chip c-v1">V1</span></td></tr>
+          <tr><td class="n">4</td><td class="name">Partnerelőzmények</td><td>A 9-re ültetett AI-összegzés. Csak akkor van értelme, ha már valós előzmény van a rendszerben.</td><td class="days">8–12</td><td><span class="chip c-v1">V1</span></td></tr>
+          <tr><td class="n">8</td><td class="name">Dokumentumfelismerés</td><td>A 6. modul kiterjesztése minden dokumentumtípusra, típusfelismeréssel és archívummal.</td><td class="days">15–25</td><td><span class="chip c-v1">V1</span></td></tr>
+          <tr><td class="n">15</td><td class="name">Szerződéselemzés</td><td>Technikailag a legkönnyebb AI-funkció a listán. A munka nagyja a jogi keretezés és a felelősségkorlátozás.</td><td class="days">15–20</td><td><span class="chip c-v1">V1</span></td></tr>
+          <tr><td class="n">10</td><td class="name">E-mail-kezelés</td><td>Maga a kód 30–45 nap. De a Gmail-hozzáférés hónapokat is jelenthet engedélyeztetésben — lásd a következő fejezetet. Ezért van a végén.</td><td class="days">30–45</td><td><span class="chip c-v2">V2</span></td></tr>
+          <tr><td class="n">16</td><td class="name">„Csináld meg helyettem”</td><td>Ügynöki működés: feladatgyűjtés, priorizálás, előkészítés, jóváhagyási kapu, visszavonhatóság, teljes naplózás. Csak akkor építhető, ha már minden alatta lévő modul stabil.</td><td class="days">30–50</td><td><span class="chip c-v2">V2</span></td></tr>
+          <tr><td class="n">—</td><td class="name">Megfelelőség</td><td>GDPR-folyamatok, adatkezelési tájékoztató, adatfeldolgozói szerződés, AI Act 50. cikk, biztonsági átvilágítás, adatexport és -törlés.</td><td class="days">20–30</td><td><span class="chip c-mvp">MVP</span></td></tr>
+          <tr class="total"><td class="n"></td><td class="name">Összesen</td><td>+ kb. 20% tesztelés, hibajavítás, felhasználói visszajelzés alapú átalakítás</td><td class="days">350–500</td><td></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="footnote">Magyar fejlesztői napidíjjal (kb. 120–200 e Ft/nap) számolva a teljes rendszer külsős kivitelezésben nagyságrendileg 45–100 M Ft. Az MVP 110–140 nap, azaz kb. 14–28 M Ft. Ezek nagyságrendek árajánlat helyett, nem árak.</p>
+  </section>
+
+  <section>
+    <h2><span class="num">03</span> A négy valódi szűk keresztmetszet</h2>
+    <p>Egyik sem kódolási probléma. Mindegyik naptári időt eszik, és nem lehet több fejlesztővel gyorsítani.</p>
+    <div class="gates">
+      <div class="gate">
+        <div class="lead">Engedélyeztetés · hetek–hónapok</div>
+        <h3>Gmail-hozzáférés (10. modul)</h3>
+        <p>A levelek olvasása „restricted scope” a Google-nél. Márkaellenőrzés, majd CASA biztonsági átvilágítás egy Google által elfogadott auditorral, <strong>évente megismételve</strong>. Több hét, több ezer dollár, és a folyamat közben a terméknek már működnie kell. A Microsoft 365 oldal ennél lényegesen egyszerűbb.</p>
+      </div>
+      <div class="gate">
+        <div class="lead">Regisztráció · 1–3 hét</div>
+        <h3>NAV technikai felhasználó</h3>
+        <p>Nem ügyfélkapu: külön regisztráció, aláírókulcs és cserekulcs, SHA-512 aláírás, 5 percig élő token. A v3-as séma évente változik, azaz állandó karbantartási tétel. Ügyfelenként külön technikai felhasználó kell — ezt a beléptetési folyamatba is bele kell tervezni.</p>
+      </div>
+      <div class="gate">
+        <div class="lead">Szerződés · 1–3 hónap</div>
+        <h3>Banki adatok (5. és 7. modul)</h3>
+        <p>A „ki tartozik nekünk” csak akkor pontos, ha látod a beérkezett utalásokat. PSD2 alatt ehhez AISP-engedély kell, vagy egy licencelt aggregátor (GoCardless, Salt Edge, Tink). A magyar bankok többsége elérhető, de ez szerződés és havidíj, nem <code>npm install</code>.</p>
+      </div>
+      <div class="gate">
+        <div class="lead">Mérés · 1–2 hét</div>
+        <h3>Magyar hang és számlaolvasás</h3>
+        <p>A hangvezérlés a demó lelke, de a magyar beszédfelismerés cégnevekkel, összegekkel, zajos építkezésen nem magától értetődő. Ugyanígy: a magyar számlaformátumok kiolvasási pontosságát <strong>meg kell mérni 50–100 valódi számlán</strong>, mielőtt bármit ígérünk. Ez a legolcsóbb kockázatcsökkentés az egész projektben.</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">04</span> Javasolt ütemezés</h2>
+    <div class="phases">
+      <div class="phase">
+        <div class="meta"><span class="tag">0. Spike</span><span class="dur">1–2 hét</span></div>
+        <div class="body">
+          <p>Három kérdés eldöntése kód írása előtt: működik-e a NAV bejövő-számla lekérdezés; mennyire pontos a magyar számlaolvasás valódi számlákon; használható-e a magyar hangfelismerés a te célközönséged körülményei között.</p>
+          <p class="mods">Kimenet: eldől, mekkora az MVP</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="meta"><span class="tag">1. MVP</span><span class="dur">3–4 hónap</span></div>
+        <div class="body">
+          <p>Az „ajánlatgyár”: cégprofil, partnerek, árlista, természetes nyelvű ajánlatkészítés logózott PDF-fel, bejövő számla fotózása, feladatok és határidők, reggeli összefoglaló. Szövegvezérlés biztosan, hang ha a spike zöld.</p>
+          <p>Ez már önmagában eladható egy térkövezőnek, villanyszerelőnek, kivitelezőnek — és <strong>nem függ egyetlen külső engedélytől sem</strong>.</p>
+          <p class="mods">Modulok: 1 · 2 · 3 · 6 · 11 · 12 · 13 · 14</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="meta"><span class="tag">2. V1</span><span class="dur">+4–5 hónap</span></div>
+        <div class="body">
+          <p>A pénzügyi kör bezárása: számlázó-integráció, kintlévőségek, fizetési emlékeztetők, partnerközpont az előzményekkel, dokumentum- és szerződéselemzés. Ekkor kezdődik párhuzamosan a banki aggregátorral és a Google-lel az engedélyeztetés.</p>
+          <p class="mods">Modulok: 4 · 5 · 7 · 8 · 9 · 15</p>
+        </div>
+      </div>
+      <div class="phase">
+        <div class="meta"><span class="tag">3. V2</span><span class="dur">+3–4 hónap</span></div>
+        <div class="body">
+          <p>E-mail-integráció és a „Csináld meg helyettem” üzemmód. Ez utóbbi az egész termék megkülönböztető funkciója, de csak akkor lesz megbízható, ha minden alatta lévő modul már éles adaton bizonyított.</p>
+          <p class="mods">Modulok: 10 · 16 · banki adatkapcsolat</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="num">05</span> Technológiai javaslat</h2>
+    <ul>
+      <li><strong>Adatbázis:</strong> PostgreSQL sorszintű biztonsággal (Supabase), EU-s régióban. A cégenkénti elkülönítés (2. modul) így az adatbázis szintjén garantált, nem alkalmazáslogikában.</li>
+      <li><strong>Alkalmazás:</strong> Next.js / TypeScript, egy kódbázis webre és mobilra telepíthető formában. A hangrögzítés miatt PWA vagy vékony natív burok.</li>
+      <li><strong>AI-réteg:</strong> Claude eszközhívással. A modulok mindegyike egy-egy jól definiált eszköz, az asszisztens ezeket hívja. Ez teszi a 16. modult egyáltalán megvalósíthatóvá — nem külön AI, hanem ugyanaz az eszközkészlet hosszabb láncban.</li>
+      <li><strong>Számlázás:</strong> Számlázz.hu Számla Agent vagy Billingo API. Saját NAV-beküldést csak akkor, ha később saját számlázómotor lesz.</li>
+      <li><strong>Dokumentumkiolvasás:</strong> elsődlegesen látásalapú LLM strukturált kimenettel; tartalék OCR a rossz minőségű fotókra.</li>
+      <li><strong>PDF:</strong> HTML-sablon fejléces nyomtatássá alakítva — így a cég arculata sablonszerkeszthető marad.</li>
+    </ul>
+    <h3>Két architekturális döntés, amit az elején kell meghozni</h3>
+    <ul>
+      <li><strong>Minden AI-művelet naplózott és visszajátszható legyen.</strong> Mit látott, mit javasolt, mit hagyott jóvá a felhasználó, mikor. Enélkül egy rossz ajánlatnál vagy hibás számlapárosításnál nem tudod megvédeni a terméket — és az AI Act átláthatósági követelményeit sem tudod teljesíteni.</li>
+      <li><strong>A jóváhagyási kapu legyen az adatmodell része, ne a felületé.</strong> Minden külső hatású művelet (levélküldés, ajánlat kiküldése, felszólítás) egy „javasolt → jóváhagyott → végrehajtott” állapotgépen menjen át. A 16. modul biztonsági alapelvét így kényszeríti ki a rendszer, nem a jó szándék.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2><span class="num">06</span> Jogi és megfelelőségi keret</h2>
+    <ul>
+      <li><strong>AI Act 50. cikk — már hatályos.</strong> 2026. augusztus 2-tól a felhasználót a felületen egyértelműen tájékoztatni kell, hogy AI-val beszél, és az AI által generált tartalmat gépi olvasásra alkalmas módon meg kell jelölni. A magas kockázatú kötelezettségeket a Digital Omnibus 2027 decemberéig kitolta, de egy vállalkozói asszisztens nem is tartozik oda. Ez tehát nem blokkoló, csak kötelező háttérmunka.</li>
+      <li><strong>GDPR.</strong> Az ügyfeleid partneradatai felett te adatfeldolgozó vagy: kell adatfeldolgozói szerződés, alvállalkozói lista (benne az AI-szolgáltató), EU-s tárolás, törlési és exportálási funkció. Az AI-szolgáltatóval kötött szerződésben rögzíteni kell, hogy az adatokat nem használják tanításra.</li>
+      <li><strong>Számlázás.</strong> Amíg integrálsz, nem vagy számlázóprogram. Ha saját kibocsátást építesz, jogszabályi megfelelés és NAV-bejelentés kell.</li>
+      <li><strong>Szerződéselemzés (15. modul).</strong> A jogi tanácsadás Magyarországon szabályozott tevékenység. A megfogalmazás legyen következetesen „kivonat és figyelemfelhívás”, nem „elemzés” vagy „vélemény”, és a felelősségkorlátozás jelenjen meg magán a funkción, ne csak az ÁSZF-ben.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2><span class="num">07</span> Mennyi idő nekem</h2>
+    <p>Külön kell választani a kódolást attól, ami nem kódolás.</p>
+    <div class="callout">
+      <p><strong>Kattintható prototípus — egy munkamenet.</strong> Magyar felület, valódi AI-parancssáv, kitalált mintacéggel és partnerekkel, működő ajánlatgenerálással és PDF-fel. Ez arra jó, hogy lásd és megmutasd. Nem tárol semmit tartósan.</p>
+      <p><strong>Éles adatbázisra épülő MVP-váz — néhány munkamenet, gyakorlatban 1–2 hét oda-vissza veled.</strong> Valódi belépés, cégenkénti elkülönítés, partner- és árlistakezelés, ajánlatkészítés, számlafotó-kiolvasás, feladatok. Ez már telepíthető és tesztelhető éles ügyféllel.</p>
+      <p><strong>Fizetős, éles termék — ide már nem elég egy AI-munkamenet.</strong> Nem a kód miatt, hanem mert kell mögé egy felelős ember vagy csapat: biztonsági átvizsgálás, üzemeltetés, ügyfélszolgálat, és az integrációs fiókok (NAV, Google, bank, számlázó) a te nevedre szólnak, a te cégadataiddal. Ezeket nem tudom helyetted elintézni.</p>
+    </div>
+    <p>Röviden: a kódot gyorsan írom, a naptári időt viszont nem én határozom meg, hanem az engedélyek és a valódi ügyfelekkel végzett tesztelés.</p>
+  </section>
+
+  <section>
+    <h2><span class="num">08</span> Amit érdemes átgondolni, mielőtt bármi épül</h2>
+    <ul>
+      <li><strong>Egy szakma, ne „a vállalkozók”.</strong> A saját példád — 800 m² térkövezés — élesebb termék, mint az általános asszisztens. Egy kivitelezőnek szóló, az ő anyagaival és normáival feltöltött ajánlatgyár azonnal érthető és azonnal eladható. Az általánosítás ráér.</li>
+      <li><strong>Üzemeltetési költség felhasználónként.</strong> Aktív használat mellett az AI-hívások, a beszédfelismerés és a dokumentumkiolvasás együtt reálisan 2–6 e Ft/hó/felhasználó. Ez alá árazni nem lehet: a fenntartható előfizetés nagyságrendileg 10–20 e Ft/hó/felhasználó, és ezt a kalkulációt az árazás előtt kell elvégezni, nem után.</li>
+      <li><strong>Mit ígér a hangvezérlés.</strong> Ha az első benyomás a hang, akkor a hangnak kell a legjobban működnie. Ha a spike azt mutatja, hogy magyarul zajban gyenge, akkor a szöveges parancssáv legyen a fő út, a hang pedig kényelmi kiegészítő. Ezt előre eldönteni sokkal olcsóbb, mint utólag.</li>
+      <li><strong>Bizalom mint funkció.</strong> A célközönség adóügyekben hibázni nem szeret. Minden kiolvasott adat mellett látszódjon, honnan jött, és legyen egy kattintással javítható. A „biztos vagyok benne / ellenőrizd” megkülönböztetés önmagában termékelőny.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2><span class="num">09</span> Következő lépés</h2>
+    <p>Két különböző úton lehet továbbmenni, és nem mindegy, melyiket választod:</p>
+    <ul>
+      <li><strong>Ha fejlesztőktől akarsz árajánlatot kérni</strong> — akkor a fejlesztői specifikáció a következő lépés, ahogy írtad: címlap, tartalomjegyzék, modulonkénti követelmények, adatmodell, képernyőtervek, MVP-fejezet, elfogadási kritériumok. Word és PDF formában. Ezt meg tudom csinálni.</li>
+      <li><strong>Ha viszont azt akarod látni, hogy működik-e</strong> — akkor a specifikáció helyett előbb a prototípus a hasznosabb. Egy működő ajánlatgyárral a kezedben lényegesen jobb specifikációt írsz, és lényegesen jobb árajánlatot is kapsz, mert a fejlesztő már látja, mit kell megépíteni.</li>
+    </ul>
+    <p>A tapasztalat az, hogy a második út olcsóbb: a specifikáció, amit a prototípus után írsz, kevesebb félreértést tartalmaz, és a fejlesztők is szűkebb sávban áraznak, ha van mit megnézniük.</p>
+  </section>
+
+  <p class="footnote">
+    Az itt szereplő nap- és költségbecslések nagyságrendi tájékoztatásra szolgálnak, nem árajánlatok. A hivatkozott szabályozási követelmények 2026. augusztusi állapotot tükröznek, és a NAV séma, a Google-hitelesítési folyamat és az AI Act végrehajtási szabályai egyaránt változhatnak. A jogi megfelelőség kérdéseiben ügyvédi és könyvelői egyeztetés szükséges.
+  </p>
+
+</div>
