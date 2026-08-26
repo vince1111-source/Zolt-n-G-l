@@ -23,6 +23,18 @@ Ami már készen van, és amit **nem kell újra elvégezni**: piackutatás, jogi
 
 ---
 
+## 0.1 Irányváltás — 2026. augusztus 26.
+
+Négy új kikötés érkezett, ami több fejezetet felülír: **építőipari dolgozók a
+felhasználók**, **webapp kell** (telepíthető PWA, nem natív alkalmazás),
+**amit be lehet kötni, azt bekötjük**, és **az AI felhasználónkénti költsége
+maradjon alacsony**. A következményeket — telefon-első felület, lépcsős
+AI-réteg, bekötendő vs. saját képességek, kisebb MVP — a
+[`docs/iranyvaltas.md`](docs/iranyvaltas.md) írja le. Ahol az alábbi fejezetek
+ettől eltérnek, az irányváltás a mérvadó.
+
+---
+
 ## 1. Mi ez a projekt
 
 Magyar nyelvű AI vállalkozói asszisztens kis- és középvállalkozásoknak. Központi működési elv:

@@ -1,0 +1,86 @@
+{
+  "leiras": "Valósághű magyar parancsok építőipari kisvállalkozótól, ahogy telefonba mondja. A mérés ezen fut. Az elvart_adatok csak azokat a mezőket sorolja, amik nélkül a művelet nem indítható el.",
+  "mondatok": [
+    { "szoveg": "Mi a helyzet a cégemben?", "szandek": "osszefoglalo", "adatok": {} },
+    { "szoveg": "Hogy állunk?", "szandek": "osszefoglalo", "adatok": {} },
+    { "szoveg": "Mondd el mi van ma", "szandek": "teendo", "adatok": {} },
+    { "szoveg": "Foglald össze hogy áll a cég", "szandek": "osszefoglalo", "adatok": {} },
+    { "szoveg": "Na mesélj, mi újság a boltban", "szandek": "osszefoglalo", "adatok": {} },
+
+    { "szoveg": "Készíts ajánlatot a Kovács Kft-nek 800 négyzetméter térkövezésre", "szandek": "ajanlat", "adatok": { "partner": "kovacs", "mennyiseg": "800" } },
+    { "szoveg": "Csinálj egy árajánlatot Szabóéknak százhúsz négyzetre", "szandek": "ajanlat", "adatok": { "partner": "szabo", "mennyiseg": "120" } },
+    { "szoveg": "Kéne egy ajánlat a Zöld Kertnek kilencven méter járdára", "szandek": "ajanlat", "adatok": { "partner": "zold", "mennyiseg": "90" } },
+    { "szoveg": "Hát figyelj, a Kovácséknak kellene egy ajánlat úgy nyolcszáz négyzetre antik térkővel", "szandek": "ajanlat", "adatok": { "partner": "kovacs", "mennyiseg": "800" } },
+    { "szoveg": "Írj ajánlatot a Nagy családnak 45 nm-re", "szandek": "ajanlat", "adatok": { "partner": "nagy", "mennyiseg": "45" } },
+    { "szoveg": "Ajánlat kell Szabó Ingatlannak, mintás kötés, 640 négyzet", "szandek": "ajanlat", "adatok": { "partner": "szabo", "mennyiseg": "640" } },
+    { "szoveg": "Adj árat a Kovács Építőnek kétszáz négyzetméterre", "szandek": "ajanlat", "adatok": { "partner": "kovacs", "mennyiseg": "200" } },
+    { "szoveg": "Kalkulálj egy ajánlatot 300 m2 térkőre a Nagyéknak", "szandek": "ajanlat", "adatok": { "partner": "nagy", "mennyiseg": "300" } },
+
+    { "szoveg": "Mutasd a lejárt számláimat", "szandek": "lejart", "adatok": {} },
+    { "szoveg": "Ki tartozik nekem?", "szandek": "lejart", "adatok": {} },
+    { "szoveg": "Mennyi a kintlévőségem?", "szandek": "lejart", "adatok": {} },
+    { "szoveg": "Kik nem fizettek még?", "szandek": "lejart", "adatok": {} },
+    { "szoveg": "Van valami hátralék?", "szandek": "lejart", "adatok": {} },
+    { "szoveg": "Mennyi pénz áll kint nálam?", "szandek": "lejart", "adatok": {} },
+
+    { "szoveg": "Mennyit kell kifizetnünk ezen a héten?", "szandek": "fizetendo", "adatok": {} },
+    { "szoveg": "Mit kell utalni?", "szandek": "fizetendo", "adatok": {} },
+    { "szoveg": "Mennyi bejövő számlám van?", "szandek": "fizetendo", "adatok": {} },
+    { "szoveg": "Kinek tartozom?", "szandek": "fizetendo", "adatok": {} },
+
+    { "szoveg": "Mi a mai teendőm?", "szandek": "teendo", "adatok": {} },
+    { "szoveg": "Mi a dolgom ma?", "szandek": "teendo", "adatok": {} },
+    { "szoveg": "Mi van a mai napirenden?", "szandek": "teendo", "adatok": {} },
+    { "szoveg": "Mit kell ma megcsinálnom?", "szandek": "teendo", "adatok": {} },
+
+    { "szoveg": "Jövő kedden emlékeztess, hogy hívjam fel a Kovács Kft-t", "szandek": "feladat", "adatok": { "hatarido": "jovo kedd" } },
+    { "szoveg": "Írd fel hogy holnap reggel hívjam vissza a Nagy családot", "szandek": "feladat", "adatok": { "hatarido": "holnap" } },
+    { "szoveg": "Jegyezd fel hogy pénteken ki kell mennem a Szabó telekre", "szandek": "feladat", "adatok": { "hatarido": "penteken" } },
+    { "szoveg": "Emlékeztess jövő héten a BauMax rendelésre", "szandek": "feladat", "adatok": { "hatarido": "jovo het" } },
+    { "szoveg": "Vegyél fel egy feladatot: kedden anyagot rendelni", "szandek": "feladat", "adatok": { "hatarido": "kedden" } },
+    { "szoveg": "Ne hagyd hogy elfelejtsem holnap a betonrendelést", "szandek": "feladat", "adatok": { "hatarido": "holnap" } },
+    { "szoveg": "Állíts be egy emlékeztetőt hétfőre a mérésre", "szandek": "feladat", "adatok": { "hatarido": "hetfore" } },
+    { "szoveg": "Rögzíts egy teendőt, csütörtökön számlázni kell", "szandek": "feladat", "adatok": { "hatarido": "csutortokon" } },
+
+    { "szoveg": "Küldj fizetési felszólítást a Zöld Kertnek", "szandek": "felszolitas", "adatok": { "partner": "zold" } },
+    { "szoveg": "Írj egy emlékeztetőt a Kovácsnak hogy fizessen", "szandek": "felszolitas", "adatok": { "partner": "kovacs" } },
+    { "szoveg": "Szólj rá a Nagyékra a számla miatt", "szandek": "felszolitas", "adatok": { "partner": "nagy" } },
+
+    { "szoveg": "Mutasd a Kovács Építő Kft-t", "szandek": "partner", "adatok": { "partner": "kovacs" } },
+    { "szoveg": "Mi a helyzet a Szabó Ingatlan Zrt-vel?", "szandek": "partner", "adatok": { "partner": "szabo" } },
+    { "szoveg": "Nyisd meg a Zöld Kert adatlapját", "szandek": "partner", "adatok": { "partner": "zold" } },
+    { "szoveg": "Hogy állunk a BauMax-szal?", "szandek": "partner", "adatok": { "partner": "baumax" } },
+    { "szoveg": "Nézzük a Nagy családot", "szandek": "partner", "adatok": { "partner": "nagy" } },
+    { "szoveg": "Mennyivel tartozik a Kovács?", "szandek": "partner", "adatok": { "partner": "kovacs" } },
+
+    { "szoveg": "Mennyibe kerül a szürke térkő négyzetmétere?", "szandek": "arlista", "adatok": {} },
+    { "szoveg": "Mi az ára a szegélykőnek?", "szandek": "arlista", "adatok": {} },
+    { "szoveg": "Mutasd az árlistát", "szandek": "arlista", "adatok": {} },
+    { "szoveg": "Mennyiért adom a lerakást?", "szandek": "arlista", "adatok": {} },
+    { "szoveg": "Mi a listaár az antik térkőre?", "szandek": "arlista", "adatok": {} },
+
+    { "szoveg": "Mi a lényeg a szerződésben?", "szandek": "szerzodes", "adatok": {} },
+    { "szoveg": "Van benne kötbér?", "szandek": "szerzodes", "adatok": {} },
+    { "szoveg": "Nézd át ezt a dokumentumot", "szandek": "szerzodes", "adatok": {} },
+
+    { "szoveg": "Intézd el a mai sürgős dolgaimat", "szandek": "agent", "adatok": {} },
+    { "szoveg": "Csináld meg helyettem", "szandek": "agent", "adatok": {} },
+    { "szoveg": "Vegyük sorra a mai ügyeket", "szandek": "agent", "adatok": {} },
+    { "szoveg": "Intézz el mindent amit lehet", "szandek": "agent", "adatok": {} },
+
+    { "szoveg": "Fotózok egy számlát", "szandek": "szamla_rogzites", "adatok": {} },
+    { "szoveg": "Töltsd fel ezt a bejövő számlát", "szandek": "szamla_rogzites", "adatok": {} },
+    { "szoveg": "Itt van egy szállítói számla, rögzítsd", "szandek": "szamla_rogzites", "adatok": {} },
+    { "szoveg": "Beolvasnád ezt a papírt?", "szandek": "szamla_rogzites", "adatok": {} },
+
+    { "szoveg": "Mennyi anyag kell 250 négyzetméterhez?", "szandek": "anyagszukseglet", "adatok": { "mennyiseg": "250" } },
+    { "szoveg": "Számold ki mennyi zúzottkő kell 80 négyzetre", "szandek": "anyagszukseglet", "adatok": { "mennyiseg": "80" } },
+    { "szoveg": "Hány raklap térkő kell 400 nm-re?", "szandek": "anyagszukseglet", "adatok": { "mennyiseg": "400" } },
+
+    { "szoveg": "Hol van a Szabó telek?", "szandek": "ismeretlen", "adatok": {} },
+    { "szoveg": "Milyen idő lesz holnap?", "szandek": "ismeretlen", "adatok": {} },
+    { "szoveg": "Rendelj be két köbméter homokot a BauMaxtól", "szandek": "ismeretlen", "adatok": {} },
+    { "szoveg": "Számold ki a bérét a Jóskának", "szandek": "ismeretlen", "adatok": {} },
+    { "szoveg": "Köszi, szia", "szandek": "ismeretlen", "adatok": {} }
+  ]
+}

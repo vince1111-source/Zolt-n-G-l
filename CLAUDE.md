@@ -33,6 +33,7 @@ adat és a hozzáférés — ezt Vince tudja megadni, nem az AI:
 | 1 | Működik-e a NAV `queryInvoiceDigest` INBOUND lekérdezés? | `spike/nav/` | NAV technikai felhasználó regisztrációjára |
 | 2 | Mennyire pontos a magyar számlaolvasás? | `spike/szamlaolvasas/` | 50–100 valódi számlára + API kulcsra |
 | 3 | Használható-e a magyar hangfelismerés valós zajban? | `spike/hang/` | 20 perc mérésre Chrome-ban |
+| 4 | Mennyibe kerül havonta a parancsfelismerés? | `spike/parancs/` | a 0. réteg mérve, az 1. réteghez API kulcs kell |
 
 A 2. spike fő mérőszáma nem a nyers pontosság, hanem a **csendes hiba**: rossz érték,
 amit a modell nem jelölt be. A 3. spike fő mérőszáma nem a WER, hanem a
@@ -44,11 +45,46 @@ Ne kezdj MVP-fejlesztésbe, amíg ezek nyitottak — a válaszuk megváltoztatja
 
 ## Tervezett stack
 
-Next.js / TypeScript · Supabase (PostgreSQL + RLS, EU-s régió) · Claude eszközhívással · HTML→PDF a dokumentumokhoz · Számlázz.hu vagy Billingo API.
+Next.js / TypeScript **telepíthető PWA-ként** (webapp, nem natív alkalmazás) ·
+Supabase (PostgreSQL + RLS, EU-s régió) · **lépcsős AI-réteg** · HTML→PDF a
+dokumentumokhoz · Számlázz.hu vagy Billingo API · beszédfelismerés bekötve
+(böngésző + felhőszolgáltató tartalék).
+
+## Célfelhasználó: helyszínen dolgozó, nem irodában
+
+Telefon, egy kéz, napfény, por, kesztyű, gyenge térerő, zaj. Ebből:
+**telefon-első felület**, min. 48 px célfelületek, erős kontraszt, nyomva-tartós
+mikrofon (nem folyamatos figyelés), offline váz. Az asztali nézet a származtatott.
+
+## Költségszabály — a lépcsős AI
+
+A felhasználónkénti AI-költséget nem a modellválasztás dönti el, hanem a hívások
+száma. Három réteg, ebben a sorrendben:
+
+```
+0. réteg  determinisztikus mintaillesztés   0 Ft, azonnali, offline is
+1. réteg  olcsó modell, zárt sémával        csak amit a 0. nem kezelt
+2. réteg  erős modell                       csak nyílt feladatra
+```
+
+- Új parancsot **először a 0. rétegbe** vegyél fel (`spike/parancs/reteg0.mjs`),
+  és csak akkor hagyd modellre, ha a megfogalmazás tényleg változatos.
+- Bizonytalanság esetén a 0. réteg **továbbad**, nem találgat.
+- **A modell megért, nem számol.** Az árkalkuláció determinisztikus kód.
+- A napi összefoglaló naponta egyszer generálódik és tárolódik.
+- A beszélgetéshossznak legyen kontextus-plafonja.
+
+## Amit bekötünk, nem megírunk
+
+Számlázás, beszédfelismerés, belépés/tárolás (Supabase), naptár (V1), bank (V2).
+**Saját marad:** az AI-réteg, a jóváhagyási kapu és az AI napló, az árréses
+árlista, és a helyszíni felület. A részletes indoklás: `docs/iranyvaltas.md`.
 
 ## MVP scope
 
-Modulok: **1, 2, 3, 6, 11, 12, 13, 14.** A mag a 13+14 (ajánlatkészítés + árlista). A 10. (e-mail) és 16. (ügynök) modul V2 — ne kezdd el korábban.
+Modulok: **1, 2, 3, 11, 12, 13, 14** — és **6 feltételesen** (csak ha az 1. spike
+zöld; különben V1). A mag a 13+14 (ajánlatkészítés + árlista). A 10. (e-mail) és
+16. (ügynök) modul V2 — ne kezdd el korábban.
 
 ## Mappaszerkezet
 
@@ -58,12 +94,14 @@ CLAUDE.md                         ez a fájl
 docs/megvalosithatosagi-terv.html megnyitható felmérés (nap- és költségbecslések)
 docs/screenshots/                 a prototípus képernyőképei
 docs/parancsok.md                 a prototípus felismert parancsai
+docs/iranyvaltas.md               a 2026-08-26-i irányváltás és indoklása
 prototype/CEGEM-AI-prototipus.html  önálló HTML, nincs build
 prototype/artifact-body.html      ugyanaz Artifact-publikáláshoz (burok nélkül)
 spike/                            0. fázis mérőeszközei — lásd spike/README.md
   nav/                            NAV bejövő számla lekérdezés (1. kérdés)
   szamlaolvasas/                  kiolvasási pontosság mérése (2. kérdés)
   hang/                           magyar hangfelismerés mérése (3. kérdés)
+  parancs/                        lépcsős parancsfelismerés költsége (4. kérdés)
   eredmenyek/                     ide kerülnek a riportok és a döntési lap
 ```
 

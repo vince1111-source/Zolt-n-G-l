@@ -10,6 +10,7 @@ elintézni helyetted.
 | 1 | Lekérdezhetők-e a bejövő számlák a NAV-tól? | [`nav/`](nav/) | NAV technikai felhasználó | 1–3 hét (regisztráció) |
 | 2 | Milyen pontos a magyar számlaolvasás? | [`szamlaolvasas/`](szamlaolvasas/) | 50–100 valódi számla + Anthropic API kulcs | 1–2 nap |
 | 3 | Használható-e a magyar hangfelismerés? | [`hang/`](hang/) | Chrome, mikrofon, 20 perc | fél nap |
+| 4 | Mennyibe kerül havonta a parancsfelismerés? | [`parancs/`](parancs/) | a 0. réteg már mérve; az 1. réteghez API kulcs | kész / 1 óra |
 
 **Kezdd az 1-essel**, mert annak a regisztrációs átfutása a leghosszabb — indítsd
 el ma, és amíg fut, csináld meg a 2-est és a 3-ast.
@@ -22,6 +23,9 @@ npm install                    # csak a 2. spike-hoz kell (@anthropic-ai/sdk)
 
 # 3. spike — ehhez semmi nem kell, most azonnal csinálható
 google-chrome hang/hang-teszt.html
+
+# 4. spike — a 0. réteg mérése API kulcs nélkül is lefut
+node parancs/merd.mjs
 
 # 1. spike
 cp nav/pelda.env .env && $EDITOR .env
