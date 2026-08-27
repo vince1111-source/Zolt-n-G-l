@@ -95,8 +95,10 @@ docs/megvalosithatosagi-terv.html megnyitható felmérés (nap- és költségbec
 docs/screenshots/                 a prototípus képernyőképei
 docs/parancsok.md                 a prototípus felismert parancsai
 docs/iranyvaltas.md               a 2026-08-26-i irányváltás és indoklása
-prototype/CEGEM-AI-prototipus.html  önálló HTML, nincs build
+prototype/CEGEM-AI-prototipus.html  asztali prototípus — önálló HTML, nincs build
 prototype/artifact-body.html      ugyanaz Artifact-publikáláshoz (burok nélkül)
+prototype/CEGEM-AI-telefon.html   telefon-első prototípus (az irányváltás után ez a fő irány)
+prototype/telefon-artifact-body.html  ugyanaz Artifact-publikáláshoz
 spike/                            0. fázis mérőeszközei — lásd spike/README.md
   nav/                            NAV bejövő számla lekérdezés (1. kérdés)
   szamlaolvasas/                  kiolvasási pontosság mérése (2. kérdés)
@@ -108,6 +110,20 @@ spike/                            0. fázis mérőeszközei — lásd spike/READ
 A `spike/` nem termékkód, és nem is válik azzá: egyszeri méréshez készült.
 Valódi ügyféladat (számla, NAV-válasz, hangfelvétel, `.env`) nem kerülhet a repóba —
 a `spike/.gitignore` ezt kizárja.
+
+## A két prototípus
+
+- **`prototype/CEGEM-AI-telefon.html`** — a **fő irány** az irányváltás óta.
+  Telefon-első: nyomva tartós mikrofon, 56 px célfelületek, napfény üzemmód,
+  teljes képernyős jóváhagyó lapok (egy képernyő = egy döntés). A 0. réteg
+  felismerője beépítve, és a válasz alatt látszik, melyik réteg felelt.
+- **`prototype/CEGEM-AI-prototipus.html`** — az asztali változat. Mind a 16
+  modult mutatja, ezért bemutatóra továbbra is hasznos; a fejlesztés iránya
+  viszont már nem ez.
+
+Mindkettő ugyanazt az árlistát és ugyanazt a végösszeget adja ugyanarra a
+parancsra (800 m² Kovács Építő Kft. → 12 485 922 Ft bruttó) — ha az egyiket
+módosítod, a másikat is igazítsd, különben a demó két különböző számot mond.
 
 ## A prototípus módosítása
 

@@ -1,0 +1,958 @@
+<!doctype html>
+<html lang="hu">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<title>CÉGEM.AI helyszíni nézet</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+
+<style>
+/* ============================================================================
+   CÉGEM.AI — telefon-első prototípus
+   Helyszínen dolgozó kivitelezőnek: egy kéz, kesztyű, napfény, zaj.
+   Nincs build, nincs függőség. Semmi nem kerül kiküldésre, semmi nem tárolódik.
+   ========================================================================== */
+
+:root{
+  /* Alap: tiszta fehér. Nem dizájndöntés, hanem olvashatóság tűző napon. */
+  --ground:#ffffff;
+  --surface:#ffffff;
+  --surface-2:#f2f0e9;
+  --surface-3:#faf9f5;
+  --line:#d3cfc2;
+  --line-soft:#e6e3d9;
+  --ink:#14130f;
+  --ink-2:#4a463c;
+  --muted:#6f6b5f;
+  --accent:#7a5c00;
+  --accent-ink:#ffffff;
+  --accent-soft:#f7edcf;
+  --kritikus:#a32b17;
+  --kritikus-soft:#fbe6e1;
+  --rendben:#1f6b3f;
+  --rendben-soft:#dff0e6;
+  --figyelem:#8a5a00;
+  --figyelem-soft:#f9edd6;
+  --arnyek:0 1px 2px rgba(20,19,15,.06), 0 8px 22px rgba(20,19,15,.07);
+  --dokk-arnyek:0 -2px 16px rgba(20,19,15,.10);
+  --r:10px;
+  --cel:56px;             /* legkisebb célfelület — kesztyűre méretezve */
+}
+
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ground:#101014;
+    --surface:#1a1a1f;
+    --surface-2:#232329;
+    --surface-3:#16161b;
+    --line:#33333c;
+    --line-soft:#26262e;
+    --ink:#f1f0ea;
+    --ink-2:#bcb9ae;
+    --muted:#8b887e;
+    --accent:#e2b850;
+    --accent-ink:#191500;
+    --accent-soft:#2c2409;
+    --kritikus:#f08a72;
+    --kritikus-soft:#331914;
+    --rendben:#79c99a;
+    --rendben-soft:#152b1f;
+    --figyelem:#e0b45f;
+    --figyelem-soft:#2e2512;
+    --arnyek:0 1px 2px rgba(0,0,0,.5), 0 8px 22px rgba(0,0,0,.35);
+    --dokk-arnyek:0 -2px 18px rgba(0,0,0,.5);
+  }
+}
+:root[data-theme="dark"]{
+  --ground:#101014;
+  --surface:#1a1a1f;
+  --surface-2:#232329;
+  --surface-3:#16161b;
+  --line:#33333c;
+  --line-soft:#26262e;
+  --ink:#f1f0ea;
+  --ink-2:#bcb9ae;
+  --muted:#8b887e;
+  --accent:#e2b850;
+  --accent-ink:#191500;
+  --accent-soft:#2c2409;
+  --kritikus:#f08a72;
+  --kritikus-soft:#331914;
+  --rendben:#79c99a;
+  --rendben-soft:#152b1f;
+  --figyelem:#e0b45f;
+  --figyelem-soft:#2e2512;
+  --arnyek:0 1px 2px rgba(0,0,0,.5), 0 8px 22px rgba(0,0,0,.35);
+  --dokk-arnyek:0 -2px 18px rgba(0,0,0,.5);
+}
+
+/* Napfény üzemmód: nem téma, hanem olvashatósági kapcsoló.
+   Tiszta fekete-fehér, vastagabb betű, erősebb keret. */
+:root[data-napfeny="1"]{
+  --ground:#ffffff; --surface:#ffffff; --surface-2:#ffffff; --surface-3:#ffffff;
+  --line:#14130f; --line-soft:#8d8a80;
+  --ink:#000000; --ink-2:#14130f; --muted:#2e2c26;
+  --accent:#4a3700; --accent-soft:#ffffff;
+  --kritikus:#8c1d0a; --kritikus-soft:#ffffff;
+  --rendben:#0f4d2a; --rendben-soft:#ffffff;
+  --figyelem:#5c3b00; --figyelem-soft:#ffffff;
+  --arnyek:none;
+}
+:root[data-napfeny="1"] .kartya,
+:root[data-napfeny="1"] .sor,
+:root[data-napfeny="1"] .chip{border-width:2px}
+:root[data-napfeny="1"] body{font-weight:500}
+
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  margin:0; background:var(--ground); color:var(--ink);
+  font-family:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:17px; line-height:1.5; -webkit-font-smoothing:antialiased;
+  overscroll-behavior-y:none;
+}
+.mono{font-family:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace}
+
+/* ---------- app-váz ---------- */
+.app{
+  max-width:460px; margin:0 auto; min-height:100dvh;
+  display:grid; grid-template-rows:auto 1fr auto;
+  /* minmax(0,1fr): enélkül a nem törhető tartalom (chipsáv) szétfeszíti a rácsot */
+  grid-template-columns:minmax(0,1fr);
+  background:var(--ground);
+  border-left:1px solid var(--line-soft); border-right:1px solid var(--line-soft);
+}
+.app > *{min-width:0}
+@media (max-width:460px){ .app{border:none} }
+
+/* ---------- felső sáv ---------- */
+.fejsav{
+  position:sticky; top:0; z-index:20; background:var(--ground);
+  border-bottom:1px solid var(--line);
+  padding:calc(env(safe-area-inset-top) + .55rem) .9rem .55rem;
+  display:flex; align-items:center; gap:.6rem;
+}
+.marka{font-weight:700; letter-spacing:-.02em; font-size:1.02rem; flex:1; min-width:0;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.marka span{color:var(--accent)}
+.marka small{display:block; font-weight:400; font-size:.72rem; color:var(--muted); letter-spacing:0}
+.ikongomb{
+  min-width:44px; height:44px; border:1px solid var(--line); background:var(--surface);
+  color:var(--ink); border-radius:var(--r); font-size:.72rem; font-weight:600;
+  display:flex; align-items:center; justify-content:center; gap:.3rem; cursor:pointer;
+  font-family:"IBM Plex Mono",monospace; letter-spacing:.03em; padding:0 .5rem;
+}
+.ikongomb[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink); border-color:var(--accent)}
+
+.halozat{
+  display:flex; align-items:center; gap:.35rem; font-family:"IBM Plex Mono",monospace;
+  font-size:.68rem; color:var(--muted); letter-spacing:.04em;
+}
+.pont{width:8px; height:8px; border-radius:50%; background:var(--rendben)}
+.halozat.off .pont{background:var(--figyelem)}
+
+/* ---------- AI Act jelzés (kötelező) ---------- */
+.aisav{
+  background:var(--surface-2); border-bottom:1px solid var(--line-soft);
+  padding:.5rem .9rem; font-size:.78rem; color:var(--ink-2);
+}
+.aisav b{color:var(--ink); font-weight:600}
+
+/* ---------- tartalom ---------- */
+main{padding:1rem .9rem 1.2rem; display:flex; flex-direction:column; gap:.9rem; overflow-y:auto}
+main > *{flex-shrink:0}
+.cimsor{display:flex; align-items:baseline; justify-content:space-between; gap:.5rem}
+h1{margin:0; font-size:1.45rem; font-weight:700; letter-spacing:-.025em; text-wrap:balance}
+.datum{font-family:"IBM Plex Mono",monospace; font-size:.72rem; color:var(--muted); white-space:nowrap}
+.szekcio{
+  font-family:"IBM Plex Mono",monospace; font-size:.68rem; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--muted); margin:.5rem 0 -.25rem;
+}
+
+/* ---------- nagy állapotkártyák ---------- */
+.kartya{
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r);
+  padding:.9rem 1rem; box-shadow:var(--arnyek); display:flex; flex-direction:column; gap:.15rem;
+  text-align:left; width:100%; color:inherit; font:inherit; cursor:pointer;
+}
+.kartya.kritikus{border-left:4px solid var(--kritikus)}
+.kartya.figyelem{border-left:4px solid var(--figyelem)}
+.kartya.rendben{border-left:4px solid var(--rendben)}
+.kartya .cimke{
+  font-family:"IBM Plex Mono",monospace; font-size:.68rem; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--muted);
+}
+.kartya .ertek{
+  font-size:1.9rem; font-weight:700; letter-spacing:-.03em; line-height:1.15;
+  font-variant-numeric:tabular-nums;
+}
+.kartya.kritikus .ertek{color:var(--kritikus)}
+.kartya .alszoveg{font-size:.88rem; color:var(--ink-2)}
+
+/* ---------- listasorok ---------- */
+.sor{
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--r);
+  padding:.75rem .9rem; display:flex; align-items:center; gap:.75rem;
+  min-height:var(--cel); width:100%; text-align:left; color:inherit; font:inherit; cursor:pointer;
+}
+.sor .fo{flex:1; min-width:0}
+.sor .nev{font-weight:600; font-size:.98rem}
+.sor .alatta{font-size:.82rem; color:var(--muted)}
+.sor .jobb{text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums}
+.sor .osszeg{font-weight:600}
+.jelzes{
+  display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:.68rem;
+  padding:.2em .5em; border-radius:4px; border:1px solid; letter-spacing:.03em; white-space:nowrap;
+}
+.j-kritikus{background:var(--kritikus-soft); color:var(--kritikus); border-color:var(--kritikus)}
+.j-figyelem{background:var(--figyelem-soft); color:var(--figyelem); border-color:var(--figyelem)}
+.j-rendben{background:var(--rendben-soft); color:var(--rendben); border-color:var(--rendben)}
+
+/* ---------- asszisztens válasza ---------- */
+.valasz{
+  background:var(--surface-3); border:1px solid var(--line); border-radius:var(--r);
+  padding:.85rem 1rem; display:flex; flex-direction:column; gap:.6rem;
+}
+.hallottam{
+  font-family:"IBM Plex Mono",monospace; font-size:.76rem; color:var(--muted);
+  display:flex; gap:.4rem; align-items:flex-start;
+}
+.hallottam b{color:var(--ink-2); font-weight:500}
+.valasz p{margin:0; font-size:1rem; line-height:1.45}
+.valasz .kiemel{color:var(--accent); font-weight:600}
+.reteg{
+  align-self:flex-start; font-family:"IBM Plex Mono",monospace; font-size:.66rem;
+  letter-spacing:.05em; padding:.22em .5em; border-radius:4px; border:1px solid var(--line);
+  background:var(--surface-2); color:var(--muted);
+}
+.reteg.ingyen{border-color:var(--rendben); color:var(--rendben); background:var(--rendben-soft)}
+
+/* ---------- gombok ---------- */
+.gomb{
+  min-height:var(--cel); border-radius:var(--r); border:1px solid var(--line);
+  background:var(--surface); color:var(--ink); font:inherit; font-weight:600; font-size:1rem;
+  padding:0 1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:.4rem;
+  width:100%;
+}
+.gomb.fo{background:var(--accent); color:var(--accent-ink); border-color:var(--accent)}
+.gomb.veszelyes{color:var(--kritikus); border-color:var(--kritikus)}
+.gombsor{display:flex; flex-direction:column; gap:.5rem}
+.gombsor.ketto{flex-direction:row}
+.gombsor.ketto .gomb{flex:1}
+button:focus-visible, a:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
+
+/* ---------- javaslatchipek ---------- */
+.chipek{display:flex; gap:.5rem; overflow-x:auto; padding:.15rem .9rem .15rem;
+  scrollbar-width:none; min-width:0}
+.chipek::-webkit-scrollbar{display:none}
+.chip{
+  flex:0 0 auto; border:1px solid var(--line); background:var(--surface); color:var(--ink-2);
+  border-radius:999px; padding:.5rem .85rem; font-size:.85rem; font:inherit; font-size:.85rem;
+  min-height:44px; cursor:pointer; white-space:nowrap;
+}
+
+/* ---------- alsó dokk ---------- */
+.dokk{
+  position:sticky; bottom:0; z-index:20; background:var(--ground); min-width:0;
+  border-top:1px solid var(--line); box-shadow:var(--dokk-arnyek);
+  padding:.6rem .9rem calc(env(safe-area-inset-bottom) + .7rem);
+  display:flex; flex-direction:column; gap:.6rem;
+}
+.dokksor{display:flex; align-items:center; gap:.75rem}
+.mikro{
+  width:76px; height:76px; flex:0 0 76px; border-radius:50%;
+  background:var(--accent); color:var(--accent-ink); border:none;
+  display:flex; align-items:center; justify-content:center; cursor:pointer;
+  box-shadow:0 0 0 0 rgba(122,92,0,.35); position:relative;
+}
+.mikro svg{width:34px; height:34px}
+.mikro[data-figyel="1"]{animation:lelegzik 1.4s ease-in-out infinite}
+@keyframes lelegzik{
+  0%,100%{box-shadow:0 0 0 0 rgba(122,92,0,.35)}
+  50%{box-shadow:0 0 0 14px rgba(122,92,0,0)}
+}
+.mikrocimke{
+  flex:1; min-width:0; font-size:.92rem; color:var(--ink-2); line-height:1.35;
+}
+.mikrocimke b{display:block; color:var(--ink); font-weight:600; font-size:1rem}
+.tobbgomb{
+  min-width:var(--cel); height:var(--cel); border-radius:var(--r); border:1px solid var(--line);
+  background:var(--surface); color:var(--ink); font:inherit; font-size:.78rem; font-weight:600;
+  cursor:pointer; font-family:"IBM Plex Mono",monospace; letter-spacing:.04em; padding:0 .6rem;
+}
+.beviteli{display:flex; gap:.5rem}
+.beviteli input{
+  flex:1; min-height:48px; border:1px solid var(--line); border-radius:var(--r);
+  background:var(--surface); color:var(--ink); font:inherit; font-size:1rem; padding:0 .8rem;
+}
+.beviteli input::placeholder{color:var(--muted)}
+.beviteli button{min-height:48px; width:auto; padding:0 1rem; flex:0 0 auto}
+
+/* ---------- teljes képernyős lap (egy döntés) ---------- */
+.lap{
+  position:fixed; inset:0; z-index:40; background:var(--ground);
+  display:flex; flex-direction:column; max-width:460px; margin:0 auto;
+  animation:felcsuszik .18s ease-out;
+}
+@keyframes felcsuszik{from{transform:translateY(14px); opacity:0} to{transform:none; opacity:1}}
+.lap-fej{
+  padding:calc(env(safe-area-inset-top) + .7rem) .9rem .7rem;
+  border-bottom:1px solid var(--line); display:flex; align-items:center; gap:.6rem;
+}
+.lap-fej h2{margin:0; font-size:1.1rem; font-weight:700; flex:1; letter-spacing:-.02em}
+.lap-torzs{flex:1; overflow-y:auto; padding:1rem .9rem 1.2rem; display:flex; flex-direction:column; gap:.85rem}
+.lap-torzs > *{flex-shrink:0}
+.lap-lab{
+  border-top:1px solid var(--line); padding:.7rem .9rem calc(env(safe-area-inset-bottom) + .8rem);
+  display:flex; flex-direction:column; gap:.5rem; background:var(--ground);
+}
+
+/* ---------- feltételezés-sáv ---------- */
+.feltetel{
+  background:var(--figyelem-soft); border:1px solid var(--figyelem); border-radius:var(--r);
+  padding:.85rem 1rem;
+}
+.feltetel .cim{
+  font-family:"IBM Plex Mono",monospace; font-size:.68rem; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--figyelem); font-weight:600; margin-bottom:.4rem;
+}
+.feltetel ul{margin:0; padding-left:1.1rem; display:flex; flex-direction:column; gap:.35rem}
+.feltetel li{font-size:.9rem; color:var(--ink-2)}
+.feltetel li::marker{color:var(--figyelem)}
+
+/* ---------- tételtáblázat ---------- */
+.tetelek{display:flex; flex-direction:column; border:1px solid var(--line); border-radius:var(--r); overflow:hidden}
+.tetel{
+  display:grid; grid-template-columns:1fr auto; gap:.2rem .75rem;
+  padding:.65rem .85rem; border-bottom:1px solid var(--line-soft); background:var(--surface);
+}
+.tetel:last-child{border-bottom:none}
+.tetel .megnev{font-size:.92rem; font-weight:500}
+.tetel .mennyi{font-size:.78rem; color:var(--muted); font-family:"IBM Plex Mono",monospace}
+.tetel .ar{font-weight:600; font-variant-numeric:tabular-nums; align-self:center; white-space:nowrap}
+.osszesen{
+  display:flex; justify-content:space-between; align-items:baseline; gap:1rem;
+  padding:.85rem 1rem; background:var(--surface-2); border-top:1px solid var(--line);
+}
+.osszesen .c{font-family:"IBM Plex Mono",monospace; font-size:.7rem; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
+.osszesen .v{font-size:1.5rem; font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:-.02em}
+
+/* ---------- napló ---------- */
+.naplotetel{
+  border-left:3px solid var(--line); padding:.1rem 0 .1rem .8rem;
+  display:flex; flex-direction:column; gap:.1rem;
+}
+.naplotetel .ido{font-family:"IBM Plex Mono",monospace; font-size:.7rem; color:var(--muted)}
+.naplotetel .mit{font-weight:600; font-size:.95rem}
+.naplotetel .reszlet{font-size:.85rem; color:var(--ink-2)}
+
+/* ---------- pirítós ---------- */
+.pirit{
+  position:fixed; left:50%; bottom:calc(env(safe-area-inset-bottom) + 7.5rem); transform:translateX(-50%);
+  background:var(--ink); color:var(--ground); padding:.7rem 1.1rem; border-radius:var(--r);
+  font-size:.92rem; font-weight:500; z-index:60; box-shadow:var(--arnyek); max-width:88vw; text-align:center;
+}
+
+.ures{padding:2rem 1rem; text-align:center; color:var(--muted); font-size:.95rem}
+
+@media (prefers-reduced-motion:reduce){
+  *{animation:none !important; transition:none !important}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <header class="fejsav">
+    <div class="marka">CÉGEM<span>.AI</span><small>Kőháló Kft. · térkövezés</small></div>
+    <div class="halozat" id="halozat" title="Kapcsolat állapota">
+      <span class="pont"></span><span id="halozatSzo">online</span>
+    </div>
+    <button class="ikongomb" id="napfenyGomb" aria-pressed="false" title="Napfény üzemmód">NAP</button>
+  </header>
+
+  <div class="aisav">
+    <b>Mesterséges intelligencia.</b> Kiküldés csak jóváhagyás után.
+  </div>
+
+  <main id="fo"></main>
+
+  <div class="dokk">
+    <div class="chipek" id="chipek"></div>
+    <div class="dokksor">
+      <button class="mikro" id="mikro" aria-label="Tartsd nyomva és mondd">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="9" y="2" width="6" height="12" rx="3"></rect>
+          <path d="M5 11a7 7 0 0 0 14 0"></path>
+          <line x1="12" y1="18" x2="12" y2="22"></line>
+        </svg>
+      </button>
+      <div class="mikrocimke" id="mikroCimke">
+        <b>Tartsd nyomva</b>és mondd, mit intézzek el
+      </div>
+      <button class="tobbgomb" id="tobbGomb">TÖBB</button>
+    </div>
+    <div class="beviteli">
+      <input id="bevitel" type="text" inputmode="text" autocomplete="off"
+             placeholder="vagy írd be…" aria-label="Parancs beírása">
+      <button class="gomb fo" id="kuldGomb" style="width:auto">Küldés</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ==========================================================================
+   Mintaadatok — kitaláltak. A demó dátuma fixen 2026. 08. 25.
+   ========================================================================== */
+const MA = new Date("2026-08-25T08:00:00");
+const Ft = n => new Intl.NumberFormat("hu-HU").format(Math.round(n)) + " Ft";
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+const partnerek = [
+  { id:"kovacs", nev:"Kovács Építő Kft.", kapcsolat:"Kovács Péter", kedvezmeny:3 },
+  { id:"szabo",  nev:"Szabó Ingatlan Zrt.", kapcsolat:"Szabó Judit", kedvezmeny:0 },
+  { id:"nagy",   nev:"Nagy család", kapcsolat:"Nagy Tamás", kedvezmeny:0 },
+  { id:"zold",   nev:"Zöld Kert Bt.", kapcsolat:"Kiss Anna", kedvezmeny:0 },
+  { id:"baumax", nev:"BauMax Trade Kft.", kapcsolat:"Tóth Gábor", kedvezmeny:0, szallito:true },
+];
+const P = id => partnerek.find(p => p.id === id) || {nev:"—"};
+
+const szamlak = [
+  { szam:"SZ-2026/0142", partner:"kovacs", brutto:1240000, hatarido:"2026-08-17", allapot:"nyitott" },
+  { szam:"SZ-2026/0138", partner:"zold",   brutto:620000,  hatarido:"2026-08-05", allapot:"nyitott" },
+  { szam:"SZ-2026/0151", partner:"szabo",  brutto:3480000, hatarido:"2026-09-04", allapot:"nyitott" },
+];
+const feladatok = [
+  { cim:"Kovács Építő Kft. — fizetési felszólítás", hatarido:"2026-08-25", surgos:true },
+  { cim:"Szabó Ingatlan Zrt. — ajánlat utánkövetése", hatarido:"2026-08-25", surgos:false },
+];
+/* Ugyanazok az árak, mint az asztali prototípusban — a két demó
+   ugyanazt a végösszeget adja ugyanarra a parancsra. */
+const arlista = [
+  { nev:"Alapozás, zúzottkő ágyazat",   egyseg:"m²",  ar:2900 },
+  { nev:"Térkő anyag, szürke 6 cm",     egyseg:"m²",  ar:3950 },
+  { nev:"Térkő lerakás, normál kötés",  egyseg:"m²",  ar:4800 },
+  { nev:"Szegélykő, süttői 100×20",     egyseg:"fm",  ar:2100 },
+  { nev:"Szegélykő elhelyezés",         egyseg:"fm",  ar:3400 },
+  { nev:"Kiszállás, munkakezdés",       egyseg:"alk.",ar:25000 },
+];
+let naplo = [
+  { ido:"07:42", mit:"Napi összefoglaló", reszlet:"3 nyitott számla, 2 teendő · naponta egyszer generálva", allapot:"kész" },
+];
+
+const napok = (a, b) => Math.round((a - b) / 86400000);
+const lejartak = () => szamlak.filter(s => s.allapot === "nyitott" && new Date(s.hatarido) < MA);
+const nyitottak = () => szamlak.filter(s => s.allapot === "nyitott");
+
+/* ==========================================================================
+   0. RÉTEG — determinisztikus felismerő.
+   Ugyanaz a logika, mint a spike/parancs/reteg0.mjs fájlban. Ami itt eldől,
+   az ingyen van: nincs hálózat, nincs token, nincs várakozás.
+   ========================================================================== */
+const norm = s => String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+const PARTNERMINTA = [
+  ["kovacs", ["kovacs"]], ["szabo", ["szabo"]], ["nagy", ["nagy csalad","nagyek","nagy "]],
+  ["baumax", ["baumax","bau max"]], ["zold", ["zold kert","zold"]],
+];
+const EGYESEK = {egy:1,ket:2,ketto:2,harom:3,negy:4,ot:5,hat:6,het:7,nyolc:8,kilenc:9};
+const TIZESEK = {tiz:10,husz:20,harminc:30,negyven:40,otven:50,hatvan:60,hetven:70,nyolcvan:80,kilencven:90};
+
+function partnerKinyeres(sz){
+  const t = norm(sz);
+  for(const [id, mintak] of PARTNERMINTA) if(mintak.some(m => t.includes(m))) return id;
+  return null;
+}
+function szamKinyeres(sz){
+  const t = norm(sz);
+  const jegy = t.match(/(\d[\d\s.]*)\s*(negyzetmeter|negyzetre|negyzet|nm|m2|m²|folyometer|fm|meter)/);
+  if(jegy) return parseInt(jegy[1].replace(/[\s.]/g,""),10);
+  const betu = t.match(/((?:egy|ket|ketto|harom|negy|ot|hat|het|nyolc|kilenc)?(?:szaz)?(?:tiz|husz|harminc|negyven|otven|hatvan|hetven|nyolcvan|kilencven)?(?:egy|ket|harom|negy|ot|hat|het|nyolc|kilenc)?)\s*(negyzetmeter|negyzetre|negyzet|nm|m2|meter)/);
+  if(betu && betu[1]){
+    let m = betu[1], v = 0;
+    const i = m.indexOf("szaz");
+    if(i >= 0){ v += (EGYESEK[m.slice(0,i)] || 1) * 100; m = m.slice(i+4); }
+    for(const [n, x] of Object.entries(TIZESEK)) if(m.startsWith(n)){ v += x; m = m.slice(n.length); break; }
+    if(EGYESEK[m]) v += EGYESEK[m];
+    if(v) return v;
+  }
+  const csupasz = t.match(/\b(\d{2,5})\b/g);
+  return csupasz && csupasz.length === 1 ? parseInt(csupasz[0],10) : null;
+}
+function hataridoKinyeres(sz){
+  const t = norm(sz) + " ";
+  if(/jovo kedd/.test(t)) return {iso:"2026-09-01", cimke:"jövő kedden"};
+  if(/jovo het/.test(t))  return {iso:"2026-09-01", cimke:"jövő héten"};
+  if(/holnap/.test(t))    return {iso:"2026-08-26", cimke:"holnap"};
+  if(/pentek/.test(t))    return {iso:"2026-08-28", cimke:"pénteken"};
+  if(/hetfo/.test(t))     return {iso:"2026-08-31", cimke:"hétfőn"};
+  return null;
+}
+
+const SZANDEKOK = [
+  { id:"ajanlat",     re:/(ajanlat|arajanlat|adj arat|kalkulalj)/, kell:["partner","mennyiseg"] },
+  { id:"partner",     re:/(mutasd|nyisd meg|nezzuk|hogy allunk a|mi a helyzet a|mennyivel tartozik)/,
+    csakHa:a => !!a.partner, kell:["partner"] },
+  { id:"felszolitas", re:/(felszolit|fizetesi emlek|hogy fizessen|szolj ra)/, kell:["partner"] },
+  { id:"feladat",     re:/(emlekeztess|jegyezd fel|ird fel|vegyel fel|allits be|rogzits|ne felejtsem)/, kell:["hatarido"] },
+  { id:"lejart",      re:/(lejart|kintlevo|kinnlevo|ki tartozik|nem fizettek|hatralek)/ },
+  { id:"fizetendo",   re:/(mennyit kell kifizet|mit kell utalni|utalni|bejovo szaml|kinek tartozom)/ },
+  { id:"teendo",      re:/(mai teendo|mi a dolgom|teendoim|mi van ma|mai feladat|napirend|mit kell ma)/ },
+  { id:"osszefoglalo",re:/(helyzet a cegemben|hogy allunk|foglald ossze|osszefoglal|hogy all a ceg)/ },
+  { id:"arlista",     re:/(arlista|mennyibe kerul|mi az ara|listaar|mennyiert adom)/ },
+];
+
+function reteg0(szoveg){
+  const t = norm(szoveg);
+  if(!t.trim()) return null;
+  const adatok = {};
+  const p = partnerKinyeres(szoveg); if(p) adatok.partner = p;
+  const m = szamKinyeres(szoveg);    if(m) adatok.mennyiseg = m;
+  const h = hataridoKinyeres(szoveg);if(h) adatok.hatarido = h;
+  for(const sz of SZANDEKOK){
+    if(!sz.re.test(t)) continue;
+    if(sz.csakHa && !sz.csakHa(adatok)) continue;
+    const hianyzik = (sz.kell || []).filter(k => !adatok[k]);
+    return { szandek:sz.id, adatok, hianyzik };
+  }
+  return null;
+}
+
+/* ==========================================================================
+   Ajánlatkalkuláció — determinisztikus kód. A modell nem számol.
+   ========================================================================== */
+function ajanlatKeszites(partnerId, m2){
+  const p = P(partnerId);
+  const fm = Math.round(4 * Math.sqrt(m2) / 5) * 5;
+  const tetelek = [
+    { nev:arlista[0].nev, mennyi:m2, egyseg:"m²", ar:arlista[0].ar },
+    { nev:arlista[1].nev, mennyi:Math.round(m2 * 1.05), egyseg:"m²", ar:arlista[1].ar },
+    { nev:arlista[2].nev, mennyi:m2, egyseg:"m²", ar:arlista[2].ar },
+    { nev:arlista[3].nev, mennyi:fm, egyseg:"fm", ar:arlista[3].ar },
+    { nev:arlista[4].nev, mennyi:fm, egyseg:"fm", ar:arlista[4].ar },
+    { nev:arlista[5].nev, mennyi:1,  egyseg:"alk", ar:arlista[5].ar },
+  ];
+  const nettoNyers = tetelek.reduce((s,t) => s + t.mennyi * t.ar, 0);
+  const netto = nettoNyers * (1 - p.kedvezmeny / 100);
+  return { partner:p, m2, fm, tetelek, netto, afa:netto * 0.27, brutto:netto * 1.27 };
+}
+
+/* ==========================================================================
+   Nézetek
+   ========================================================================== */
+let nezet = "ma";
+let valasz = null;      // { hallottam, szoveg, reteg, gombok }
+let nyitottLap = null;  // { tipus, adat }
+
+const fo = document.getElementById("fo");
+
+function rajzol(){
+  fo.innerHTML = nezet === "ma" ? vMa()
+    : nezet === "penzugy" ? vPenzugy()
+    : nezet === "feladatok" ? vFeladatok()
+    : nezet === "arlista" ? vArlista()
+    : nezet === "naplo" ? vNaplo()
+    : vMa();
+  fo.querySelectorAll("[data-megy]").forEach(el =>
+    el.addEventListener("click", () => { nezet = el.dataset.megy; valasz = null; rajzol(); }));
+  fo.querySelectorAll("[data-parancs]").forEach(el =>
+    el.addEventListener("click", () => kezel(el.dataset.parancs)));
+  fo.scrollTop = 0;
+}
+
+function valaszHtml(){
+  if(!valasz) return "";
+  return `<div class="valasz">
+    ${valasz.hallottam ? `<div class="hallottam">🎙<b>„${esc(valasz.hallottam)}”</b></div>` : ""}
+    <p>${valasz.szoveg}</p>
+    <span class="reteg ${valasz.reteg === 0 ? "ingyen" : ""}">${
+      valasz.reteg === 0 ? "0. réteg · helyben, ingyen" : "1. réteg · modell"
+    }</span>
+    ${valasz.gombok ? `<div class="gombsor">${valasz.gombok}</div>` : ""}
+  </div>`;
+}
+
+function vMa(){
+  const lej = lejartak();
+  const lejOsszeg = lej.reduce((s,x) => s + x.brutto, 0);
+  const surgos = feladatok.filter(f => f.surgos).length;
+  return `
+    <div class="cimsor">
+      <h1>Jó reggelt!</h1>
+      <span class="datum">08. 25. kedd</span>
+    </div>
+    ${valaszHtml()}
+    <div class="szekcio">Ami ma számít</div>
+    <button class="kartya kritikus" data-parancs="mutasd a lejárt számláimat">
+      <span class="cimke">Lejárt követelés</span>
+      <span class="ertek">${Ft(lejOsszeg)}</span>
+      <span class="alszoveg">${lej.length} számla · a legrégebbi ${napok(MA, new Date(lej[lej.length-1].hatarido))} napja</span>
+    </button>
+    <button class="kartya figyelem" data-megy="feladatok">
+      <span class="cimke">Mai teendő</span>
+      <span class="ertek">${feladatok.length}</span>
+      <span class="alszoveg">${surgos} sürgős · ${feladatok[0].cim}</span>
+    </button>
+    <button class="kartya rendben" data-parancs="mennyit kell kifizetnünk">
+      <span class="cimke">Nyitott számláim</span>
+      <span class="ertek">${Ft(nyitottak().reduce((s,x) => s + x.brutto,0))}</span>
+      <span class="alszoveg">${nyitottak().length} számla összesen</span>
+    </button>
+    <div class="szekcio">Gyors műveletek</div>
+    <button class="sor" data-parancs="készíts ajánlatot a Kovács Kft-nek 800 négyzetméter térkövezésre">
+      <div class="fo"><div class="nev">Ajánlat készítése</div><div class="alatta">Mondd el, kinek és mekkora felületre</div></div>
+      <span class="jelzes j-rendben">gyakori</span>
+    </button>
+    <button class="sor" data-megy="arlista">
+      <div class="fo"><div class="nev">Árlista</div><div class="alatta">${arlista.length} tétel</div></div>
+    </button>
+    <button class="sor" data-megy="naplo">
+      <div class="fo"><div class="nev">AI napló</div><div class="alatta">Mit javasolt, mit hagytál jóvá</div></div>
+    </button>`;
+}
+
+function vPenzugy(){
+  const lej = lejartak();
+  return `
+    <div class="cimsor"><h1>Kintlévőség</h1><span class="datum">${nyitottak().length} nyitott</span></div>
+    ${valaszHtml()}
+    <div class="szekcio">Lejárt</div>
+    ${lej.map(s => `
+      <button class="sor" data-parancs="küldj fizetési felszólítást a ${P(s.partner).nev}-nek">
+        <div class="fo">
+          <div class="nev">${esc(P(s.partner).nev)}</div>
+          <div class="alatta">${s.szam}</div>
+        </div>
+        <div class="jobb">
+          <div class="osszeg">${Ft(s.brutto)}</div>
+          <span class="jelzes j-kritikus">${napok(MA, new Date(s.hatarido))} napja</span>
+        </div>
+      </button>`).join("")}
+    <div class="szekcio">Még nem járt le</div>
+    ${nyitottak().filter(s => new Date(s.hatarido) >= MA).map(s => `
+      <div class="sor">
+        <div class="fo"><div class="nev">${esc(P(s.partner).nev)}</div><div class="alatta">${s.szam}</div></div>
+        <div class="jobb">
+          <div class="osszeg">${Ft(s.brutto)}</div>
+          <span class="jelzes j-figyelem">${napok(new Date(s.hatarido), MA)} nap múlva</span>
+        </div>
+      </div>`).join("")}`;
+}
+
+function vFeladatok(){
+  return `
+    <div class="cimsor"><h1>Teendők</h1><span class="datum">${feladatok.length} db</span></div>
+    ${valaszHtml()}
+    ${feladatok.map(f => `
+      <div class="sor">
+        <div class="fo"><div class="nev">${esc(f.cim)}</div><div class="alatta">${f.hatarido}</div></div>
+        ${f.surgos ? '<span class="jelzes j-kritikus">sürgős</span>' : ""}
+      </div>`).join("")}
+    <button class="sor" data-parancs="jövő kedden emlékeztess, hogy hívjam fel a Kovács Kft-t">
+      <div class="fo"><div class="nev">+ Új emlékeztető</div><div class="alatta">Mondd el, mikor és mit</div></div>
+    </button>`;
+}
+
+function vArlista(){
+  return `
+    <div class="cimsor"><h1>Árlista</h1><span class="datum">${arlista.length} tétel</span></div>
+    ${valaszHtml()}
+    ${arlista.map(t => `
+      <div class="sor">
+        <div class="fo"><div class="nev">${esc(t.nev)}</div><div class="alatta">${t.egyseg}</div></div>
+        <div class="jobb"><div class="osszeg">${Ft(t.ar)}</div></div>
+      </div>`).join("")}`;
+}
+
+function vNaplo(){
+  return `
+    <div class="cimsor"><h1>AI napló</h1><span class="datum">${naplo.length} bejegyzés</span></div>
+    <p style="margin:0; font-size:.9rem; color:var(--ink-2)">
+      Minden AI-művelet nyoma: mit javasolt, mit hagytál jóvá, mikor.
+    </p>
+    ${naplo.map(n => `
+      <div class="naplotetel">
+        <span class="ido">${n.ido} · ${esc(n.allapot)}</span>
+        <span class="mit">${esc(n.mit)}</span>
+        <span class="reszlet">${esc(n.reszlet)}</span>
+      </div>`).join("")}`;
+}
+
+/* ==========================================================================
+   Teljes képernyős lapok — egy képernyő, egy döntés
+   ========================================================================== */
+function lapNyit(html){
+  lapZar();
+  const el = document.createElement("div");
+  el.className = "lap";
+  el.id = "lap";
+  el.innerHTML = html;
+  document.body.appendChild(el);
+  el.querySelectorAll("[data-zar]").forEach(b => b.addEventListener("click", lapZar));
+  el.querySelectorAll("[data-tett]").forEach(b => b.addEventListener("click", () => tett(b.dataset.tett)));
+  return el;
+}
+function lapZar(){ const el = document.getElementById("lap"); if(el) el.remove(); }
+
+function ajanlatLap(a){
+  return `
+    <div class="lap-fej">
+      <button class="ikongomb" data-zar aria-label="Vissza">←</button>
+      <h2>Ajánlat — ${esc(a.partner.nev)}</h2>
+    </div>
+    <div class="lap-torzs">
+      <div class="feltetel">
+        <div class="cim">Amit feltételeztem — nézd át</div>
+        <ul>
+          <li>${new Intl.NumberFormat("hu-HU").format(a.m2)} m² burkolandó felület, szürke, normál kötésű 6 cm-es térkővel.</li>
+          <li>${a.fm} fm szegélyt számoltam, közel négyzetes területet feltételezve.</li>
+          <li>5% vágási ráhagyás az anyagnál.</li>
+          <li>Nem tartalmaz bontást, földmunkát és sittelszállítást.</li>
+          ${a.partner.kedvezmeny ? `<li>${a.partner.kedvezmeny}% törzsvevői kedvezményt alkalmaztam.</li>` : ""}
+        </ul>
+      </div>
+      <div class="tetelek">
+        ${a.tetelek.map(t => `
+          <div class="tetel">
+            <div><div class="megnev">${esc(t.nev)}</div>
+            <div class="mennyi">${new Intl.NumberFormat("hu-HU").format(t.mennyi)} ${t.egyseg} × ${Ft(t.ar)}</div></div>
+            <div class="ar">${Ft(t.mennyi * t.ar)}</div>
+          </div>`).join("")}
+        <div class="osszesen"><span class="c">Bruttó összesen</span><span class="v">${Ft(a.brutto)}</span></div>
+      </div>
+      <p style="margin:0; font-size:.85rem; color:var(--muted)">
+        Nettó ${Ft(a.netto)} + 27% áfa ${Ft(a.afa)}
+      </p>
+    </div>
+    <div class="lap-lab">
+      <button class="gomb fo" data-tett="ajanlat-jovahagy">Jóváhagyom és kiküldöm</button>
+      <div class="gombsor ketto">
+        <button class="gomb" data-tett="ajanlat-modosit">Módosítom</button>
+        <button class="gomb veszelyes" data-zar>Mégsem</button>
+      </div>
+    </div>`;
+}
+
+function tett(mit){
+  if(mit === "ajanlat-jovahagy"){
+    naplo.unshift({ ido:"08:14", mit:"Ajánlat kiküldése", reszlet:"Kovács Építő Kft. · jóváhagyva, kiküldve", allapot:"végrehajtva" });
+    feladatok.push({ cim:"Kovács Építő Kft. — ajánlat utánkövetése", hatarido:"2026-09-01", surgos:false });
+    lapZar();
+    valasz = { szoveg:"Kiküldtem az ajánlatot, és felvettem egy utánkövetési feladatot <span class=\"kiemel\">jövő hétfőre</span>.", reteg:0 };
+    nezet = "ma"; rajzol(); pirit("Ajánlat kiküldve");
+  }
+  if(mit === "ajanlat-modosit"){
+    lapZar();
+    pirit("Mondd el, mit módosítsak");
+  }
+  if(mit === "felszolitas-jovahagy"){
+    naplo.unshift({ ido:"08:16", mit:"Fizetési felszólítás", reszlet:"jóváhagyva, kiküldve", allapot:"végrehajtva" });
+    lapZar(); pirit("Felszólítás kiküldve");
+    valasz = { szoveg:"Elküldtem a felszólítást. Ha egy héten belül nem fizet, szóljak?", reteg:0 };
+    rajzol();
+  }
+}
+
+function pirit(szoveg){
+  const el = document.createElement("div");
+  el.className = "pirit"; el.textContent = szoveg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 2200);
+}
+
+/* ==========================================================================
+   A parancs feldolgozása
+   ========================================================================== */
+function kezel(szoveg, hangbol){
+  const r = reteg0(szoveg);
+  const hallottam = hangbol ? szoveg : null;
+
+  if(!r){
+    // Ide kerülne az 1. réteg hívása (olcsó modell, zárt sémával).
+    valasz = {
+      hallottam,
+      szoveg:"Ezt nem ismertem fel helyben, ezért továbbadnám a modellnek. A prototípusban nincs modellhívás — próbáld a lenti javaslatok valamelyikét.",
+      reteg:1
+    };
+    nezet = "ma"; rajzol(); return;
+  }
+
+  if(r.hianyzik.length){
+    const kerdes = {
+      partner:"Melyik partnernek?",
+      mennyiseg:"Hány négyzetméterre?",
+      hatarido:"Mikorra tegyem be?"
+    }[r.hianyzik[0]];
+    valasz = { hallottam, szoveg:esc(kerdes) + " Mondd egy szóval.", reteg:0 };
+    nezet = "ma"; rajzol(); return;
+  }
+
+  const a = r.adatok;
+  switch(r.szandek){
+    case "ajanlat": {
+      const aj = ajanlatKeszites(a.partner, a.mennyiseg);
+      naplo.unshift({ ido:"08:12", mit:"Ajánlat készítése",
+        reszlet:`${aj.partner.nev} · ${a.mennyiseg} m² · ${Ft(aj.brutto)}`, allapot:"jóváhagyásra vár" });
+      valasz = { hallottam, reteg:0,
+        szoveg:`Elkészítettem az ajánlatot <span class="kiemel">${esc(aj.partner.nev)}</span> részére, ${new Intl.NumberFormat("hu-HU").format(a.mennyiseg)} m²-re. Végösszeg <span class="kiemel">${Ft(aj.brutto)}</span>.` };
+      nezet = "ma"; rajzol();
+      lapNyit(ajanlatLap(aj));
+      return;
+    }
+    case "lejart": {
+      const lej = lejartak();
+      valasz = { hallottam, reteg:0,
+        szoveg:`<span class="kiemel">${Ft(lej.reduce((s,x)=>s+x.brutto,0))}</span> lejárt követelésed van ${lej.length} számlán. A legrégebbi ${napok(MA, new Date(lej[lej.length-1].hatarido))} napja.` };
+      nezet = "penzugy"; rajzol(); return;
+    }
+    case "fizetendo":
+      valasz = { hallottam, reteg:0, szoveg:"Ezen a héten <span class=\"kiemel\">2 656 000 Ft</span> kifizetés esedékes 2 bejövő számlán." };
+      nezet = "penzugy"; rajzol(); return;
+    case "felszolitas": {
+      const p = P(a.partner);
+      naplo.unshift({ ido:"08:15", mit:"Fizetési felszólítás", reszlet:`${p.nev} · levéltervezet`, allapot:"jóváhagyásra vár" });
+      lapNyit(`
+        <div class="lap-fej"><button class="ikongomb" data-zar aria-label="Vissza">←</button><h2>Felszólítás</h2></div>
+        <div class="lap-torzs">
+          <div class="feltetel">
+            <div class="cim">Kiküldés előtt jóváhagyást kérek</div>
+            <ul><li>Címzett: ${esc(p.kapcsolat)} · ${esc(p.nev)}</li>
+                <li>Hangnem: udvarias emlékeztető, nem felszólítás.</li></ul>
+          </div>
+          <div class="valasz"><p>Kedves ${esc(p.kapcsolat)}!<br><br>
+          A ${esc(p.nev)} részére kiállított számlánk fizetési határideje lejárt.
+          Kérjük, szíveskedjenek rendezni. Ha már utaltak, tekintsék tárgytalannak.<br><br>
+          Üdvözlettel,<br>Kőháló Kft.</p></div>
+        </div>
+        <div class="lap-lab">
+          <button class="gomb fo" data-tett="felszolitas-jovahagy">Jóváhagyom és elküldöm</button>
+          <button class="gomb veszelyes" data-zar>Mégsem</button>
+        </div>`);
+      valasz = { hallottam, reteg:0, szoveg:`Megírtam a levelet a <span class="kiemel">${esc(p.nev)}</span> részére. Kiküldés előtt jóváhagyást kérek.` };
+      nezet = "ma"; rajzol(); return;
+    }
+    case "feladat": {
+      feladatok.push({ cim:"Hívd fel a " + (a.partner ? P(a.partner).nev : "megbeszélt partnert"), hatarido:a.hatarido.iso, surgos:false });
+      naplo.unshift({ ido:"08:18", mit:"Feladat rögzítése", reszlet:a.hatarido.cimke, allapot:"kész" });
+      valasz = { hallottam, reteg:0, szoveg:`Rendben, <span class="kiemel">${esc(a.hatarido.cimke)}</span> szólok.` };
+      nezet = "feladatok"; rajzol(); pirit("Emlékeztető rögzítve"); return;
+    }
+    case "partner": {
+      const p = P(a.partner);
+      const sz = szamlak.filter(s => s.partner === a.partner && s.allapot === "nyitott");
+      valasz = { hallottam, reteg:0,
+        szoveg:`<span class="kiemel">${esc(p.nev)}</span> · ${esc(p.kapcsolat)}. ${sz.length ? `${sz.length} nyitott számla, ${Ft(sz.reduce((s,x)=>s+x.brutto,0))}.` : "Nincs nyitott számlája."}` };
+      nezet = "penzugy"; rajzol(); return;
+    }
+    case "arlista":
+      valasz = { hallottam, reteg:0, szoveg:"Itt az árlistád. A szürke térkő anyagára <span class=\"kiemel\">3 950 Ft/m²</span>." };
+      nezet = "arlista"; rajzol(); return;
+    case "teendo":
+      valasz = { hallottam, reteg:0, szoveg:`Ma ${feladatok.length} teendőd van, ebből ${feladatok.filter(f=>f.surgos).length} sürgős.` };
+      nezet = "feladatok"; rajzol(); return;
+    default:
+      valasz = { hallottam, reteg:0, szoveg:`Ma <span class="kiemel">${Ft(lejartak().reduce((s,x)=>s+x.brutto,0))}</span> lejárt követelésed van és ${feladatok.length} teendőd.` };
+      nezet = "ma"; rajzol(); return;
+  }
+}
+
+/* ==========================================================================
+   Bevitel: nyomva tartós mikrofon + szöveg
+   ========================================================================== */
+const CHIPEK = [
+  "Készíts ajánlatot a Kovács Kft-nek 800 négyzetméter térkövezésre",
+  "Mutasd a lejárt számláimat",
+  "Jövő kedden emlékeztess, hogy hívjam fel a Kovács Kft-t",
+  "Küldj fizetési felszólítást a Zöld Kertnek",
+  "Mennyibe kerül a szürke térkő?",
+  "Mi a mai teendőm?",
+];
+const chipSav = document.getElementById("chipek");
+chipSav.innerHTML = CHIPEK.map(c => `<button class="chip">${esc(c.length > 34 ? c.slice(0,32) + "…" : c)}</button>`).join("");
+chipSav.querySelectorAll(".chip").forEach((b, i) => b.addEventListener("click", () => kezel(CHIPEK[i])));
+
+const bevitel = document.getElementById("bevitel");
+document.getElementById("kuldGomb").addEventListener("click", () => {
+  if(bevitel.value.trim()){ kezel(bevitel.value.trim()); bevitel.value = ""; bevitel.blur(); }
+});
+bevitel.addEventListener("keydown", e => { if(e.key === "Enter") document.getElementById("kuldGomb").click(); });
+
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const mikro = document.getElementById("mikro");
+const mikroCimke = document.getElementById("mikroCimke");
+let felismero = null;
+
+function figyelKezd(){
+  if(!SR){ mikroCimke.innerHTML = "<b>Nincs mikrofon</b>Chrome kell hozzá, közvetlenül megnyitva"; return; }
+  try{
+    felismero = new SR();
+    felismero.lang = "hu-HU";
+    felismero.interimResults = false;
+    felismero.onresult = e => { const t = e.results[0][0].transcript; kezel(t, true); };
+    felismero.onerror = e => {
+      mikroCimke.innerHTML = e.error === "not-allowed"
+        ? "<b>A mikrofon tiltva</b>Beágyazva nem működik — nyisd meg közvetlenül"
+        : "<b>Nem hallottam</b>Próbáld újra, vagy írd be";
+      mikro.dataset.figyel = "0";
+    };
+    felismero.onend = () => { mikro.dataset.figyel = "0"; alaphelyzet(); };
+    felismero.start();
+    mikro.dataset.figyel = "1";
+    mikroCimke.innerHTML = "<b>Hallgatlak…</b>engedd el, ha befejezted";
+  }catch(_){
+    mikroCimke.innerHTML = "<b>Nem indult el</b>Használd a szövegmezőt";
+  }
+}
+function figyelVege(){ if(felismero){ try{ felismero.stop(); }catch(_){} } }
+function alaphelyzet(){ setTimeout(() => { mikroCimke.innerHTML = "<b>Tartsd nyomva</b>és mondd, mit intézzek el"; }, 1200); }
+
+/* Nyomva tartás, nem koppintás: zajban a folyamatos figyelés félreért. */
+mikro.addEventListener("pointerdown", e => { e.preventDefault(); figyelKezd(); });
+mikro.addEventListener("pointerup", figyelVege);
+mikro.addEventListener("pointercancel", figyelVege);
+mikro.addEventListener("pointerleave", figyelVege);
+
+/* ---------- napfény üzemmód ---------- */
+const napfenyGomb = document.getElementById("napfenyGomb");
+napfenyGomb.addEventListener("click", () => {
+  const be = document.documentElement.getAttribute("data-napfeny") === "1";
+  document.documentElement.setAttribute("data-napfeny", be ? "0" : "1");
+  napfenyGomb.setAttribute("aria-pressed", be ? "false" : "true");
+  pirit(be ? "Napfény üzemmód ki" : "Napfény üzemmód be");
+});
+
+/* ---------- TÖBB menü ---------- */
+document.getElementById("tobbGomb").addEventListener("click", () => {
+  lapNyit(`
+    <div class="lap-fej"><button class="ikongomb" data-zar aria-label="Vissza">←</button><h2>Több</h2></div>
+    <div class="lap-torzs">
+      ${[["ma","Ma"],["penzugy","Kintlévőség"],["feladatok","Teendők"],["arlista","Árlista"],["naplo","AI napló"]]
+        .map(([id, nev]) => `<button class="sor" data-nez="${id}"><div class="fo"><div class="nev">${nev}</div></div></button>`).join("")}
+      <p style="margin:.5rem 0 0; font-size:.85rem; color:var(--muted)">
+        Prototípus. Kitalált mintaadatok — semmi nem kerül kiküldésre és semmi nem tárolódik.
+      </p>
+    </div>`);
+  document.querySelectorAll("#lap [data-nez]").forEach(b =>
+    b.addEventListener("click", () => { nezet = b.dataset.nez; valasz = null; lapZar(); rajzol(); }));
+});
+
+/* ---------- hálózat ---------- */
+function halozatFrissit(){
+  const el = document.getElementById("halozat");
+  const online = navigator.onLine;
+  el.classList.toggle("off", !online);
+  document.getElementById("halozatSzo").textContent = online ? "online" : "offline · sorban";
+}
+window.addEventListener("online", halozatFrissit);
+window.addEventListener("offline", halozatFrissit);
+
+halozatFrissit();
+rajzol();
+</script>
+</body>
+</html>
