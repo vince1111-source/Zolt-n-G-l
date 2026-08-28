@@ -130,7 +130,8 @@ Ezt a 2. spike után érdemes véglegesíteni.
 | Számlakiállítás, NAV-adatszolgáltatás | **bekötni** | Számlázz.hu Számla Agent vagy Billingo | Már eldöntött. Saját számlázó jogszabályi teher. |
 | Beszédfelismerés | **bekötni** | böngésző + ElevenLabs/Deepgram | Lásd fentebb. |
 | Belépés, jogosultság, adattárolás, fájlok | **bekötni** | Supabase | Sorszintű izolációval, EU-s régióban. |
-| Ajánlat kiállítása és számlává alakítása | **részben bekötni** | Billingo (magasabb csomagtól van árajánlat) | Ellenőrizendő: az API engedi-e az ajánlat létrehozását. |
+| Ajánlat kiállítása | **saját** | — | Az API nem tud árajánlatot — lásd az 5.1 pontot. |
+| Díjbekérő és számla | **bekötni** | Billingo API v3 | Az ajánlat elfogadása után ide megy át a folyamat. |
 | Naptár-szinkron | **bekötni, de V1** | Google / Microsoft | Az MVP-ben elég a belső feladatlista. |
 | Banki adatok | **bekötni, de V2** | GoCardless / Salt Edge / Tink | Szerződés és havidíj, 1–3 hónap átfutás. |
 | PDF-előállítás | **saját, de triviális** | HTML sablon → nyomtatás | Így az arculat sablonszerkeszthető marad. |
@@ -138,6 +139,37 @@ Ezt a 2. spike után érdemes véglegesíteni.
 | **A jóváhagyási kapu és az AI napló** | **saját** | — | Ez a bizalom, és ez a jogi védhetőség. |
 | **Árlista árréssel** | **saját** | — | A számlázók terméklistája nem kezel árrést és ügyfélárat. |
 | **A helyszíni felület** | **saját** | — | Ezt senki nem adja készen. |
+
+### 5.1 Az ajánlatot nem lehet kiszervezni — utánanéztünk
+
+Nyitott kérdés volt, hogy a számlázó API-ja tud-e árajánlatot. **Nem tud.**
+
+A Billingo API v3-ban a létrehozható dokumentumtípusok: `invoice`, `proforma`
+(díjbekérő), `advance` (előlegszámla) és `draft`. **Árajánlat nincs köztük** —
+az a felületen létező funkció (magasabb csomagtól), de az API-n nem érhető el.
+A Számlázz.hu Számla Agentnél ugyanezt nem tudtam ellenőrizni, mert a
+dokumentációs oldalaikat a hálózat nem engedte lekérni; ott a díjbekérőre
+vonatkozó GYIK létezik, az árajánlatra nem találtam ilyet.
+
+Ez jó hír, nem rossz: **az ajánlat úgyis a termék magja.** Az árréses árlista,
+a determinisztikus kalkuláció és az „amit feltételeztem" sáv nem is lenne
+kiszervezhető, mert a számlázók terméklistája nem kezel árrést és ügyfélárat.
+
+Amit viszont érdemes bekötni, az a folyamat **második fele**:
+
+```
+ajánlat (nálunk: AI + saját árlista + saját PDF)
+      │  az ügyfél elfogadja
+      ▼
+díjbekérő  →  Billingo API:  POST /documents  (type: proforma)
+      │  az ügyfél fizet
+      ▼
+számla     →  Billingo API:  POST /documents/{id}/create-from-proforma
+```
+
+Így a NAV-adatszolgáltatás végig a számlázó felelőssége marad, mi pedig csak
+azt írjuk meg, ami tényleg a miénk. **Ellenőrizni kell próbafiókkal**, mert ez
+a nyilvános API-leírásból származik, nem éles hívásból.
 
 A tanulság: **a megkülönböztetés négy dologban van** — az AI-réteg, a
 jóváhagyási kapu, az árréses árlista és a terepre szabott felület. Minden más
@@ -169,7 +201,8 @@ ajánlatot, és nem felejt el semmit.
 |---|---|
 | Elég jó a böngésző hangfelismerése terepen? | 3. spike, két környezetben |
 | Mennyi a számlakiolvasás valódi költsége? | 2. spike, valódi számlákon |
-| Engedi a Billingo API az ajánlat létrehozását? | fejlesztői dokumentáció + próbafiók |
+| ~~Engedi a Billingo API az ajánlat létrehozását?~~ | **Megvan: nem.** Lásd 5.1. A díjbekérő–számla lánc viszont megy. |
+| A Számlázz.hu Agent tud-e díjbekérőt? | dokumentáció (a hálózat most nem engedte lekérni) |
 | Mekkora a 0. réteg valódi lefedettsége? | a 3. spike átiratait átengedni a 4. spike mérésén |
 | Hol a végleges ár? | a 2. spike után, a tényleges költséggel |
 

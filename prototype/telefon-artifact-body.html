@@ -223,6 +223,7 @@ h1{margin:0; font-size:1.45rem; font-weight:700; letter-spacing:-.025em; text-wr
   background:var(--surface-2); color:var(--muted);
 }
 .reteg.ingyen{border-color:var(--rendben); color:var(--rendben); background:var(--rendben-soft)}
+.reteg.varakozo{border-color:var(--figyelem); color:var(--figyelem); background:var(--figyelem-soft)}
 
 /* ---------- gombok ---------- */
 .gomb{
@@ -533,6 +534,7 @@ function hataridoKinyeres(sz){
 }
 
 const SZANDEKOK = [
+  { id:"agent", re:/(intezd el|intezz el|csinald meg helyettem|surgos dolgaim|vegyuk sorra|mai surgos)/ },
   { id:"szamla_rogzites", re:/(fotoz|szamlat rogzits|rogzitsd a szamla|olvasd be|szkenneld|bejovo szamlat)/ },
   { id:"ajanlat",     re:/(ajanlat|arajanlat|adj arat|kalkulalj)/, kell:["partner","mennyiseg"] },
   { id:"partner",     re:/(mutasd|nyisd meg|nezzuk|hogy allunk a|mi a helyzet a|mennyivel tartozik)/,
@@ -653,6 +655,10 @@ function vMa(){
     <button class="sor" data-parancs="készíts ajánlatot a Kovács Kft-nek 800 négyzetméter térkövezésre">
       <div class="fo"><div class="nev">Ajánlat készítése</div><div class="alatta">Mondd el, kinek és mekkora felületre</div></div>
       <span class="jelzes j-rendben">gyakori</span>
+    </button>
+    <button class="sor" data-parancs="intézd el a mai sürgős dolgaimat">
+      <div class="fo"><div class="nev">Intézd el a mai dolgaimat</div><div class="alatta">Egyenként végigmegyünk, te döntesz</div></div>
+      <span class="jelzes j-figyelem">${feladatok.filter(f=>f.surgos).length + lejartak().length} ügy</span>
     </button>
     <button class="sor" data-lap="szamla">
       <div class="fo"><div class="nev">Számla rögzítése</div><div class="alatta">Fotózd le — kiolvasom, te ellenőrzöd</div></div>
@@ -942,7 +948,104 @@ function sorbaTesz(mit){
   naplo.unshift({ ido:"08:20", mit, reszlet:"nincs térerő — sorba állítva", allapot:"küldésre vár" });
 }
 
+/* ==========================================================================
+   Végigvezetés — „Intézd el a mai sürgős dolgaimat".
+   Ez mutatja meg a jóváhagyási kaput a legtisztábban: a rendszer összeszedi
+   és sorba rakja az ügyeket, majd tételenként megáll. Minden tétel három
+   állapotot vehet fel: javasolt → jóváhagyott / kihagyott → végrehajtott.
+   Semmi nem történik meg magától.
+   (A 16. modul az ütemtervben V2 — ez itt csak bemutató, nem fejlesztés.)
+   ========================================================================== */
+let ugyek = [];
+let ugyIdx = 0;
+
+function ugyekOsszeszedese(){
+  const lista = [];
+  for(const sz of lejartak()){
+    lista.push({
+      cim:`${P(sz.partner).nev} — fizetési emlékeztető`,
+      miert:`${sz.szam} · ${Ft(sz.brutto)} · ${napok(MA, new Date(sz.hatarido))} napja lejárt`,
+      javaslat:`Küldök egy udvarias emlékeztetőt ${esc(P(sz.partner).kapcsolat)} részére.`,
+      sulyossag: napok(MA, new Date(sz.hatarido)) > 14 ? "kritikus" : "figyelem",
+      allapot:"javasolt",
+    });
+  }
+  lista.push({
+    cim:"Szabó Ingatlan Zrt. — ajánlat utánkövetése",
+    miert:"AJ-2026/031 · 4 250 000 Ft · 9 napja kiküldve, nincs válasz",
+    javaslat:"Írok egy rövid érdeklődő levelet, és beteszek egy visszahívást péntekre.",
+    sulyossag:"figyelem",
+    allapot:"javasolt",
+  });
+  // Sorrend: ami régebb óta áll és nagyobb, az megy előre.
+  return lista.sort((a,b) => (a.sulyossag === "kritikus" ? -1 : 1) - (b.sulyossag === "kritikus" ? -1 : 1));
+}
+
+function ugyLap(){
+  if(ugyIdx >= ugyek.length) return ugyZaras();
+  const u = ugyek[ugyIdx];
+  lapNyit(`
+    <div class="lap-fej">
+      <button class="ikongomb" data-tett="ugy-leallit" aria-label="Leállítom">←</button>
+      <h2>${ugyIdx + 1} / ${ugyek.length}</h2>
+      <span class="jelzes ${u.sulyossag === "kritikus" ? "j-kritikus" : "j-figyelem"}">${u.sulyossag === "kritikus" ? "sürgős" : "fontos"}</span>
+    </div>
+    <div class="lap-torzs">
+      <div class="cimsor"><h1>${esc(u.cim)}</h1></div>
+      <div class="sor" style="cursor:default">
+        <div class="fo"><div class="alatta">${esc(u.miert)}</div></div>
+      </div>
+      <div class="valasz">
+        <p>${u.javaslat}</p>
+        <span class="reteg varakozo">javasolt — még nem történt meg</span>
+      </div>
+      <p style="margin:0; font-size:.88rem; color:var(--muted)">
+        ${ugyek.length - ugyIdx - 1 > 0
+          ? `Utána még ${ugyek.length - ugyIdx - 1} ügy van.`
+          : "Ez az utolsó."}
+      </p>
+    </div>
+    <div class="lap-lab">
+      <button class="gomb fo" data-tett="ugy-jovahagy">Jóváhagyom</button>
+      <div class="gombsor ketto">
+        <button class="gomb" data-tett="ugy-kihagy">Kihagyom</button>
+        <button class="gomb veszelyes" data-tett="ugy-leallit">Leállítom</button>
+      </div>
+    </div>`);
+}
+
+function ugyZaras(){
+  const kesz = ugyek.filter(u => u.allapot === "végrehajtott").length;
+  const kihagyott = ugyek.filter(u => u.allapot === "kihagyott").length;
+  lapZar();
+  valasz = { reteg:0,
+    szoveg: kesz
+      ? `Végeztem: <span class="kiemel">${kesz} ügyet</span> elintéztem${kihagyott ? `, ${kihagyott} kimaradt` : ""}. Mind bekerült az AI naplóba.`
+      : "Rendben, nem küldtem ki semmit. Az ügyek maradtak, ahogy voltak." };
+  nezet = "ma"; rajzol();
+  if(kesz) pirit(`${kesz} ügy elintézve`);
+}
+
 function tett(mit){
+  if(mit === "ugy-jovahagy"){
+    const u = ugyek[ugyIdx];
+    u.allapot = online() ? "végrehajtott" : "küldésre vár";
+    if(online()){
+      naplo.unshift({ ido:"08:3" + ugyIdx, mit:u.cim, reszlet:"jóváhagyva, végrehajtva", allapot:"végrehajtva" });
+    } else {
+      sorbaTesz(u.cim);
+      u.allapot = "végrehajtott"; // a felhasználó szempontjából elintézett, csak a küldés vár
+    }
+    ugyIdx += 1; ugyLap(); return;
+  }
+  if(mit === "ugy-kihagy"){
+    const u = ugyek[ugyIdx];
+    u.allapot = "kihagyott";
+    naplo.unshift({ ido:"08:3" + ugyIdx, mit:u.cim, reszlet:"a felhasználó kihagyta", allapot:"kihagyott" });
+    ugyIdx += 1; ugyLap(); return;
+  }
+  if(mit === "ugy-leallit"){ ugyZaras(); return; }
+
   if(mit === "ajanlat-jovahagy"){
     feladatok.push({ cim:"Kovács Építő Kft. — ajánlat utánkövetése", hatarido:"2026-09-01", surgos:false });
     lapZar();
@@ -1066,6 +1169,16 @@ function kezel(szoveg, hangbol){
       valasz = { hallottam, reteg:0, szoveg:`Itt van <span class="kiemel">${esc(p.nev)}</span>.` };
       nezet = "partner:" + a.partner; rajzol(); return;
     }
+    case "agent": {
+      ugyek = ugyekOsszeszedese(); ugyIdx = 0;
+      naplo.unshift({ ido:"08:30", mit:"Napi ügyek összeszedése",
+        reszlet:`${ugyek.length} tétel, fontossági sorrendben`, allapot:"javaslat" });
+      valasz = { hallottam, reteg:0,
+        szoveg:`Összeszedtem a mai ügyeket: <span class="kiemel">${ugyek.length} tétel</span>, fontossági sorrendben. Egyenként végigmegyünk rajtuk — semmit nem küldök ki jóváhagyás nélkül.` };
+      nezet = "ma"; rajzol();
+      setTimeout(ugyLap, 700);
+      return;
+    }
     case "szamla_rogzites":
       valasz = { hallottam, reteg:0, szoveg:"Rendben, fotózd le a számlát. Kiolvasom, te ellenőrzöd." };
       nezet = "ma"; rajzol(); szamlaLapNyit(); return;
@@ -1085,6 +1198,7 @@ function kezel(szoveg, hangbol){
    Bevitel: nyomva tartós mikrofon + szöveg
    ========================================================================== */
 const CHIPEK = [
+  "Intézd el a mai sürgős dolgaimat",
   "Készíts ajánlatot a Kovács Kft-nek 800 négyzetméter térkövezésre",
   "Mutasd a lejárt számláimat",
   "Jövő kedden emlékeztess, hogy hívjam fel a Kovács Kft-t",

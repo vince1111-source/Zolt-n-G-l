@@ -134,7 +134,18 @@ Egyetlen fájl, nincs build. A szándékfelismerő a `handle(text, fromVoice)` f
 
 Az „AI” benne **determinisztikus regex-alapú szándékfelismerő, nem LLM** — demóra jó, termékbe nem.
 
-Módosítás után futtasd le a füstpróbát (Playwright, `npm i playwright`): mind a 9 példaparancs, a jóváhagyási folyamat, világos + sötét téma, 390 px mobil, vízszintes túlcsordulás.
+Módosítás után futtasd le a füstpróbát:
+
+```bash
+npm i playwright && npx playwright install chromium
+node prototype/fustproba.mjs
+```
+
+Ez a telefonos prototípust járja végig: ajánlat jóváhagyással, számlarögzítés
+megerősítő folyamattal, végigvezetés, offline sor, világos/sötét/napfény
+megjelenés, 390 px szélesség, vízszintes túlcsordulás és 44 px alatti
+célfelületek. Az asztali prototípushoz nincs külön szkript — ott a 9
+példaparancsot és a jóváhagyási folyamatot kézzel nézd át.
 
 ## Amit ne csinálj
 
