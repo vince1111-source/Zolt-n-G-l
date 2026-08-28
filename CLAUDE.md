@@ -117,6 +117,9 @@ a `spike/.gitignore` ezt kizárja.
   Telefon-első: nyomva tartós mikrofon, 56 px célfelületek, napfény üzemmód,
   teljes képernyős jóváhagyó lapok (egy képernyő = egy döntés). A 0. réteg
   felismerője beépítve, és a válasz alatt látszik, melyik réteg felelt.
+  Tartalmazza a számla fotózását megerősítő folyamattal (minden kiolvasott
+  adat mellett ott van, honnan jött, a bizonytalanok megjelölve), az offline
+  sort, és a partnerlistát.
 - **`prototype/CEGEM-AI-prototipus.html`** — az asztali változat. Mind a 16
   modult mutatja, ezért bemutatóra továbbra is hasznos; a fejlesztés iránya
   viszont már nem ez.

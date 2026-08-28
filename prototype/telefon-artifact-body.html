@@ -334,6 +334,39 @@ button:focus-visible, a:focus-visible{outline:3px solid var(--accent); outline-o
 .osszesen .c{font-family:"IBM Plex Mono",monospace; font-size:.7rem; letter-spacing:.1em; text-transform:uppercase; color:var(--muted)}
 .osszesen .v{font-size:1.5rem; font-weight:700; font-variant-numeric:tabular-nums; letter-spacing:-.02em}
 
+/* ---------- kiolvasott mezők (megerősítő folyamat) ---------- */
+.mezok{display:flex; flex-direction:column; border:1px solid var(--line); border-radius:var(--r); overflow:hidden}
+.mezo{
+  display:flex; align-items:center; gap:.75rem; padding:.7rem .85rem;
+  border-bottom:1px solid var(--line-soft); background:var(--surface);
+  width:100%; text-align:left; font:inherit; color:inherit; min-height:var(--cel); cursor:pointer;
+}
+.mezo:last-child{border-bottom:none}
+.mezo.ellenorizd{background:var(--figyelem-soft)}
+.mezo .bal{flex:1; min-width:0; display:flex; flex-direction:column; gap:.1rem}
+.mezo .nev{display:block;
+  font-family:"IBM Plex Mono",monospace; font-size:.68rem; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--muted);
+}
+.mezo .ert{display:block; font-weight:600; font-size:1rem; overflow-wrap:anywhere}
+.mezo .honnan{display:block; font-size:.76rem; color:var(--muted)}
+.mezo.ellenorizd .honnan{color:var(--figyelem)}
+.mezo .ceruza{
+  font-family:"IBM Plex Mono",monospace; font-size:.66rem; letter-spacing:.05em;
+  color:var(--muted); border:1px solid var(--line); border-radius:4px; padding:.25em .5em; white-space:nowrap;
+}
+
+/* ---------- fotó ---------- */
+.fotogomb{
+  border:2px dashed var(--line); border-radius:var(--r); background:var(--surface-3);
+  padding:2.2rem 1rem; display:flex; flex-direction:column; align-items:center; gap:.5rem;
+  color:var(--ink-2); font:inherit; cursor:pointer; width:100%; min-height:180px;
+  justify-content:center; text-align:center;
+}
+.fotogomb b{font-size:1.05rem; color:var(--ink)}
+.fotogomb svg{width:40px; height:40px; color:var(--accent)}
+.fotogomb input{display:none}
+
 /* ---------- napló ---------- */
 .naplotetel{
   border-left:3px solid var(--line); padding:.1rem 0 .1rem .8rem;
@@ -437,6 +470,19 @@ let naplo = [
   { ido:"07:42", mit:"Napi összefoglaló", reszlet:"3 nyitott számla, 2 teendő · naponta egyszer generálva", allapot:"kész" },
 ];
 
+/* Bejövő (szállítói) számlák. A `forras` mutatja, honnan tudjuk —
+   ez a bizalom alapja: minden adat mellett látszik, honnan jött. */
+let bejovoSzamlak = [
+  { szam:"BM-2026/0281", partner:"baumax", brutto:2146300, hatarido:"2026-09-09", forras:"NAV lekérdezés" },
+  { szam:"ZK/2026/77",   partner:"zold",   brutto:609600,  hatarido:"2026-08-30", forras:"fotó" },
+];
+
+/* Offline sor: amit a rendszer nem tudott most elküldeni.
+   Alagsorban, betonpincében nincs térerő — a munka viszont nem áll meg. */
+let sor = [];
+let offlineSzimulacio = false;
+const online = () => navigator.onLine && !offlineSzimulacio;
+
 const napok = (a, b) => Math.round((a - b) / 86400000);
 const lejartak = () => szamlak.filter(s => s.allapot === "nyitott" && new Date(s.hatarido) < MA);
 const nyitottak = () => szamlak.filter(s => s.allapot === "nyitott");
@@ -487,6 +533,7 @@ function hataridoKinyeres(sz){
 }
 
 const SZANDEKOK = [
+  { id:"szamla_rogzites", re:/(fotoz|szamlat rogzits|rogzitsd a szamla|olvasd be|szkenneld|bejovo szamlat)/ },
   { id:"ajanlat",     re:/(ajanlat|arajanlat|adj arat|kalkulalj)/, kell:["partner","mennyiseg"] },
   { id:"partner",     re:/(mutasd|nyisd meg|nezzuk|hogy allunk a|mi a helyzet a|mennyivel tartozik)/,
     csakHa:a => !!a.partner, kell:["partner"] },
@@ -548,12 +595,18 @@ function rajzol(){
     : nezet === "penzugy" ? vPenzugy()
     : nezet === "feladatok" ? vFeladatok()
     : nezet === "arlista" ? vArlista()
+    : nezet === "partnerek" ? vPartnerek()
+    : nezet.startsWith("partner:") ? vPartner(nezet.slice(8))
     : nezet === "naplo" ? vNaplo()
     : vMa();
   fo.querySelectorAll("[data-megy]").forEach(el =>
     el.addEventListener("click", () => { nezet = el.dataset.megy; valasz = null; rajzol(); }));
   fo.querySelectorAll("[data-parancs]").forEach(el =>
     el.addEventListener("click", () => kezel(el.dataset.parancs)));
+  fo.querySelectorAll("[data-partner]").forEach(el =>
+    el.addEventListener("click", () => { nezet = "partner:" + el.dataset.partner; valasz = null; rajzol(); }));
+  fo.querySelectorAll("[data-lap]").forEach(el =>
+    el.addEventListener("click", () => { if(el.dataset.lap === "szamla") szamlaLapNyit(); }));
   fo.scrollTop = 0;
 }
 
@@ -579,6 +632,7 @@ function vMa(){
       <span class="datum">08. 25. kedd</span>
     </div>
     ${valaszHtml()}
+    ${sorKartya()}
     <div class="szekcio">Ami ma számít</div>
     <button class="kartya kritikus" data-parancs="mutasd a lejárt számláimat">
       <span class="cimke">Lejárt követelés</span>
@@ -600,12 +654,68 @@ function vMa(){
       <div class="fo"><div class="nev">Ajánlat készítése</div><div class="alatta">Mondd el, kinek és mekkora felületre</div></div>
       <span class="jelzes j-rendben">gyakori</span>
     </button>
+    <button class="sor" data-lap="szamla">
+      <div class="fo"><div class="nev">Számla rögzítése</div><div class="alatta">Fotózd le — kiolvasom, te ellenőrzöd</div></div>
+    </button>
+    <button class="sor" data-megy="partnerek">
+      <div class="fo"><div class="nev">Partnerek</div><div class="alatta">${partnerek.length} partner</div></div>
+    </button>
     <button class="sor" data-megy="arlista">
       <div class="fo"><div class="nev">Árlista</div><div class="alatta">${arlista.length} tétel</div></div>
     </button>
     <button class="sor" data-megy="naplo">
       <div class="fo"><div class="nev">AI napló</div><div class="alatta">Mit javasolt, mit hagytál jóvá</div></div>
     </button>`;
+}
+
+/* Offline sor: ami vár a kapcsolatra. Nem hibaüzenet, hanem állapot. */
+function sorKartya(){
+  if(!sor.length) return "";
+  return `
+    <div class="kartya figyelem" style="cursor:default">
+      <span class="cimke">Küldésre vár</span>
+      <span class="ertek">${sor.length}</span>
+      <span class="alszoveg">${sor.map(x => esc(x.mit)).join(" · ")} — elküldöm, amint van térerő.</span>
+    </div>`;
+}
+
+function vPartnerek(){
+  return `
+    <div class="cimsor"><h1>Partnerek</h1><span class="datum">${partnerek.length} db</span></div>
+    ${valaszHtml()}
+    ${partnerek.map(p => {
+      const nyitott = szamlak.filter(x => x.partner === p.id && x.allapot === "nyitott");
+      const osszeg = nyitott.reduce((s,x) => s + x.brutto, 0);
+      return `<button class="sor" data-partner="${p.id}">
+        <div class="fo">
+          <div class="nev">${esc(p.nev)}</div>
+          <div class="alatta">${esc(p.kapcsolat)}${p.szallito ? " · szállító" : ""}</div>
+        </div>
+        ${osszeg ? `<div class="jobb"><div class="osszeg">${Ft(osszeg)}</div></div>` : ""}
+      </button>`;
+    }).join("")}`;
+}
+
+function vPartner(id){
+  const p = P(id);
+  const nyitott = szamlak.filter(x => x.partner === id && x.allapot === "nyitott");
+  const lejart = nyitott.filter(x => new Date(x.hatarido) < MA);
+  return `
+    <div class="cimsor"><h1>${esc(p.nev)}</h1></div>
+    <div class="valasz">
+      <p><b>${esc(p.kapcsolat)}</b>${p.kedvezmeny ? ` · ${p.kedvezmeny}% törzsvevői kedvezmény` : ""}</p>
+      <p>${nyitott.length
+        ? `${nyitott.length} nyitott számla, összesen <span class="kiemel">${Ft(nyitott.reduce((s,x)=>s+x.brutto,0))}</span>.${lejart.length ? ` Ebből <span class="kiemel">${Ft(lejart.reduce((s,x)=>s+x.brutto,0))}</span> már lejárt.` : ""}`
+        : "Nincs nyitott számlája."}</p>
+      <span class="reteg ingyen">0. réteg · helyben, ingyen</span>
+    </div>
+    ${nyitott.map(x => `
+      <div class="sor">
+        <div class="fo"><div class="nev">${x.szam}</div><div class="alatta">${x.hatarido}</div></div>
+        <div class="jobb"><div class="osszeg">${Ft(x.brutto)}</div></div>
+      </div>`).join("")}
+    ${lejart.length ? `<button class="gomb fo" data-parancs="küldj fizetési felszólítást a ${esc(p.nev)}-nek">Fizetési emlékeztető</button>` : ""}
+    <button class="gomb" data-megy="partnerek">← Vissza a partnerekhez</button>`;
 }
 
 function vPenzugy(){
@@ -625,6 +735,18 @@ function vPenzugy(){
           <span class="jelzes j-kritikus">${napok(MA, new Date(s.hatarido))} napja</span>
         </div>
       </button>`).join("")}
+    <div class="szekcio">Fizetendő — bejövő számlák</div>
+    ${bejovoSzamlak.map(b => `
+      <div class="sor">
+        <div class="fo">
+          <div class="nev">${esc(P(b.partner).nev)}</div>
+          <div class="alatta">${b.szam} · ${b.hatarido}</div>
+        </div>
+        <div class="jobb">
+          <div class="osszeg">${Ft(b.brutto)}</div>
+          <span class="jelzes ${b.forras === "fotó" ? "j-figyelem" : "j-rendben"}">${b.forras}</span>
+        </div>
+      </div>`).join("")}
     <div class="szekcio">Még nem járt le</div>
     ${nyitottak().filter(s => new Date(s.hatarido) >= MA).map(s => `
       <div class="sor">
@@ -730,13 +852,118 @@ function ajanlatLap(a){
     </div>`;
 }
 
+/* ==========================================================================
+   6. modul — számla rögzítése fotóból.
+   A lényeg nem a kiolvasás, hanem a megerősítő folyamat: minden adat mellett
+   látszik, honnan jött, a bizonytalanokat a rendszer megjelöli, és egy
+   koppintással javíthatók. Bizonytalanság esetén kérdez, nem találgat.
+   ========================================================================== */
+
+/* Szimulált kiolvasás. Élesben ide jön a látásalapú modell hívása. */
+const KIOLVASOTT = [
+  { kulcs:"kiallito",   nev:"Kiállító",          ertek:"BauMax Trade Kft.",   honnan:"a számla fejlécéből", biztos:true },
+  { kulcs:"adoszam",    nev:"Adószám",           ertek:"12345678-2-42",       honnan:"a fejlécből",         biztos:true },
+  { kulcs:"szamlaszam", nev:"Számlaszám",        ertek:"BM-2026/0294",        honnan:"a jobb felső sarokból", biztos:true },
+  { kulcs:"kelt",       nev:"Kelt",              ertek:"2026. 08. 24.",       honnan:"a dátum mezőből",     biztos:true },
+  { kulcs:"hatarido",   nev:"Fizetési határidő", ertek:"2026. 09. 07.",       honnan:"a fizetési feltételekből", biztos:true },
+  { kulcs:"brutto",     nev:"Bruttó összeg",     ertek:"486 200 Ft",          honnan:"a végösszeg sorból",  biztos:true },
+  { kulcs:"bankszamla", nev:"Bankszámlaszám",    ertek:"10300002-10512345-49020018", honnan:"gyűrött a papír itt — ellenőrizd", biztos:false },
+];
+
+function szamlaLapNyit(){
+  lapNyit(`
+    <div class="lap-fej"><button class="ikongomb" data-zar aria-label="Vissza">←</button><h2>Számla rögzítése</h2></div>
+    <div class="lap-torzs">
+      <label class="fotogomb">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M3 8a2 2 0 0 1 2-2h2l1.5-2h7L17 6h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <circle cx="12" cy="13" r="3.5"></circle>
+        </svg>
+        <b>Fotózd le a számlát</b>
+        <span>Elég, ha olvasható — a gyűrött papír is jó</span>
+        <input type="file" accept="image/*" capture="environment" id="fotoBemenet">
+      </label>
+      <p style="margin:0; font-size:.88rem; color:var(--muted)">
+        Kiolvasom az adatokat, de kiküldés vagy könyvelés előtt te hagyod jóvá.
+        Amiben nem vagyok biztos, azt megjelölöm.
+      </p>
+    </div>`);
+  const be = document.getElementById("fotoBemenet");
+  if(be) be.addEventListener("change", () => szamlaKiolvasas());
+  // Kattintás a gombra fotó nélkül is továbbvisz — demóban ez a fő út.
+  document.querySelector("#lap .fotogomb")?.addEventListener("click", e => {
+    if(e.target.tagName !== "INPUT"){ e.preventDefault(); szamlaKiolvasas(); }
+  });
+}
+
+function szamlaKiolvasas(){
+  lapNyit(`
+    <div class="lap-fej"><button class="ikongomb" data-zar aria-label="Vissza">←</button><h2>Olvasom…</h2></div>
+    <div class="lap-torzs"><div class="ures">Kiolvasom a számla adatait…</div></div>`);
+  setTimeout(szamlaMegerosites, 900);
+}
+
+function szamlaMegerosites(){
+  const bizonytalan = KIOLVASOTT.filter(m => !m.biztos);
+  lapNyit(`
+    <div class="lap-fej"><button class="ikongomb" data-zar aria-label="Vissza">←</button><h2>Ellenőrizd</h2></div>
+    <div class="lap-torzs">
+      ${bizonytalan.length ? `
+      <div class="feltetel">
+        <div class="cim">${bizonytalan.length} mezőben nem vagyok biztos</div>
+        <ul>${bizonytalan.map(m => `<li>${esc(m.nev)} — ${esc(m.honnan)}</li>`).join("")}</ul>
+      </div>` : ""}
+      <div class="mezok">
+        ${KIOLVASOTT.map(m => `
+          <button class="mezo ${m.biztos ? "" : "ellenorizd"}" data-mezo="${m.kulcs}">
+            <span class="bal">
+              <span class="nev">${esc(m.nev)}</span>
+              <span class="ert">${esc(m.ertek)}</span>
+              <span class="honnan">${esc(m.honnan)}</span>
+            </span>
+            <span class="ceruza">JAVÍT</span>
+          </button>`).join("")}
+      </div>
+      <p style="margin:0; font-size:.85rem; color:var(--muted)">
+        Minden adat mellett ott van, honnan olvastam ki. Koppints rá, ha javítani kell.
+      </p>
+    </div>
+    <div class="lap-lab">
+      <button class="gomb fo" data-tett="szamla-rogzit">Rendben, rögzítsd</button>
+      <button class="gomb veszelyes" data-zar>Eldobom</button>
+    </div>`);
+  document.querySelectorAll("#lap [data-mezo]").forEach(b =>
+    b.addEventListener("click", () => pirit("Itt lehetne javítani — a demóban nem szerkeszthető")));
+}
+
+/* Offline sor: a művelet elkészül, csak a kiküldés vár a térerőre. */
+function sorbaTesz(mit){
+  sor.push({ mit, ido:"08:20" });
+  naplo.unshift({ ido:"08:20", mit, reszlet:"nincs térerő — sorba állítva", allapot:"küldésre vár" });
+}
+
 function tett(mit){
   if(mit === "ajanlat-jovahagy"){
-    naplo.unshift({ ido:"08:14", mit:"Ajánlat kiküldése", reszlet:"Kovács Építő Kft. · jóváhagyva, kiküldve", allapot:"végrehajtva" });
     feladatok.push({ cim:"Kovács Építő Kft. — ajánlat utánkövetése", hatarido:"2026-09-01", surgos:false });
     lapZar();
-    valasz = { szoveg:"Kiküldtem az ajánlatot, és felvettem egy utánkövetési feladatot <span class=\"kiemel\">jövő hétfőre</span>.", reteg:0 };
-    nezet = "ma"; rajzol(); pirit("Ajánlat kiküldve");
+    if(!online()){
+      sorbaTesz("Ajánlat kiküldése — Kovács Építő Kft.");
+      valasz = { szoveg:"Jóváhagyva. Most nincs térerő, ezért <span class=\"kiemel\">sorba tettem</span> — elküldöm, amint van. Az utánkövetést felvettem.", reteg:0 };
+      pirit("Sorba állítva");
+    } else {
+      naplo.unshift({ ido:"08:14", mit:"Ajánlat kiküldése", reszlet:"Kovács Építő Kft. · jóváhagyva, kiküldve", allapot:"végrehajtva" });
+      valasz = { szoveg:"Kiküldtem az ajánlatot, és felvettem egy utánkövetési feladatot <span class=\"kiemel\">jövő hétfőre</span>.", reteg:0 };
+      pirit("Ajánlat kiküldve");
+    }
+    nezet = "ma"; rajzol();
+  }
+  if(mit === "szamla-rogzit"){
+    bejovoSzamlak.unshift({ szam:"BM-2026/0294", partner:"baumax", brutto:486200, hatarido:"2026-09-07", forras:"fotó" });
+    naplo.unshift({ ido:"08:22", mit:"Bejövő számla rögzítése",
+      reszlet:"BauMax Trade Kft. · 486 200 Ft · 1 mezőt megjelöltem ellenőrzésre", allapot:"jóváhagyva" });
+    lapZar();
+    valasz = { szoveg:"Rögzítettem a <span class=\"kiemel\">BauMax Trade Kft.</span> számláját, 486 200 Ft, fizetési határidő szeptember 7. Beteszem a fizetendők közé.", reteg:0 };
+    nezet = "ma"; rajzol(); pirit("Számla rögzítve");
   }
   if(mit === "ajanlat-modosit"){
     lapZar();
@@ -836,11 +1063,12 @@ function kezel(szoveg, hangbol){
     }
     case "partner": {
       const p = P(a.partner);
-      const sz = szamlak.filter(s => s.partner === a.partner && s.allapot === "nyitott");
-      valasz = { hallottam, reteg:0,
-        szoveg:`<span class="kiemel">${esc(p.nev)}</span> · ${esc(p.kapcsolat)}. ${sz.length ? `${sz.length} nyitott számla, ${Ft(sz.reduce((s,x)=>s+x.brutto,0))}.` : "Nincs nyitott számlája."}` };
-      nezet = "penzugy"; rajzol(); return;
+      valasz = { hallottam, reteg:0, szoveg:`Itt van <span class="kiemel">${esc(p.nev)}</span>.` };
+      nezet = "partner:" + a.partner; rajzol(); return;
     }
+    case "szamla_rogzites":
+      valasz = { hallottam, reteg:0, szoveg:"Rendben, fotózd le a számlát. Kiolvasom, te ellenőrzöd." };
+      nezet = "ma"; rajzol(); szamlaLapNyit(); return;
     case "arlista":
       valasz = { hallottam, reteg:0, szoveg:"Itt az árlistád. A szürke térkő anyagára <span class=\"kiemel\">3 950 Ft/m²</span>." };
       nezet = "arlista"; rajzol(); return;
@@ -862,6 +1090,7 @@ const CHIPEK = [
   "Jövő kedden emlékeztess, hogy hívjam fel a Kovács Kft-t",
   "Küldj fizetési felszólítást a Zöld Kertnek",
   "Mennyibe kerül a szürke térkő?",
+  "Fotózok egy számlát",
   "Mi a mai teendőm?",
 ];
 const chipSav = document.getElementById("chipek");
@@ -923,22 +1152,44 @@ document.getElementById("tobbGomb").addEventListener("click", () => {
   lapNyit(`
     <div class="lap-fej"><button class="ikongomb" data-zar aria-label="Vissza">←</button><h2>Több</h2></div>
     <div class="lap-torzs">
-      ${[["ma","Ma"],["penzugy","Kintlévőség"],["feladatok","Teendők"],["arlista","Árlista"],["naplo","AI napló"]]
+      ${[["ma","Ma"],["penzugy","Kintlévőség"],["feladatok","Teendők"],["partnerek","Partnerek"],["arlista","Árlista"],["naplo","AI napló"]]
         .map(([id, nev]) => `<button class="sor" data-nez="${id}"><div class="fo"><div class="nev">${nev}</div></div></button>`).join("")}
+      <div class="szekcio">Terepi próba</div>
+      <button class="sor" id="offlineKapcsolo">
+        <div class="fo">
+          <div class="nev">Térerő nélkül</div>
+          <div class="alatta">Próbáld ki, mi történik, ha nincs net: a művelet elkészül, a kiküldés vár.</div>
+        </div>
+        <span class="jelzes ${offlineSzimulacio ? "j-figyelem" : "j-rendben"}">${offlineSzimulacio ? "be" : "ki"}</span>
+      </button>
       <p style="margin:.5rem 0 0; font-size:.85rem; color:var(--muted)">
         Prototípus. Kitalált mintaadatok — semmi nem kerül kiküldésre és semmi nem tárolódik.
       </p>
     </div>`);
   document.querySelectorAll("#lap [data-nez]").forEach(b =>
     b.addEventListener("click", () => { nezet = b.dataset.nez; valasz = null; lapZar(); rajzol(); }));
+  document.getElementById("offlineKapcsolo")?.addEventListener("click", () => {
+    offlineSzimulacio = !offlineSzimulacio;
+    lapZar(); halozatFrissit();
+    if(online() && sor.length){
+      const db = sor.length;
+      sor.forEach(x => naplo.unshift({ ido:"08:24", mit:x.mit, reszlet:"a sorból elküldve", allapot:"végrehajtva" }));
+      sor = [];
+      pirit(`${db} művelet elküldve`);
+    } else {
+      pirit(offlineSzimulacio ? "Térerő nélküli üzemmód" : "Újra online");
+    }
+    rajzol();
+  });
 });
 
 /* ---------- hálózat ---------- */
 function halozatFrissit(){
   const el = document.getElementById("halozat");
-  const online = navigator.onLine;
-  el.classList.toggle("off", !online);
-  document.getElementById("halozatSzo").textContent = online ? "online" : "offline · sorban";
+  const van = online();
+  el.classList.toggle("off", !van);
+  document.getElementById("halozatSzo").textContent =
+    van ? "online" : (sor.length ? `offline · ${sor.length} sorban` : "offline");
 }
 window.addEventListener("online", halozatFrissit);
 window.addEventListener("offline", halozatFrissit);
