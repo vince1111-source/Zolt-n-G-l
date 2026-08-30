@@ -23,6 +23,7 @@ MVP-fejlesztés csak a válaszok után indul, mert azok megváltoztatják a scop
 |---|---|
 | [`HANDOVER.md`](HANDOVER.md) | **Kezdd ezzel.** Teljes projektátadás: döntések, becslések, ütemterv, jogi keret. |
 | [`CLAUDE.md`](CLAUDE.md) | Projektutasítások Claude Code-nak: nyelv, sarkalatos szabályok, scope. |
+| [`db/`](db/) | Az adatbázis-séma sorszintű izolációval és a jóváhagyási kapuval — futtatható tesztekkel. |
 | [`spike/`](spike/) | A 0. fázis mérőeszközei — NAV-lekérdezés, számlaolvasás-pontosság, hangfelismerés. |
 | [`prototype/CEGEM-AI-telefon.html`](prototype/CEGEM-AI-telefon.html) | **A fő irány**: telefon-első prototípus. Nyisd meg telefonon, Chrome-ban. |
 | [`prototype/CEGEM-AI-prototipus.html`](prototype/CEGEM-AI-prototipus.html) | Az asztali változat, mind a 16 modullal. |

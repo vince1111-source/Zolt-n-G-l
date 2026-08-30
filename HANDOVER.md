@@ -372,8 +372,12 @@ A mérőeszközök készen állnak a `spike/` mappában; ami hátravan, az hozz�
 
 ### C) MVP fejlesztés indítása
 
-- [ ] Supabase projekt EU-s régióban, séma sorszintű biztonsággal (`cegek`, `felhasznalok`, `partnerek`, `termekek`, `ajanlatok`, `ajanlat_tetelek`, `szamlak`, `feladatok`, `dokumentumok`, `ai_naplo`, `javasolt_muveletek`)
-- [ ] **A `javasolt_muveletek` állapotgép az első migrációba kerüljön** (lásd 2.5/b)
+- [x] ~~Séma sorszintű biztonsággal, a `javasolt_muveletek` állapotgéppel az első
+      migrációban~~ — `db/migraciok/0001_alap.sql`. A `db/futtat.sh` felépíti és
+      21 állítással bizonyítja a sarkalatos szabályokat. Supabase-re telepíthető,
+      két beállítással: lásd `db/README.md`.
+- [ ] Supabase projekt EU-s régióban, a fenti migráció alkalmazása
+- [ ] A `ceg_id` bekötése a JWT-be (custom access token hook)
 - [ ] Next.js váz, belépés, cégprofil
 - [ ] Partner + árlista CRUD (a prototípus adatszerkezete átvehető)
 - [ ] Claude eszközkészlet (lásd 6. fejezet) + parancssáv

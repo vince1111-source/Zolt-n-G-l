@@ -14,7 +14,7 @@ Magyar nyelvű AI vállalkozói asszisztens kisvállalkozásoknak. Elv: *„Mond
 
 ## Sarkalatos szabályok — ezektől ne térj el kérdés nélkül
 
-1. **Jóváhagyási kapu az adatmodellben, nem a felületen.** Minden külső hatású művelet (e-mail, ajánlatkiküldés, felszólítás, utalási javaslat) állapotgépen megy át: `javasolt → jóváhagyott → végrehajtott` (mellékág: `kihagyott`, `elvetett`). Ez az első migrációba kerül.
+1. **Jóváhagyási kapu az adatmodellben, nem a felületen.** Minden külső hatású művelet (e-mail, ajánlatkiküldés, felszólítás, utalási javaslat) állapotgépen megy át: `javasolt → jóváhagyott → végrehajtott` (mellékág: `kihagyott`, `elvetett`). **Ez már benne van az első migrációban** (`db/migraciok/0001_alap.sql`), triggerrel őrizve — ha hozzányúlsz, a `db/futtat.sh` tesztjeinek utána is zöldnek kell lenniük.
 2. **Minden AI-művelet naplózva.** Mit látott a modell, mit javasolt, mit hagyott jóvá a felhasználó, mikor. Ez nem opcionális: felelősségi és AI Act-követelmény.
 3. **Multi-tenant izoláció adatbázis-szinten** (PostgreSQL RLS), nem alkalmazáslogikában.
 4. **Számlázást nem építünk**, integrálunk (Számlázz.hu Számla Agent vagy Billingo).
@@ -101,6 +101,10 @@ prototype/CEGEM-AI-prototipus.html  asztali prototípus — önálló HTML, ninc
 prototype/artifact-body.html      ugyanaz Artifact-publikáláshoz (burok nélkül)
 prototype/CEGEM-AI-telefon.html   telefon-első prototípus (az irányváltás után ez a fő irány)
 prototype/telefon-artifact-body.html  ugyanaz Artifact-publikáláshoz
+db/                               adatbázis: séma, RLS, állapotgép + bizonyító tesztek
+  migraciok/0001_alap.sql         az első migráció — a sarkalatos szabályokkal
+  tesztek/                        21 állítás, ami bizonyítja is őket
+  futtat.sh                       egy parancs: séma + tesztek
 spike/                            0. fázis mérőeszközei — lásd spike/README.md
   nav/                            NAV bejövő számla lekérdezés (1. kérdés)
   szamlaolvasas/                  kiolvasási pontosság mérése (2. kérdés)
