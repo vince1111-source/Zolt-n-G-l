@@ -38,6 +38,12 @@ const bongeszo = await chromium.launch(
 async function ujOldal(opts = {}) {
   const ctx = await bongeszo.newContext({ viewport: TELEFON, deviceScaleFactor: 2, ...opts });
   const oldal = await ctx.newPage();
+  // A külső betűkészlet-kérés hálózat nélkül percekig lóg. A füstpróbának
+  // nincs rá szüksége, és így hermetikus is: nem függ a hálózattól.
+  await oldal.route('**://*/**', r => {
+    const u = r.request().url();
+    r.continue ? (u.startsWith('file:') ? r.continue() : r.abort()) : r.abort();
+  });
   const hibak = [];
   // A betűkészlet a Google Fontsról jön; hálózat nélküli futásnál ez nem hiba.
   oldal.on('console', m => m.type() === 'error' && !/ERR_|fonts\.g/.test(m.text()) && hibak.push(m.text()));
@@ -87,6 +93,39 @@ console.log('\nAjánlat készítése és jóváhagyása');
   await ctx.close();
 }
 
+/* ------------------------------------------- 2b. ajánlat módosítása -- */
+console.log('\nAjánlat módosítása beszédből');
+{
+  const { ctx, oldal, hibak } = await ujOldal();
+  await oldal.locator('.chip', { hasText: 'Készíts ajánlatot' }).click();
+  await oldal.waitForTimeout(500);
+  const elso = (await oldal.locator('.osszesen .v').textContent()).trim();
+  await oldal.locator('[data-tett="ajanlat-modosit"]').click();
+  await oldal.waitForTimeout(250);
+  await oldal.fill('#bevitel', 'kilencszáz négyzetméter antik térkővel');
+  await oldal.locator('#kuldGomb').click();
+  await oldal.waitForTimeout(600);
+  const masodik = (await oldal.locator('.osszesen .v').textContent()).trim();
+  ok(elso !== masodik, 'a módosítás után más a végösszeg', `${elso} → ${masodik}`);
+  ok(await oldal.evaluate(() => utolsoAjanlat.m2 === 900 && utolsoAjanlat.valtozat === 'antik'),
+    'a kimondott szám és a változat is átment');
+  ok((await oldal.locator('.tetel', { hasText: 'antik' }).count()) === 1, 'az antik anyag került a tételek közé');
+  // A jóváhagyó lap szándékosan kizár minden más bevitelt (egy képernyő,
+  // egy döntés), ezért előbb be kell zárni.
+  await oldal.locator('#lap [data-zar]').last().click();
+  await oldal.waitForTimeout(250);
+  ok((await oldal.locator('#lap').count()) === 0, 'a Mégsem bezárja a lapot');
+  // A módosítás-várakozás nem ragadhat be: egy sima parancsnak át kell mennie.
+  await oldal.evaluate(() => { modositastVar = true; });
+  await oldal.fill('#bevitel', 'mutasd a lejárt számláimat');
+  await oldal.locator('#kuldGomb').click();
+  await oldal.waitForTimeout(400);
+  ok(await oldal.evaluate(() => nezet === 'penzugy' && modositastVar === false),
+    'a nem-módosítás parancs a szokásos úton megy tovább');
+  ok(hibak.length === 0, 'nincs konzolhiba', hibak.join(' | '));
+  await ctx.close();
+}
+
 /* --------------------------------------------------- 3. számla rögzítése -- */
 console.log('\nSzámla rögzítése megerősítő folyamattal');
 {
@@ -123,6 +162,10 @@ console.log('\nVégigvezetés — jóváhagyási kapu');
   ok(JSON.stringify(allapotok) === JSON.stringify(['végrehajtott', 'kihagyott', 'végrehajtott']),
     'az állapotgép a jóváhagyást és a kihagyást is rögzítette', JSON.stringify(allapotok));
   ok((await oldal.locator('#lap').count()) === 0, 'a végén bezárul a léptető');
+  // 3.2 szabály: a naplóból látszania kell, mit látott a rendszer.
+  await oldal.locator('[data-megy="naplo"]').click();
+  await oldal.waitForTimeout(300);
+  ok((await oldal.locator('.naplotetel').count()) > 0, 'az AI napló nem üres');
   ok(hibak.length === 0, 'nincs konzolhiba', hibak.join(' | '));
   await ctx.close();
 }

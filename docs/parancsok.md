@@ -1,6 +1,61 @@
-# A prototípus felismert parancsai
+# A prototípusok felismert parancsai
 
-A `handle()` függvény szándékfelismerő ágai, felismerési mintával együtt. Ékezet nélkülire normalizálva vizsgál (`norm()`), tehát ékezettel és anélkül is működik.
+Két prototípus van, és **külön parancskészletük** van. A fő irány a telefonos.
+
+- [Telefonos prototípus](#telefonos-prototípus) — `prototype/CEGEM-AI-telefon.html`
+- [Asztali prototípus](#asztali-prototípus) — `prototype/CEGEM-AI-prototipus.html`
+
+Mindkettő ékezet nélkülire normalizálva vizsgál (`norm()`), tehát ékezettel és
+anélkül is működik. **Egyik sem nyelvi modell**: determinisztikus mintaillesztés,
+ami demóra jó, termékbe nem.
+
+---
+
+## Telefonos prototípus
+
+Ez a 0. réteg — ugyanaz a logika, mint a `spike/parancs/reteg0.mjs` fájlban és a
+hangmérő lapon. Ami itt eldől, az ingyen van: nincs hálózat, nincs token.
+
+| Szándék | Felismerési minta | Kell hozzá | Mit csinál |
+|---|---|---|---|
+| Végigvezetés | `intezd el`, `intezz el`, `csinald meg helyettem`, `surgos dolgaim`, `vegyuk sorra`, `mai surgos` | — | Ügyek összeszedése, majd tételenként jóváhagyási kapu |
+| Számla rögzítése | `fotoz`, `szamlat rogzits`, `olvasd be`, `szkenneld`, `bejovo szamlat` | — | Fotó → kiolvasás → megerősítő folyamat |
+| Ajánlat | `ajanlat`, `arajanlat`, `adj arat`, `kalkulalj` | partner + mennyiség | Kalkuláció, majd teljes képernyős jóváhagyó lap |
+| Partner megnyitása | `mutasd`, `nyisd meg`, `nezzuk`, `hogy allunk a`, `mi a helyzet a`, `mennyivel tartozik` | partner | Partner adatlap AI-összefoglalóval |
+| Fizetési felszólítás | `felszolit`, `fizetesi emlek`, `hogy fizessen`, `szolj ra` | partner | Levéltervezet jóváhagyási kapuval |
+| Feladat rögzítése | `emlekeztess`, `jegyezd fel`, `ird fel`, `vegyel fel`, `allits be`, `rogzits`, `ne felejtsem` | határidő | Dátumfelismerés + feladat |
+| Lejárt / kintlévőség | `lejart`, `kintlevo`, `ki tartozik`, `nem fizettek`, `hatralek` | — | Kintlévőség nézet |
+| Fizetendő | `mennyit kell kifizet`, `mit kell utalni`, `utalni`, `bejovo szaml`, `kinek tartozom` | — | Heti esedékesség |
+| Mai teendő | `mai teendo`, `mi a dolgom`, `teendoim`, `mi van ma`, `napirend`, `mit kell ma` | — | Feladatlista |
+| Összefoglaló | `helyzet a cegemben`, `hogy allunk`, `foglald ossze`, `osszefoglal`, `hogy all a ceg` | — | Napi állás |
+| Árlista | `arlista`, `mennyibe kerul`, `mi az ara`, `listaar`, `mennyiert adom` | — | Árlista nézet |
+
+**Ha hiányzik egy szükséges adat**, a rendszer visszakérdez („Melyik partnernek?"),
+nem találgat. Ha egyáltalán nem ismeri fel, kiírja, hogy továbbadná a modellnek —
+a prototípusban nincs modellhívás.
+
+### Példaparancsok (a chipsáv)
+
+1. Intézd el a mai sürgős dolgaimat
+2. Készíts ajánlatot a Kovács Kft-nek 800 négyzetméter térkövezésre
+3. Mutasd a lejárt számláimat
+4. Jövő kedden emlékeztess, hogy hívjam fel a Kovács Kft-t
+5. Küldj fizetési felszólítást a Zöld Kertnek
+6. Mennyibe kerül a szürke térkő?
+7. Fotózok egy számlát
+8. Mi a mai teendőm?
+
+### Számfelismerés
+
+Kimondott számnevet is kezel: „nyolcszáz négyzetméter" → `800`. Számjeggyel
+mértékegység mellett (`800 nm`, `120 négyzetre`), betűvel kimondva, vagy csupasz
+számként, ha a mondatban pontosan egy szerepel.
+
+---
+
+## Asztali prototípus
+
+A `handle()` függvény szándékfelismerő ágai, felismerési mintával együtt.
 
 | Szándék | Felismerési minta (regex, normalizált) | Mit csinál |
 |---|---|---|
@@ -17,7 +72,7 @@ A `handle()` függvény szándékfelismerő ágai, felismerési mintával együt
 | Partner megnyitása | partnernév + (`mutasd`\|`nyisd`\|`hozd`\|`mi a helyzet`\|`hogy all`) | Partnerközpont adatlap AI-összefoglalóval |
 | Fallback | minden más | Felsorolja a működő példaparancsokat |
 
-## Példaparancsok (a `CHIPS` tömb)
+### Példaparancsok (a `CHIPS` tömb)
 
 1. Mi a helyzet a cégemben?
 2. Intézd el a mai sürgős dolgaimat
@@ -29,7 +84,7 @@ A `handle()` függvény szándékfelismerő ágai, felismerési mintával együt
 8. Jövő kedden emlékeztess, hogy hívjam fel a Kovács Kft-t
 9. Mi a lényeg a szerződésben?
 
-## Ajánlatkészítés logikája (`buildQuote`)
+### Ajánlatkészítés logikája (`buildQuote`)
 
 Bemenet: partner, m², változat (`normal` / `mintas` / `antik`).
 

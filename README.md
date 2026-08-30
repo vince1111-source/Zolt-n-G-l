@@ -24,18 +24,22 @@ MVP-fejlesztés csak a válaszok után indul, mert azok megváltoztatják a scop
 | [`HANDOVER.md`](HANDOVER.md) | **Kezdd ezzel.** Teljes projektátadás: döntések, becslések, ütemterv, jogi keret. |
 | [`CLAUDE.md`](CLAUDE.md) | Projektutasítások Claude Code-nak: nyelv, sarkalatos szabályok, scope. |
 | [`spike/`](spike/) | A 0. fázis mérőeszközei — NAV-lekérdezés, számlaolvasás-pontosság, hangfelismerés. |
-| [`prototype/CEGEM-AI-prototipus.html`](prototype/CEGEM-AI-prototipus.html) | Önálló kattintható prototípus. Nincs build, nyisd meg böngészőben. |
+| [`prototype/CEGEM-AI-telefon.html`](prototype/CEGEM-AI-telefon.html) | **A fő irány**: telefon-első prototípus. Nyisd meg telefonon, Chrome-ban. |
+| [`prototype/CEGEM-AI-prototipus.html`](prototype/CEGEM-AI-prototipus.html) | Az asztali változat, mind a 16 modullal. |
+| [`docs/fejlesztoi-specifikacio.md`](docs/fejlesztoi-specifikacio.md) | Fejlesztői specifikáció — Word és PDF a `docs/kiadas/` mappában. |
+| [`docs/iranyvaltas.md`](docs/iranyvaltas.md) | A 2026-08-26-i irányváltás: telefon-első, PWA, lépcsős AI, mit ne építsünk. |
+| [`docs/demo-forgatokonyv.md`](docs/demo-forgatokonyv.md) | 4 perces bemutató forgatókönyv, kérdés-válaszokkal. |
 | [`docs/megvalosithatosagi-terv.html`](docs/megvalosithatosagi-terv.html) | Megvalósíthatósági felmérés: modulonkénti becslés, szűk keresztmetszetek. |
-| [`docs/parancsok.md`](docs/parancsok.md) | A prototípus felismert parancsai. |
+| [`docs/parancsok.md`](docs/parancsok.md) | A prototípusok felismert parancsai. |
 
 ## A prototípus megnyitása
 
 ```bash
-xdg-open prototype/CEGEM-AI-prototipus.html   # Linux
-open prototype/CEGEM-AI-prototipus.html       # macOS
+xdg-open prototype/CEGEM-AI-telefon.html   # Linux
+open prototype/CEGEM-AI-telefon.html       # macOS
 ```
 
-Chrome kell hozzá, ha a hangvezérlést is ki akarod próbálni. A prototípus
+**Telefonon nézd**, és Chrome-ban — beágyazva a böngésző letiltja a mikrofont. A prototípus
 semmit nem küld ki és nem tárol; az „AI” benne determinisztikus magyar
 szándékfelismerő, nem nyelvi modell.
 

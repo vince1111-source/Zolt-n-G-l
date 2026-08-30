@@ -376,6 +376,7 @@ button:focus-visible, a:focus-visible{outline:3px solid var(--accent); outline-o
 .naplotetel .ido{font-family:"IBM Plex Mono",monospace; font-size:.7rem; color:var(--muted)}
 .naplotetel .mit{font-weight:600; font-size:.95rem}
 .naplotetel .reszlet{font-size:.85rem; color:var(--ink-2)}
+.naplotetel .bemenet{font-family:"IBM Plex Mono",monospace; font-size:.76rem; color:var(--muted)}
 
 /* ---------- pirítós ---------- */
 .pirit{
@@ -567,12 +568,15 @@ function reteg0(szoveg){
 /* ==========================================================================
    Ajánlatkalkuláció — determinisztikus kód. A modell nem számol.
    ========================================================================== */
-function ajanlatKeszites(partnerId, m2){
+function ajanlatKeszites(partnerId, m2, valtozat = "normal"){
   const p = P(partnerId);
   const fm = Math.round(4 * Math.sqrt(m2) / 5) * 5;
+  const anyag = valtozat === "antik"
+    ? { nev:"Térkő anyag, antik 6 cm", ar:5200 }
+    : { nev:arlista[1].nev, ar:arlista[1].ar };
   const tetelek = [
     { nev:arlista[0].nev, mennyi:m2, egyseg:"m²", ar:arlista[0].ar },
-    { nev:arlista[1].nev, mennyi:Math.round(m2 * 1.05), egyseg:"m²", ar:arlista[1].ar },
+    { nev:anyag.nev, mennyi:Math.round(m2 * 1.05), egyseg:"m²", ar:anyag.ar },
     { nev:arlista[2].nev, mennyi:m2, egyseg:"m²", ar:arlista[2].ar },
     { nev:arlista[3].nev, mennyi:fm, egyseg:"fm", ar:arlista[3].ar },
     { nev:arlista[4].nev, mennyi:fm, egyseg:"fm", ar:arlista[4].ar },
@@ -580,7 +584,7 @@ function ajanlatKeszites(partnerId, m2){
   ];
   const nettoNyers = tetelek.reduce((s,t) => s + t.mennyi * t.ar, 0);
   const netto = nettoNyers * (1 - p.kedvezmeny / 100);
-  return { partner:p, m2, fm, tetelek, netto, afa:netto * 0.27, brutto:netto * 1.27 };
+  return { partner:p, m2, fm, valtozat, tetelek, netto, afa:netto * 0.27, brutto:netto * 1.27 };
 }
 
 /* ==========================================================================
@@ -799,6 +803,7 @@ function vNaplo(){
       <div class="naplotetel">
         <span class="ido">${n.ido} · ${esc(n.allapot)}</span>
         <span class="mit">${esc(n.mit)}</span>
+        ${n.parancs ? `<span class="bemenet">amit hallottam: „${esc(n.parancs)}”</span>` : ""}
         <span class="reszlet">${esc(n.reszlet)}</span>
       </div>`).join("")}`;
 }
@@ -829,7 +834,7 @@ function ajanlatLap(a){
       <div class="feltetel">
         <div class="cim">Amit feltételeztem — nézd át</div>
         <ul>
-          <li>${new Intl.NumberFormat("hu-HU").format(a.m2)} m² burkolandó felület, szürke, normál kötésű 6 cm-es térkővel.</li>
+          <li>${new Intl.NumberFormat("hu-HU").format(a.m2)} m² burkolandó felület, ${a.valtozat === "antik" ? "<b>antik</b>" : "szürke"}, normál kötésű 6 cm-es térkővel.</li>
           <li>${a.fm} fm szegélyt számoltam, közel négyzetes területet feltételezve.</li>
           <li>5% vágási ráhagyás az anyagnál.</li>
           <li>Nem tartalmaz bontást, földmunkát és sittelszállítást.</li>
@@ -958,6 +963,9 @@ function sorbaTesz(mit){
    ========================================================================== */
 let ugyek = [];
 let ugyIdx = 0;
+/* Az utolsó ajánlat paraméterei — a „Módosítom" ág ebből számol újra. */
+let utolsoAjanlat = null;
+let modositastVar = false;
 
 function ugyekOsszeszedese(){
   const lista = [];
@@ -1070,7 +1078,9 @@ function tett(mit){
   }
   if(mit === "ajanlat-modosit"){
     lapZar();
-    pirit("Mondd el, mit módosítsak");
+    modositastVar = true;
+    valasz = { reteg:0, szoveg:'Mit módosítsak? Mondj egy új méretet — például <span class="kiemel">„kilencszáz négyzetméter"</span> —, vagy azt, hogy <span class="kiemel">antik térkővel</span>.' };
+    nezet = "ma"; rajzol();
   }
   if(mit === "felszolitas-jovahagy"){
     naplo.unshift({ ido:"08:16", mit:"Fizetési felszólítás", reszlet:"jóváhagyva, kiküldve", allapot:"végrehajtva" });
@@ -1091,8 +1101,35 @@ function pirit(szoveg){
    A parancs feldolgozása
    ========================================================================== */
 function kezel(szoveg, hangbol){
-  const r = reteg0(szoveg);
   const hallottam = hangbol ? szoveg : null;
+
+  // Ajánlat módosítása: rövid válasz egy folyamatban lévő kérdésre.
+  // Nem kell hozzá teljes parancs, elég a megváltozott adat.
+  if(modositastVar && utolsoAjanlat){
+    const ujM2 = szamKinyeres(szoveg);
+    const ujValtozat = /antik/.test(norm(szoveg)) ? "antik"
+      : /(szurke|normal)/.test(norm(szoveg)) ? "normal" : null;
+    if(ujM2 || ujValtozat){
+      modositastVar = false;
+      utolsoAjanlat = {
+        partner: utolsoAjanlat.partner,
+        m2: ujM2 || utolsoAjanlat.m2,
+        valtozat: ujValtozat || utolsoAjanlat.valtozat,
+      };
+      const aj = ajanlatKeszites(utolsoAjanlat.partner, utolsoAjanlat.m2, utolsoAjanlat.valtozat);
+      naplo.unshift({ ido:"08:13", mit:"Ajánlat módosítása", parancs:szoveg,
+        reszlet:`${aj.partner.nev} · ${utolsoAjanlat.m2} m²${utolsoAjanlat.valtozat === "antik" ? " · antik" : ""} · ${Ft(aj.brutto)}`,
+        allapot:"jóváhagyásra vár" });
+      valasz = { hallottam, reteg:0,
+        szoveg:`Átszámoltam: ${new Intl.NumberFormat("hu-HU").format(utolsoAjanlat.m2)} m²${utolsoAjanlat.valtozat === "antik" ? ", antik térkővel" : ""}. Az új végösszeg <span class="kiemel">${Ft(aj.brutto)}</span>.` };
+      nezet = "ma"; rajzol();
+      lapNyit(ajanlatLap(aj));
+      return;
+    }
+    modositastVar = false; // nem módosítás volt — menjen a szokásos úton
+  }
+
+  const r = reteg0(szoveg);
 
   if(!r){
     // Ide kerülne az 1. réteg hívása (olcsó modell, zárt sémával).
@@ -1117,8 +1154,10 @@ function kezel(szoveg, hangbol){
   const a = r.adatok;
   switch(r.szandek){
     case "ajanlat": {
-      const aj = ajanlatKeszites(a.partner, a.mennyiseg);
-      naplo.unshift({ ido:"08:12", mit:"Ajánlat készítése",
+      const valtozat = /antik/.test(norm(szoveg)) ? "antik" : "normal";
+      const aj = ajanlatKeszites(a.partner, a.mennyiseg, valtozat);
+      utolsoAjanlat = { partner:a.partner, m2:a.mennyiseg, valtozat };
+      naplo.unshift({ ido:"08:12", mit:"Ajánlat készítése", parancs:szoveg,
         reszlet:`${aj.partner.nev} · ${a.mennyiseg} m² · ${Ft(aj.brutto)}`, allapot:"jóváhagyásra vár" });
       valasz = { hallottam, reteg:0,
         szoveg:`Elkészítettem az ajánlatot <span class="kiemel">${esc(aj.partner.nev)}</span> részére, ${new Intl.NumberFormat("hu-HU").format(a.mennyiseg)} m²-re. Végösszeg <span class="kiemel">${Ft(aj.brutto)}</span>.` };
