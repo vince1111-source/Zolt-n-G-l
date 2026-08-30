@@ -379,7 +379,11 @@ A mérőeszközök készen állnak a `spike/` mappában; ami hátravan, az hozz�
 
 ### E) Ha fejlesztőktől kérsz árajánlatot
 
-Készüljön **Word + PDF fejlesztői specifikáció**: címlap, tartalomjegyzék, modulonkénti követelmények, adatmodell, képernyőtervek, MVP-fejezet, elfogadási kritériumok. Ez a dokumentum + a prototípus együtt már majdnem elég hozzá.
+**Elkészült.** `docs/fejlesztoi-specifikacio.md` a forrás, a Word- és PDF-változat
+a `docs/kiadas/` mappában van. Tartalmazza a sarkalatos követelményeket elfogadási
+kritériumokkal, a teljes adatmodellt, a modulonkénti követelményeket, az
+integrációkat és a becsléseket. Ez a dokumentum + a telefonos prototípus együtt
+elég egy fejlesztői árajánlathoz.
 
 > **Ajánlott sorrend:** előbb prototípus (kész), aztán specifikáció. A prototípus után írt specifikáció kevesebb félreértést tartalmaz, és a fejlesztők is szűkebb sávban áraznak, ha van mit megnézniük.
 

@@ -95,6 +95,8 @@ docs/megvalosithatosagi-terv.html megnyitható felmérés (nap- és költségbec
 docs/screenshots/                 a prototípus képernyőképei
 docs/parancsok.md                 a prototípus felismert parancsai
 docs/iranyvaltas.md               a 2026-08-26-i irányváltás és indoklása
+docs/fejlesztoi-specifikacio.md   fejlesztői specifikáció (a forrás)
+docs/kiadas/                      abból generált Word és PDF + a generátorok
 prototype/CEGEM-AI-prototipus.html  asztali prototípus — önálló HTML, nincs build
 prototype/artifact-body.html      ugyanaz Artifact-publikáláshoz (burok nélkül)
 prototype/CEGEM-AI-telefon.html   telefon-első prototípus (az irányváltás után ez a fő irány)
