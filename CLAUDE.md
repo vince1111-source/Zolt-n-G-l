@@ -70,7 +70,8 @@ száma. Három réteg, ebben a sorrendben:
 - Új parancsot **először a 0. rétegbe** vegyél fel (`spike/parancs/reteg0.mjs`),
   és csak akkor hagyd modellre, ha a megfogalmazás tényleg változatos.
 - Bizonytalanság esetén a 0. réteg **továbbad**, nem találgat.
-- **A modell megért, nem számol.** Az árkalkuláció determinisztikus kód.
+- **A modell megért, nem számol.** Az árkalkuláció determinisztikus kód:
+  `mag/arkalkulacio.mjs`, tesztekkel. Ha hozzányúlsz, `node --test mag/*.teszt.mjs`.
 - A napi összefoglaló naponta egyszer generálódik és tárolódik.
 - A beszélgetéshossznak legyen kontextus-plafonja.
 
@@ -101,6 +102,7 @@ prototype/CEGEM-AI-prototipus.html  asztali prototípus — önálló HTML, ninc
 prototype/artifact-body.html      ugyanaz Artifact-publikáláshoz (burok nélkül)
 prototype/CEGEM-AI-telefon.html   telefon-első prototípus (az irányváltás után ez a fő irány)
 prototype/telefon-artifact-body.html  ugyanaz Artifact-publikáláshoz
+mag/                              a termék magja: determinisztikus árkalkuláció + tesztek
 db/                               adatbázis: séma, RLS, állapotgép + bizonyító tesztek
   migraciok/0001_alap.sql         az első migráció — a sarkalatos szabályokkal
   tesztek/                        21 állítás, ami bizonyítja is őket
