@@ -178,6 +178,7 @@ ami alapján a döntés meghozható:
 | 1 | `spike/nav/nav-lekerdezes.mjs` | mezőnkénti kitöltöttség a NAV válaszában | NAV technikai felhasználó (1–3 hét regisztráció) |
 | 2 | `spike/szamlaolvasas/` | **csendes hiba** — rossz érték, amit a modell nem jelölt be | 50–100 valódi számla + Anthropic API kulcs |
 | 3 | `spike/hang/hang-teszt.html` | **szándékpontosság** — a helyes művelet indul-e el | 20 perc mérés Chrome-ban, több környezetben |
+| 4 | `spike/parancs/merd.mjs` | havi AI-költség felhasználónként | a 0. réteg már mérve; az 1. réteghez API kulcs |
 
 A 2. és 3. spike ma elvégezhető. Az 1. regisztrációját érdemes ma elindítani,
 mert az a leghosszabb átfutású.
@@ -269,8 +270,18 @@ A magyar piacon a részfunkciókra van szereplő: Számlázz.hu, Billingo, KBOSS
 
 ## 9. A prototípus
 
-**Fájl:** `prototype/CEGEM-AI-prototipus.html` — egyetlen önálló HTML fájl, nincs build, nincs függőség.
-**Artifact-változat:** `prototype/artifact-body.html` — ugyanaz `<!doctype>/<head>/<body>` burok nélkül (a Claude Artifact publikálás így várja).
+**Két prototípus van.** Az irányváltás óta a telefonos a fő irány.
+
+| Fájl | Mi ez |
+|---|---|
+| `prototype/CEGEM-AI-telefon.html` | **A fő irány.** Telefon-első: nyomva tartós mikrofon, 56 px célfelületek, napfény üzemmód, teljes képernyős jóváhagyó lapok. Tartalmazza az ajánlatot módosítással, a számlafotózást megerősítő folyamattal, a végigvezetést, az offline sort és az AI naplót. |
+| `prototype/CEGEM-AI-prototipus.html` | Az asztali változat, mind a 16 modullal — a teljes vízió. Bemutatóra fejlesztőnek vagy befektetőnek hasznos, ügyfélnek nem. |
+
+Mindkettőhöz tartozik egy `…artifact-body.html` változat, `<!doctype>/<head>/<body>`
+burok nélkül (a Claude Artifact publikálás így várja).
+
+Módosítás után futtatandó: `node prototype/fustproba.mjs` — 30 ellenőrzés a
+telefonos prototípuson, hálózat nélkül is fut.
 
 **Élő linkek:**
 - Prototípus: https://claude.ai/code/artifact/111a40b5-b3cd-4a22-a748-c6d247f3d96d
