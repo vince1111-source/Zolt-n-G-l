@@ -4,9 +4,11 @@ import { szerverKliens } from "./supabase/server";
 /**
  * A bejelentkezett felhasználó cége és saját felhasznalok-sora.
  *
- * Ha valaki megerősítette az e-mailjét, de valamiért (megszakadt kérés,
- * régi munkamenet) még nincs `felhasznalok` sora, visszairányítjuk a
- * regisztrációra — inkább kérdez, mint hogy kitalál egy céget.
+ * Ha valaki idáig eljutott, a munkamenete már érvényes — az e-mailje
+ * tehát megerősítve. Ha ennek ellenére nincs `felhasznalok` sora (mert a
+ * megerősítő link nem a várt alakban futott le, és a cég soha nem jött
+ * létre), a helyes irány a regisztráció BEFEJEZÉSE, nem az „ellenőrizd az
+ * e-mailt" — azt a lapot csak a még be sem jelentkezett látja.
  */
 export async function sajatCegVagyIranyitas() {
   const supabase = await szerverKliens();
@@ -26,7 +28,7 @@ export async function sajatCegVagyIranyitas() {
     .maybeSingle();
 
   if (!felhasznalo) {
-    redirect("/regisztracio/ellenorizd-az-e-mailt");
+    redirect("/regisztracio/befejezes");
   }
 
   const { data: ceg } = await supabase
