@@ -12,7 +12,7 @@
 
 ```bash
 # 1. Nézd meg, mi van kész, és hogy tényleg működik-e
-node --test mag/*.teszt.mjs        # 34 teszt — árkalkuláció, fizetési határidő, kintlévőség, AI-eszközök
+node --test mag/*.teszt.mjs        # 43 teszt — árkalkuláció, fizetési határidő, kintlévőség, AI-eszközök
 ./db/futtat.sh                     # 22 állítás — a sarkalatos szabályok (PostgreSQL kell)
 cd spike && node parancs/merd.mjs  # a lépcsős parancsfelismerés mérése
 
@@ -90,7 +90,7 @@ mérésektől függ, az a 6. modul mérete és a hang szerepe — az még nyitot
 | Mi | Hol | Bizonyíték |
 |---|---|---|
 | **Adatbázis-séma** RLS-sel és a jóváhagyási kapuval | `db/` | `./db/futtat.sh` → 22 állítás zöld |
-| **Mag** — árkalkuláció, fizetési határidő, kintlévőség, AI-eszközkészlet | `mag/` | `node --test mag/*.teszt.mjs` → 34 teszt zöld |
+| **Mag** — árkalkuláció, fizetési határidő, kintlévőség, AI-eszközkészlet | `mag/` | `node --test mag/*.teszt.mjs` → 43 teszt zöld |
 | **Telefon-első prototípus** | `prototype/CEGEM-AI-telefon.html` | `node prototype/fustproba.mjs` → 129 ellenőrzés zöld |
 | Asztali prototípus (mind a 16 modul) | `prototype/CEGEM-AI-prototipus.html` | kézzel átnézve |
 | **Árréses árlista + nagyker** (beszerzési ár, árrés, fedezet) | a telefonos prototípusban | a füstpróba külön szakasza |
@@ -208,6 +208,8 @@ mag/                               A TERMÉK MAGJA — saját, nem bekötendő
   fizetesi_hatarido.teszt.mjs      6 teszt
   kintlevoseg.mjs                  nyitott/lejárt összesítés, partnerenkénti bontással
   kintlevoseg.teszt.mjs            6 teszt
+  anyagszukseglet.mjs              a térkövezéshez kellő anyagok, a prototípuséval azonos konstansokkal
+  anyagszukseglet.teszt.mjs        9 teszt
   eszkozok.mjs                     az AI-réteg eszközkészlete, zárt sémákkal + a kapu állapotgépe
   eszkozok.teszt.mjs               11 teszt
 
@@ -250,7 +252,7 @@ spike/                             a 0. fázis mérőeszközei — nem termékk�
 ## 5. Hogyan ellenőrzöd, hogy nem rontottál el semmit
 
 ```bash
-node --test mag/*.teszt.mjs        # mag — 34 teszt
+node --test mag/*.teszt.mjs        # mag — 43 teszt
 ./db/futtat.sh                     # séma + sarkalatos szabályok — 22 állítás
 node prototype/fustproba.mjs       # telefonos prototípus — 129 ellenőrzés
 cd spike && node parancs/merd.mjs  # a 0. réteg lefedettsége és a költségbecslés
@@ -386,12 +388,18 @@ Ezek egyike sem függ a spike-októl és a hangtól. **1., 4. és 5. pont elkés
 — itt hagyva, hogy lássa a következő fejlesztő, mi történt és miért.
 
 1. ✅ **A determinisztikus számítások a magban.** `mag/fizetesi_hatarido.mjs`
-   (a határidő a partner napszámából) és `mag/kintlevoseg.mjs`
-   (nyitott/lejárt összesítés, partnerenkénti bontással) elkészült,
-   tesztekkel — `node --test mag/*.teszt.mjs` → 24 teszt zöld. Az
-   anyagszükséglet, a fedezet és az árrés-tartó árfrissítés még csak a
-   telefonos prototípusban van meg — ha a webapp megkapja a munkák/nagyker
-   modult, ezeket is át kell emelni ugyanígy.
+   (a határidő a partner napszámából), `mag/kintlevoseg.mjs`
+   (nyitott/lejárt összesítés, partnerenkénti bontással) és
+   `mag/anyagszukseglet.mjs` (a térkövezéshez szükséges anyagok, a
+   telefonos prototípuséval megegyező konstansokkal) elkészült,
+   tesztekkel — `node --test mag/*.teszt.mjs` → 43 teszt zöld.
+   ⚠ Az `anyagszukseglet` szándékosan **nincs bekötve** a webapp
+   ajánlatkészítésébe: az ott generikus (bármilyen árlistatételből épül),
+   míg ez a számítás kifejezetten térkövezésre szabott — csak akkor van
+   értelme rákötni, ha a webapp megkapja a munkák/nagyker modult, ahol
+   a méret (m²) mezőként létezik. A fedezet és az árrés-tartó
+   árfrissítés még csak a telefonos prototípusban van meg, ugyanígy
+   át kell majd emelni.
 2. **Ajánlat PDF-sablon.** A webapp `/ajanlatok/[id]/dokumentum` oldala
    megkapta a nyomtatható, cégfejléces előnézetet — böngésző-nyomtatással
    (`window.print()`), whitelist-alapú `@media print` szabállyal (csak a
