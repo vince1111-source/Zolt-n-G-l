@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f2f0e7;
+  --foreground: #16241b;
+  --color-brand: #12382a;
+  --color-brand-ink: #ffffff;
+  --color-cta: #a5e838;
+  --color-cta-ink: #0d2a16;
+  --color-surface: #ffffff;
+  --color-line: #d8d3c2;
+  --color-muted: #6c7569;
+  --color-kritikus: #a32b17;
+  --color-kritikus-soft: #fbe6e1;
+  --color-rendben: #1f6b3f;
+  --color-rendben-soft: #dff0e6;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-brand: var(--color-brand);
+  --color-brand-ink: var(--color-brand-ink);
+  --color-cta: var(--color-cta);
+  --color-cta-ink: var(--color-cta-ink);
+  --color-surface: var(--color-surface);
+  --color-line: var(--color-line);
+  --color-muted: var(--color-muted);
+  --color-kritikus: var(--color-kritikus);
+  --color-kritikus-soft: var(--color-kritikus-soft);
+  --color-rendben: var(--color-rendben);
+  --color-rendben-soft: var(--color-rendben-soft);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+input,
+select,
+textarea {
+  background: var(--color-surface);
+  border: 1px solid var(--color-line);
+  border-radius: 10px;
+  padding: 0.6rem 0.8rem;
+  font-size: 0.95rem;
+  color: var(--foreground);
+  width: 100%;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 2px solid var(--color-cta);
+  outline-offset: 1px;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: var(--color-muted);
+}
