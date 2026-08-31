@@ -269,7 +269,7 @@ console.log('\nÁrlista szerkesztése — az új ár beépül az ajánlatba');
   const uj = (await oldal.locator('.osszesen .v').textContent()).replace(/\s/g, ' ').trim();
   // 800 m² × 200 Ft többlet: (10 135 500 + 160 000) × 0,97 × 1,27 = 12 683 026.
   ok(uj === '12 683 026 Ft', 'a következő ajánlat már az új árral számol', uj);
-  ok(await oldal.evaluate(() => JSON.parse(localStorage.getItem('cegem-ai-demo-2')).arlista[2].ar === 5000),
+  ok(await oldal.evaluate(() => JSON.parse(localStorage.getItem(TAROLO)).arlista[2].ar === 5000),
     'a módosítás megmarad a tárolóban');
   await oldal.locator('#lap [data-zar]').first().click();
   await oldal.waitForTimeout(250);
@@ -413,6 +413,121 @@ console.log('\nOffline jóváhagyott ajánlat állapota');
   await oldal.locator('#offlineKapcsolo').click(); await oldal.waitForTimeout(400);
   ok(await oldal.evaluate(() => ajanlatok[0].allapot === 'kiküldve'),
     'a kapcsolat visszatérésekor az ajánlat tényleg kiküldötté válik');
+  ok(hibak.length === 0, 'nincs konzolhiba', hibak.join(' | '));
+  await ctx.close();
+}
+
+/* ------------------------- 15. nagyker: árrés, fedezet, árfrissítés ------ */
+console.log('\nNagyker — árréses árlista és az árfrissítés kapuja');
+{
+  const { ctx, oldal, hibak } = await ujOldal();
+  // A fedezet a jóváhagyó lapon látszik...
+  await oldal.locator('.chip', { hasText: 'Készíts ajánlatot' }).click();
+  await oldal.waitForTimeout(500);
+  ok((await oldal.locator('.fedezet').count()) === 1, 'a fedezet-sáv ott van a jóváhagyó lapon');
+  ok(/Fedezet/.test(await oldal.locator('.fedezet .c').textContent()), 'és fedezetnek nevezi magát');
+  // ...de az ügyfélnek szóló dokumentumra nem kerül rá.
+  await oldal.locator('[data-tett="ajanlat-dokumentum"]').click();
+  await oldal.waitForTimeout(300);
+  const dokSzoveg = await oldal.evaluate(() => document.getElementById('lap').textContent);
+  ok(!/[Ff]edezet|beszerz/i.test(dokSzoveg), 'a dokumentumon nincs fedezet és nincs beszerzési ár');
+  await oldal.locator('[data-tett="ajanlat-vissza"]').first().click();
+  await oldal.waitForTimeout(250);
+  await oldal.locator('#lap .gombsor [data-zar]').click();
+  await oldal.waitForTimeout(250);
+
+  // Nagyker nézet: parancsból, árrés-jelzésekkel és a váró frissítéssel.
+  await oldal.fill('#bevitel', 'Mennyiért adja most a BauMax a térkövet?');
+  await oldal.locator('#kuldGomb').click();
+  await oldal.waitForTimeout(400);
+  ok(await oldal.evaluate(() => nezet === 'nagyker'), 'a parancs a nagyker nézetre visz');
+  ok((await oldal.locator('.jelzes', { hasText: 'árrés' }).count()) > 0, 'az árrés tételenként látszik');
+  ok((await oldal.locator('[data-lap="arfrissites"]').count()) === 1, 'az árfrissítés átvezetésre vár');
+
+  // Az árfrissítés a kapun megy át: átnézed, és csak jóváhagyásra vezet át.
+  await oldal.locator('[data-lap="arfrissites"]').click();
+  await oldal.waitForTimeout(300);
+  const regiSzurke = await oldal.evaluate(() => arlista.find(t => t.nev === 'Térkő anyag, szürke 6 cm').ar);
+  await oldal.locator('[data-tett="arfrissites-atvezet"]').click();
+  await oldal.waitForTimeout(400);
+  ok(await oldal.evaluate(() => arlista.find(t => t.nev === 'Térkő anyag, szürke 6 cm').besz === 3190),
+    'a beszerzési ár átment');
+  const ujSzurke = await oldal.evaluate(() => arlista.find(t => t.nev === 'Térkő anyag, szürke 6 cm').ar);
+  ok(ujSzurke > regiSzurke && ujSzurke % 10 === 0, 'az eladási ár az árrés tartásával nőtt, 10 Ft-ra kerekítve',
+    `${regiSzurke} → ${ujSzurke}`);
+  ok(await oldal.evaluate(() => arfrissites === null), 'nincs több váró frissítés');
+  ok(await oldal.evaluate(() => naplo.some(n => n.mit.includes('árfrissítés') && n.allapot === 'végrehajtva')),
+    'az átvezetés a naplóban, jóváhagyással');
+  // A következő ajánlat már az új árral megy.
+  await oldal.locator('.chip', { hasText: 'Készíts ajánlatot' }).click();
+  await oldal.waitForTimeout(500);
+  const vegso = (await oldal.locator('.osszesen .v').textContent()).replace(/\s/g, ' ').trim();
+  ok(vegso !== '12 485 922 Ft', 'a következő ajánlat már az átvezetett árral számol', vegso);
+  ok(hibak.length === 0, 'nincs konzolhiba', hibak.join(' | '));
+  await ctx.close();
+}
+
+/* --------------------- 16. anyaglap: beszerzési költség a nagyker árain -- */
+console.log('\nBeszerzési költség az anyaglapon');
+{
+  const { ctx, oldal, hibak } = await ujOldal();
+  await oldal.locator('.chip', { hasText: 'Mennyi anyag kell' }).click();
+  await oldal.waitForTimeout(500);
+  const cimke = await oldal.locator('#lap .osszesen .c').textContent();
+  ok(/Beszerzés/.test(cimke), 'az anyaglap alján ott a beszerzési összeg', cimke);
+  const osszeg = await oldal.locator('#lap .osszesen .v').textContent();
+  ok(/Ft/.test(osszeg) && osszeg.trim() !== '0 Ft', 'az összeg a nagyker árain számolt', osszeg.trim());
+  ok(hibak.length === 0, 'nincs konzolhiba', hibak.join(' | '));
+  await ctx.close();
+}
+
+/* ----------------- 17. az átvizsgálás javított hibái ne jöjjenek vissza -- */
+console.log('\nÁrrés-szélsőségek és a nagyker-kapcsolat');
+{
+  const { ctx, oldal, hibak } = await ujOldal();
+  // Nagyker-nevű tétel felvételekor a beszerzési ár a szállítóét követi —
+  // az árfrissítő lapon nincs NaN.
+  await oldal.locator('[data-megy="arlista"]').click(); await oldal.waitForTimeout(250);
+  await oldal.locator('[data-szerk="ar:-1"]').click(); await oldal.waitForTimeout(250);
+  await oldal.fill('.urlap input[name="nev"]', 'Zúzottkő 0/32');
+  await oldal.fill('.urlap input[name="ar"]', '6000');
+  await oldal.locator('[data-ment]').click(); await oldal.waitForTimeout(300);
+  ok(await oldal.evaluate(() => {
+    const t = arlista.find(x => x.nev === 'Zúzottkő 0/32');
+    return t && t.besz === 4200 && t.nagyker === true;
+  }), 'a nagyker-nevű új tétel átveszi a szállító beszerzési árát');
+  await oldal.evaluate(() => { nezet = 'nagyker'; valasz = null; rajzol(); });
+  await oldal.waitForTimeout(250);
+  await oldal.locator('[data-lap="arfrissites"]').click(); await oldal.waitForTimeout(300);
+  const frissitoSzoveg = await oldal.evaluate(() => document.getElementById('lap').textContent);
+  ok(!/NaN|Infinity/.test(frissitoSzoveg), 'az árfrissítő lapon nincs NaN és nincs Infinity');
+  await oldal.locator('#lap [data-zar]').last().click(); await oldal.waitForTimeout(250);
+
+  // Veszteséges ár: piros jelzés az árlistán, piros fedezet-sáv az ajánlaton.
+  await oldal.evaluate(() => {
+    arlista.find(x => x.nev === 'Térkő anyag, szürke 6 cm').ar = 2000; // besz 2980 alatt
+    nezet = 'arlista'; rajzol();
+  });
+  await oldal.waitForTimeout(250);
+  ok((await oldal.locator('.jelzes.j-kritikus', { hasText: 'árrés' }).count()) > 0,
+    'a beszerzés alatti ár piros árrés-jelzést kap');
+  await oldal.locator('.chip', { hasText: 'Készíts ajánlatot' }).click();
+  await oldal.waitForTimeout(500);
+  ok(await oldal.evaluate(() => {
+    const f = document.querySelector('.fedezet');
+    return f && !f.classList.contains('veszteseg'); // 800 m²-en még pozitív a teljes fedezet
+  }), 'pozitív fedezetnél nincs veszteség-jelzés');
+  await oldal.evaluate(() => {
+    // Mindent önköltség alá viszünk — a fedezet negatívba fordul.
+    arlista.forEach(t => { if(t.besz) t.ar = Math.max(1, Math.round(t.besz * 0.5)); });
+    const aj = ajanlatKeszites('kovacs', 800, 'normal');
+    nezettAjanlat = { a: aj, szam: kovetkezoAjanlatSzam(), allapot:'tervezet', kelt:'2026-08-25' };
+    lapNyit(ajanlatLap(aj, nezettAjanlat.szam, 'tervezet', '2026-08-25'));
+  });
+  await oldal.waitForTimeout(300);
+  ok((await oldal.locator('.fedezet.veszteseg').count()) === 1, 'negatív fedezetnél piros a sáv');
+  ok(/Veszteséges/.test(await oldal.locator('.fedezet .c').textContent()),
+    'és ki is mondja, hogy veszteséges');
   ok(hibak.length === 0, 'nincs konzolhiba', hibak.join(' | '));
   await ctx.close();
 }

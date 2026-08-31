@@ -32,6 +32,7 @@ hangmérő lapon. Ami itt eldől, az ingyen van: nincs hálózat, nincs token.
 | Ajánlatok | `ajanlataim`, `ajanlatok`, `kikuldott ajanlat`, `nyitott ajanlat` | — | A kiadott ajánlatok és a sorsuk |
 | Anyagszükséglet | `mennyi anyag`, `anyagszukseglet`, `mit kell rendelni`, `hany raklap`, `beszerzesi lista` | mennyiség* | Beszerzési lista ugyanabból a méretből |
 | Cégadatok | `cegadat`, `cegprofil`, `adoszamom`, `bankszamlaszamom`, `beallitas` | — | Cégprofil nézet |
+| Nagyker | `nagyker`, `beszerzesi ar`, `arres`, `mennyiert adja`, `arfrissites` | — | Beszerzési árak, árrés, váró árfrissítés |
 
 \* Az anyagszükséglet a mondatból veszi a méretet, vagy az utoljára nézett
 ajánlatból — ha egyik sincs, visszakérdez.
@@ -50,8 +51,9 @@ a prototípusban nincs modellhívás.
 6. Mennyibe kerül a szürke térkő?
 7. Mutasd az ajánlataimat
 8. Mennyi anyag kell 800 négyzetméterhez?
-9. Fotózok egy számlát
-10. Mi a mai teendőm?
+9. Mennyiért adja most a BauMax a térkövet?
+10. Fotózok egy számlát
+11. Mi a mai teendőm?
 
 ### Számfelismerés
 

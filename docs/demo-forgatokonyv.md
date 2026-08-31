@@ -124,6 +124,12 @@ számításból dolgozik:
 - **Ajánlataim** — mi lett abból, ami kiment: elfogadva, nincs válasz,
   elutasítva. A „nincs válasz" ajánlatból lesz az utánkövetési teendő,
   amit az „Intézd el" folyamat felhoz.
+- **Nagyker árak** — a beszerzési oldal. Az ajánlaton (csak neked) ott a
+  **fedezet**; a nagyker árfrissítése a jóváhagyási kapun megy át: a
+  rendszer kiszámolja az új eladási árat **az árrésed tartásával**, de
+  nem vezeti át magától. A mondat hozzá:
+  > "A számlázóprogramok terméklistája nem tudja, mennyiért veszed.
+  > Ez itt tudja — és ha a nagyker árat emel, szól, de te döntesz."
 
 ### 4:30 — Zárás
 

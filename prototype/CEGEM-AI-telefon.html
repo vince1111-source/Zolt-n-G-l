@@ -458,6 +458,11 @@ button:focus-visible, a:focus-visible{outline:3px solid var(--accent); outline-o
 /* Nyomtatáskor csak a dokumentum megy papírra, a felület nem. */
 @media print{
   .app,.pirit,.lap-fej,.lap-lab{display:none !important}
+  /* A fedezet és a feltételezés-sáv belső információ: a böngésző saját
+     nyomtatása (Cmd+P) sem viheti papírra — a lapokról csak a .dok
+     dokumentum kerül papírra. */
+  .lap .fedezet,.lap .feltetel,.lap .valasz,.lap .sor,.lap .gombsor,
+  .lap .tetelek,.lap .mezok,.lap .urlap,.lap .fotogomb{display:none !important}
   .lap{position:static; height:auto; background:#fff}
   .lap-torzs{overflow:visible; padding:0}
   .dok{border:none; padding:0; font-size:.9rem}
@@ -483,6 +488,18 @@ button:focus-visible, a:focus-visible{outline:3px solid var(--accent); outline-o
 }
 .mezo.javitott{background:var(--rendben-soft); border-left:4px solid var(--rendben)}
 .mezo.javitott .honnan{color:var(--rendben)}
+
+/* --- fedezet-sáv: belső információ, az ügyfél-dokumentumra nem kerül rá --- */
+.fedezet{
+  border:1px solid var(--rendben); background:var(--rendben-soft); border-radius:var(--r);
+  padding:.7rem .85rem; display:flex; flex-direction:column; gap:.15rem;
+}
+.fedezet .c{font-family:"IBM Plex Mono",monospace; font-size:.64rem; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--rendben)}
+.fedezet b{font-size:1.15rem; font-variant-numeric:tabular-nums; color:var(--ink)}
+.fedezet .mi{font-size:.78rem; color:var(--ink-2)}
+.fedezet.veszteseg{border-color:var(--kritikus); background:var(--kritikus-soft)}
+.fedezet.veszteseg .c{color:var(--kritikus)}
 
 .pirit{
   position:fixed; left:50%; bottom:calc(env(safe-area-inset-bottom) + 7.5rem); transform:translateX(-50%);
@@ -567,15 +584,52 @@ const feladatok = [
 ];
 /* Ugyanazok az árak, mint az asztali prototípusban — a két demó
    ugyanazt a végösszeget adja ugyanarra a parancsra. */
+/* Árréses árlista: minden tételnél ott a beszerzési ár is (`besz`) —
+   anyagnál a nagyker ára, munkadíjnál az önköltség. Az ajánlat ebből
+   tudja megmondani a fedezetet, és az árfrissítés ebből számol új
+   eladási árat. A számlázók terméklistája ezt nem tudja — ez saját mag. */
 const arlista = [
-  { nev:"Alapozás, zúzottkő ágyazat",   egyseg:"m²",  ar:2900 },
-  { nev:"Térkő anyag, szürke 6 cm",     egyseg:"m²",  ar:3950 },
-  { nev:"Térkő lerakás, normál kötés",  egyseg:"m²",  ar:4800 },
-  { nev:"Szegélykő, süttői 100×20",     egyseg:"fm",  ar:2100 },
-  { nev:"Szegélykő elhelyezés",         egyseg:"fm",  ar:3400 },
-  { nev:"Kiszállás, munkakezdés",       egyseg:"alk.",ar:25000 },
-  { nev:"Térkő anyag, antik 6 cm",      egyseg:"m²",  ar:5200 },
+  { nev:"Alapozás, zúzottkő ágyazat",   egyseg:"m²",  ar:2900,  besz:1900 },
+  { nev:"Térkő anyag, szürke 6 cm",     egyseg:"m²",  ar:3950,  besz:2980, nagyker:true },
+  { nev:"Térkő lerakás, normál kötés",  egyseg:"m²",  ar:4800,  besz:3200 },
+  { nev:"Szegélykő, süttői 100×20",     egyseg:"fm",  ar:2100,  besz:1450, nagyker:true },
+  { nev:"Szegélykő elhelyezés",         egyseg:"fm",  ar:3400,  besz:2200 },
+  { nev:"Kiszállás, munkakezdés",       egyseg:"alk.",ar:25000, besz:0 },
+  { nev:"Térkő anyag, antik 6 cm",      egyseg:"m²",  ar:5200,  besz:3900, nagyker:true },
 ];
+
+/* ==========================================================================
+   Nagyker — a szállító árlistája, ahogy tőle jön. Élesben ez a szállító
+   API-jából vagy a beküldött árlistájából frissül; a demóban szimulált.
+   Az árváltozás itt is a jóváhagyási kapun megy át: a rendszer kiszámolja
+   az új eladási árat az árrés tartásával, de nem vezeti át magától.
+   ========================================================================== */
+let nagyker = {
+  szallito:"baumax",
+  frissitve:"2026-08-18",
+  tetelek:[
+    { nev:"Térkő anyag, szürke 6 cm", egyseg:"m²",   besz:2980 },
+    { nev:"Térkő anyag, antik 6 cm",  egyseg:"m²",   besz:3900 },
+    { nev:"Szegélykő, süttői 100×20", egyseg:"fm",   besz:1450 },
+    { nev:"Zúzottkő 0/32",            egyseg:"t",    besz:4200 },
+    { nev:"Ágyazóhomok 0/4",          egyseg:"t",    besz:5600 },
+    { nev:"C12/15 beton",             egyseg:"m³",   besz:32500 },
+    { nev:"Fugahomok 25 kg",          egyseg:"zsák", besz:1890 },
+  ],
+};
+
+/* A ma reggel érkezett árfrissítés — átvezetésre vár. */
+let arfrissites = {
+  kelt:"2026-08-25",
+  valtozasok:[
+    { nev:"Térkő anyag, szürke 6 cm", uj:3190 },
+    { nev:"Zúzottkő 0/32",            uj:4500 },
+    { nev:"Fugahomok 25 kg",          uj:1790 },
+  ],
+};
+
+/* Árrés: az eladási árban lévő haszon aránya. */
+const arres = t => (t.besz != null && t.ar > 0) ? Math.round((t.ar - t.besz) / t.ar * 100) : null;
 let naplo = [
   { ido:"07:42", mit:"Napi összefoglaló", reszlet:"3 nyitott számla, 2 teendő · naponta egyszer generálva", allapot:"kész" },
 ];
@@ -685,6 +739,7 @@ const SZANDEKOK = [
   { id:"fizetendo",   re:/(mennyit kell kifizet|mit kell utalni|utalni|bejovo szaml|kinek tartozom)/ },
   { id:"teendo",      re:/(mai teendo|mi a dolgom|teendoim|mi van ma|mai feladat|napirend|mit kell ma)/ },
   { id:"osszefoglalo",re:/(helyzet a cegemben|hogy allunk|foglald ossze|osszefoglal|hogy all a ceg)/ },
+  { id:"nagyker",     re:/(nagyker|beszerzesi ar|szallitoi ar|arres|mennyiert adja|arfrissites|mennyiert veszem)/ },
   { id:"arlista",     re:/(arlista|mennyibe kerul|mi az ara|listaar|mennyiert adom)/ },
 ];
 
@@ -735,8 +790,16 @@ function ajanlatKeszites(partnerId, m2, valtozat = "normal"){
   ];
   const listaar = tetelek.reduce((s,t) => s + t.mennyi * t.ar, 0);
   const netto = listaar * (1 - p.kedvezmeny / 100);
+  // Fedezet: mennyi marad, ha a beszerzést (nagyker + önköltség) kifizettük.
+  // Ugyanabból a tételsorból számol, mint az összeg — nem külön becslés.
+  const onkoltseg = tetelek.reduce((s,t) => {
+    const at = arlista.find(x => x.nev === t.nev);
+    return s + t.mennyi * ((at && at.besz != null) ? at.besz : t.ar);
+  }, 0);
+  const fedezet = netto - onkoltseg;
   return { partner:p, m2, fm, valtozat, tetelek, listaar, kedvezmenyErtek:listaar - netto,
-           netto, afa:netto * (ceg.afa / 100), brutto:netto * (1 + ceg.afa / 100) };
+           netto, afa:netto * (ceg.afa / 100), brutto:netto * (1 + ceg.afa / 100),
+           onkoltseg, fedezet, fedezetSzazalek: netto > 0 ? fedezet / netto * 100 : 0 };
 }
 
 /* ==========================================================================
@@ -763,18 +826,34 @@ function anyagszukseglet(m2, fm, valtozat){
   return [
     { nev: valtozat === "antik" ? "Térkő, antik 6 cm" : "Térkő, szürke 6 cm",
       mennyi:terkoM2, egyseg:"m²",
+      nagykerNev: valtozat === "antik" ? "Térkő anyag, antik 6 cm" : "Térkő anyag, szürke 6 cm",
       alatta:`${Math.ceil(terkoM2 / ANYAG.raklapM2)} raklap · 5% vágási ráhagyással` },
     { nev:"Zúzottkő 0/32 — alapréteg", mennyi:egyTized(zuzottkoM3 * ANYAG.zuzottkoSuruseg), egyseg:"t",
+      nagykerNev:"Zúzottkő 0/32",
       alatta:`${Math.round(ANYAG.agyazatVastagsag * 100)} cm tömörítve · ${egyTized(zuzottkoM3)} m³ lazán` },
     { nev:"Ágyazóhomok 0/4", mennyi:egyTized(homokM3 * ANYAG.homokSuruseg), egyseg:"t",
+      nagykerNev:"Ágyazóhomok 0/4",
       alatta:`${Math.round(ANYAG.homokVastagsag * 100)} cm ágyazóréteg` },
     { nev:"Szegélykő, süttői 100×20", mennyi:fm, egyseg:"db",
+      nagykerNev:"Szegélykő, süttői 100×20",
       alatta:"1 fm-es elemek, a becsült kerületre" },
     { nev:"Beton a szegélygerendához", mennyi:egyTized(fm * 0.02), egyseg:"m³",
+      nagykerNev:"C12/15 beton",
       alatta:"C12/15, kétoldali megtámasztással" },
     { nev:"Fugahomok", mennyi:Math.ceil(m2 * ANYAG.fugahomokKgM2 / ANYAG.zsakKg), egyseg:"zsák",
+      nagykerNev:"Fugahomok 25 kg",
       alatta:`${ANYAG.zsakKg} kg-os kiszerelés` },
   ];
+}
+
+/* A beszerzési lista ára a nagyker aktuális árain. */
+function beszerzesiKoltseg(lista){
+  let ossz = 0, hianyzo = 0;
+  for(const t of lista){
+    const nk = nagyker.tetelek.find(x => x.nev === t.nagykerNev);
+    if(nk) ossz += t.mennyi * nk.besz; else hianyzo += 1;
+  }
+  return { ossz, hianyzo };
 }
 
 /* ==========================================================================
@@ -802,12 +881,12 @@ let ajanlatok = [
    a következő megnyitásig. Ha a böngésző tiltja a tárolást (beágyazott
    nézet, privát ablak), a demó attól még hibátlanul megy, csak felejt.
    ========================================================================== */
-const TAROLO = "cegem-ai-demo-2";
+const TAROLO = "cegem-ai-demo-3";
 
 function ment(){
   try{
     localStorage.setItem(TAROLO, JSON.stringify({
-      ceg, partnerek, arlista, szamlak, bejovoSzamlak, feladatok, ajanlatok, ajanlatSzamlalo, naplo, sor
+      ceg, partnerek, arlista, szamlak, bejovoSzamlak, feladatok, ajanlatok, ajanlatSzamlalo, naplo, sor, nagyker, arfrissites
     }));
   }catch(_){ /* nincs tárolás — nem hiba, csak nem emlékszünk */ }
 }
@@ -828,6 +907,9 @@ function betolt(){
     if(Array.isArray(x.naplo)) naplo = x.naplo;
     if(Number.isFinite(x.ajanlatSzamlalo)) ajanlatSzamlalo = x.ajanlatSzamlalo;
     if(Array.isArray(x.sor)) sor = x.sor;
+    if(x.nagyker && Array.isArray(x.nagyker.tetelek)) nagyker = x.nagyker;
+    if("arfrissites" in x) arfrissites =
+      (x.arfrissites && Array.isArray(x.arfrissites.valtozasok)) ? x.arfrissites : null;
   }catch(_){ /* sérült tárolt állapot — inkább a mintaadat, mint egy törött demó */ }
 }
 
@@ -852,6 +934,7 @@ function rajzol(){
     : nezet === "arlista" ? vArlista()
     : nezet === "partnerek" ? vPartnerek()
     : nezet === "ajanlatok" ? vAjanlatok()
+    : nezet === "nagyker" ? vNagyker()
     : nezet === "cegprofil" ? vCegprofil()
     : nezet.startsWith("partner:") ? vPartner(nezet.slice(8))
     : nezet === "naplo" ? vNaplo()
@@ -863,7 +946,10 @@ function rajzol(){
   fo.querySelectorAll("[data-partner]").forEach(el =>
     el.addEventListener("click", () => { nezet = "partner:" + el.dataset.partner; valasz = null; rajzol(); }));
   fo.querySelectorAll("[data-lap]").forEach(el =>
-    el.addEventListener("click", () => { if(el.dataset.lap === "szamla") szamlaLapNyit(); }));
+    el.addEventListener("click", () => {
+      if(el.dataset.lap === "szamla") szamlaLapNyit();
+      if(el.dataset.lap === "arfrissites") arfrissitesLap();
+    }));
   fo.querySelectorAll("[data-ajanlat]").forEach(el =>
     el.addEventListener("click", () => ajanlatMegnyit(el.dataset.ajanlat)));
   fo.querySelectorAll("[data-szerk]").forEach(el =>
@@ -936,6 +1022,10 @@ function vMa(){
     </button>
     <button class="sor" data-megy="arlista">
       <div class="fo"><div class="nev">Árlista</div><div class="alatta">${arlista.length} tétel</div></div>
+    </button>
+    <button class="sor" data-megy="nagyker">
+      <div class="fo"><div class="nev">Nagyker árak</div><div class="alatta">Beszerzési árak és az árrésed</div></div>
+      ${arfrissites ? `<span class="jelzes j-figyelem">${arfrissites.valtozasok.length} új ár</span>` : ""}
     </button>
     <button class="sor" data-megy="naplo">
       <div class="fo"><div class="nev">AI napló</div><div class="alatta">Mit javasolt, mit hagytál jóvá</div></div>
@@ -1059,11 +1149,16 @@ function vArlista(){
       Koppints egy tételre az ár módosításához. Az ajánlat ebből számol —
       áremelés után a következő ajánlat már az új árral megy ki.
     </p>
-    ${arlista.map((t, i) => `
+    ${arlista.map((t, i) => {
+      const r = arres(t);
+      return `
       <button class="sor" data-szerk="ar:${i}">
-        <div class="fo"><div class="nev">${esc(t.nev)}</div><div class="alatta">${esc(t.egyseg)}</div></div>
-        <div class="jobb"><div class="osszeg">${Ft(t.ar)}</div></div>
-      </button>`).join("")}
+        <div class="fo"><div class="nev">${esc(t.nev)}</div>
+        <div class="alatta">${t.besz ? `beszerzés ${Ft(t.besz)}/${esc(t.egyseg)}${t.nagyker ? " · nagyker" : ""}` : esc(t.egyseg)}</div></div>
+        <div class="jobb"><div class="osszeg">${Ft(t.ar)}</div>
+        ${r != null && t.besz ? `<span class="jelzes ${r < 0 ? "j-kritikus" : r < 15 ? "j-figyelem" : "j-rendben"}">${r}% árrés</span>` : ""}</div>
+      </button>`;
+    }).join("")}
     <button class="sor" data-szerk="ar:-1">
       <div class="fo"><div class="nev">+ Új tétel</div><div class="alatta">Saját ár felvétele</div></div>
     </button>`;
@@ -1099,6 +1194,109 @@ function vAjanlatok(){
     <p style="margin:0; font-size:.85rem; color:var(--muted)">
       Koppints bármelyikre: megnézheted úgy, ahogy az ügyfél látta.
     </p>`;
+}
+
+/* Nagyker árak — a beszerzési oldal. Itt látszik, mennyiért veszed,
+   mennyiért adod, és mennyi marad közte. Az árfrissítés jóváhagyásra vár:
+   a rendszer kiszámolja az új eladási árat, de nem vezeti át magától. */
+function vNagyker(){
+  const sz = P(nagyker.szallito);
+  return `
+    <div class="cimsor"><h1>Nagyker árak</h1><span class="datum">${esc(sz.nev)}</span></div>
+    ${valaszHtml()}
+    ${arfrissites ? `
+    <button class="kartya figyelem" data-lap="arfrissites">
+      <span class="cimke">Árfrissítés érkezett — ${datumHu(arfrissites.kelt)}</span>
+      <span class="ertek">${arfrissites.valtozasok.length} tétel</span>
+      <span class="alszoveg">A ${esc(sz.nev)} új árakat küldött. Nézd át — átvezetés csak jóváhagyással.</span>
+    </button>` : `
+    <div class="kartya rendben" style="cursor:default">
+      <span class="cimke">Árlista naprakész</span>
+      <span class="ertek">${datumHu(nagyker.frissitve)}</span>
+      <span class="alszoveg">Nincs átvezetésre váró árváltozás.</span>
+    </div>`}
+    <div class="szekcio">Beszerzési árak — ${esc(sz.nev)}</div>
+    ${nagyker.tetelek.map(nk => {
+      const sajat = arlista.find(x => x.nev === nk.nev);
+      const r = sajat ? arres(sajat) : null;
+      return `<div class="sor" style="cursor:default">
+        <div class="fo">
+          <div class="nev">${esc(nk.nev)}</div>
+          <div class="alatta">${sajat ? `eladási ár ${Ft(sajat.ar)}` : "csak beszerzésre — nincs az árlistádban"}</div>
+        </div>
+        <div class="jobb">
+          <div class="osszeg">${Ft(nk.besz)}<span style="font-weight:400; color:var(--muted)">/${esc(nk.egyseg)}</span></div>
+          ${r != null ? `<span class="jelzes ${r < 0 ? "j-kritikus" : r < 15 ? "j-figyelem" : "j-rendben"}">${r}% árrés</span>` : ""}
+        </div>
+      </div>`;
+    }).join("")}
+    <p style="margin:0; font-size:.85rem; color:var(--muted)">
+      Élesben az árak a nagyker rendszeréből vagy a beküldött árlistából
+      frissülnek. A demóban a frissítés szimulált — a folyamat viszont éles:
+      árváltozás csak jóváhagyás után kerül az árlistádba.
+    </p>`;
+}
+
+/* Az árfrissítés átnézése — egy képernyő, egy döntés. A rendszer megmutatja,
+   mi drágult és mit jelentene az árrés tartása; az átvezetés a te döntésed. */
+function arfrissitesLap(){
+  if(!arfrissites) return;
+  // A 2. sarkalatos szabály: a javaslatnak is legyen nyoma, ne csak a
+  // döntésnek. Egyszer naplózzuk, nem minden megnyitáskor.
+  if(!arfrissites.naplozva){
+    arfrissites.naplozva = true;
+    naplo.unshift({ ido:"08:27", mit:"Nagyker árfrissítés kiszámolva",
+      reszlet:`${P(nagyker.szallito).nev} · ${arfrissites.valtozasok.length} tétel · új eladási árak az árrés tartásával — jóváhagyásra vár`,
+      allapot:"jóváhagyásra vár" });
+    ment();
+  }
+  const hu = new Intl.NumberFormat("hu-HU");
+  const sorok = arfrissites.valtozasok.map(v => {
+    const nk = nagyker.tetelek.find(x => x.nev === v.nev);
+    if(!nk) return null; // ismeretlen tétel a frissítésben — kihagyjuk, nem dobunk hibát
+    const sajat = arlista.find(x => x.nev === v.nev);
+    const szazalek = Math.round((v.uj - nk.besz) / nk.besz * 100);
+    // Új eladási ár csak akkor számolható, ha van mihez tartani az árrést.
+    const ujElado = (sajat && sajat.besz > 0)
+      ? Math.round(v.uj * sajat.ar / sajat.besz / 10) * 10 : null;
+    return { v, nk, sajat, szazalek, ujElado };
+  }).filter(Boolean);
+  lapNyit(`
+    <div class="lap-fej">
+      <button class="ikongomb" data-zar aria-label="Vissza">←</button>
+      <h2>Árfrissítés — ${esc(P(nagyker.szallito).nev)}</h2>
+    </div>
+    <div class="lap-torzs">
+      <div class="feltetel">
+        <div class="cim">Mit jelent ez neked</div>
+        <ul>
+          <li>${sorok.filter(x => x.v.uj > x.nk.besz).length} tétel drágult, ${sorok.filter(x => x.v.uj < x.nk.besz).length} olcsóbb lett.</li>
+          <li>Ahol a tétel az árlistádban is szerepel, kiszámoltam az új eladási árat
+              <b>az árrésed tartásával</b>, 10 Ft-ra kerekítve.</li>
+          <li>Amíg nem hagyod jóvá, minden ajánlat a régi árakkal készül.</li>
+        </ul>
+      </div>
+      <div class="tetelek">
+        ${sorok.map(({v, nk, szazalek, ujElado, sajat}) => `
+          <div class="tetel">
+            <div><div class="megnev">${esc(v.nev)}</div>
+            <div class="mennyi">${hu.format(nk.besz)} → ${hu.format(v.uj)} Ft/${esc(nk.egyseg)} (${szazalek > 0 ? "+" : ""}${szazalek}%)</div></div>
+            <div class="ar">${ujElado != null ? `eladási ${hu.format(sajat.ar)} → ${hu.format(ujElado)} Ft`
+              : sajat ? "nincs beszerzési ár rögzítve" : "csak beszerzés"}</div>
+          </div>`).join("")}
+      </div>
+      <p style="margin:0; font-size:.85rem; color:var(--muted)">
+        Az átvezetés a kiadott ajánlatokat nem érinti — azok a kiadáskori
+        árak pillanatképét őrzik.
+      </p>
+    </div>
+    <div class="lap-lab">
+      <button class="gomb fo" data-tett="arfrissites-atvezet">Átvezetem — az árrésem marad</button>
+      <div class="gombsor ketto">
+        <button class="gomb" data-tett="arfrissites-csakbesz">Csak a beszerzési árat</button>
+        <button class="gomb" data-zar>Később</button>
+      </div>
+    </div>`);
 }
 
 /* 1. modul — cégprofil. Nem beállításmenü: ez az, amiből a rendszer dolgozik. */
@@ -1220,12 +1418,15 @@ function arlistaSzerkeszt(i){
   const t = uj ? { nev:"", egyseg:"m²", ar:0 } : arlista[i];
   urlapLap({
     cim: uj ? "Új árlistatétel" : "Ár módosítása",
-    leiras: uj ? "Vedd fel a saját tételedet." :
-      "Az ajánlat ebből az árlistából számol — amit itt átírsz, a következő ajánlatban már így megy ki.",
+    leiras: uj ? "Vedd fel a saját tételedet. Ha beszerzési árat is adsz, számoljuk az árrést." :
+      "Az ajánlat ebből az árlistából számol — amit itt átírsz, a következő ajánlatban már így megy ki."
+      + (t.nagyker ? " A beszerzési árat a nagyker árfrissítése is frissíti." : ""),
     mezok: [
       { kulcs:"nev", nev:"Megnevezés", ertek:t.nev, tipp:"pl. Térkő lerakás, normál kötés" },
       { kulcs:"egyseg", nev:"Mennyiségi egység", ertek:t.egyseg, tipp:"m², fm, db, alk." },
-      { kulcs:"ar", nev:"Nettó egységár (Ft)", ertek:t.ar, tipus:"number" },
+      { kulcs:"ar", nev:"Nettó eladási ár (Ft)", ertek:t.ar, tipus:"number" },
+      { kulcs:"besz", nev:"Beszerzési ár / önköltség (Ft)", ertek:t.besz ?? "", tipus:"number",
+        tipp:"üresen hagyható" },
     ],
     mentesCimke: uj ? "Felveszem" : "Mentem az új árat",
     torles: uj ? null : () => {
@@ -1235,13 +1436,24 @@ function arlistaSzerkeszt(i){
     onMentes: (k) => {
       if(!k.nev || !(k.ar >= 0)){ pirit("Név és ár kell hozzá"); return; }
       const regi = t.ar;
-      if(uj) arlista.push({ nev:k.nev, egyseg:k.egyseg || "db", ar:k.ar });
-      else Object.assign(arlista[i], { nev:k.nev, egyseg:k.egyseg || t.egyseg, ar:k.ar });
+      const besz = k.besz > 0 ? k.besz : (k.besz === 0 ? 0 : undefined);
+      // A nagyker-kapcsolat a néven múlik: ha a név már nem egyezik a
+      // szállító tételével, a jelölést levesszük — ha egyezik, felvesszük,
+      // és a beszerzési ár a szállítóét követi.
+      const nkTetel = nagyker.tetelek.find(x => x.nev === k.nev);
+      const adat = { nev:k.nev, egyseg:k.egyseg || t.egyseg || "db", ar:k.ar,
+        besz: nkTetel ? nkTetel.besz : besz, nagyker: !!nkTetel };
+      if(uj) arlista.push(adat);
+      else Object.assign(arlista[i], adat);
       naplo.unshift({ ido:"08:40", mit: uj ? "Új árlistatétel" : "Ár módosítása",
-        reszlet: uj ? `${k.nev} · ${Ft(k.ar)}/${k.egyseg}` : `${k.nev} · ${Ft(regi)} → ${Ft(k.ar)}`,
+        reszlet: uj ? `${k.nev} · ${Ft(k.ar)}/${adat.egyseg}` : `${k.nev} · ${Ft(regi)} → ${Ft(k.ar)}`,
         allapot:"kész" });
       ment(); lapZar(); nezet = "arlista"; rajzol();
-      pirit(uj ? "Tétel felvéve" : "Új ár mentve");
+      if(adat.besz != null && k.ar < adat.besz){
+        pirit("Figyelem: az eladási ár a beszerzési ár alatt van");
+      } else {
+        pirit(uj ? "Tétel felvéve" : "Új ár mentve");
+      }
     },
   });
 }
@@ -1345,6 +1557,13 @@ function ajanlatLap(a, szam, allapot, kelt){
       <p style="margin:0; font-size:.85rem; color:var(--muted)">
         Nettó ${Ft(a.netto)} + ${ceg.afa}% áfa ${Ft(a.afa)}
       </p>
+      ${a.fedezet != null ? `
+      <div class="fedezet ${a.fedezet < 0 ? "veszteseg" : ""}">
+        <span class="c">${a.fedezet < 0 ? "Veszteséges — nézd át az árakat" : "Fedezet — csak neked látszik"}</span>
+        <b>${Ft(a.fedezet)} · ${Math.round(a.fedezetSzazalek)}%</b>
+        <span class="mi">Anyag a ${esc(P(nagyker.szallito).nev)} árain (frissítve: ${datumHu(nagyker.frissitve)}),
+        munkadíj önköltségen. Az ügyfélnek küldött dokumentumon nem szerepel.</span>
+      </div>` : ""}
       <button class="sor" data-tett="ajanlat-dokumentum">
         <div class="fo"><div class="nev">Így látja az ügyfél</div>
         <div class="alatta">A kiküldendő dokumentum, ${esc(ceg.nev)} fejlécével</div></div>
@@ -1461,20 +1680,28 @@ function anyagLap(){
         </ul>
       </div>
       <div class="tetelek">
-        ${lista.map(t => `
+        ${lista.map(t => {
+          const nk = nagyker.tetelek.find(x => x.nev === t.nagykerNev);
+          return `
           <div class="tetel">
             <div><div class="megnev">${esc(t.nev)}</div>
-            <div class="mennyi">${esc(t.alatta)}</div></div>
+            <div class="mennyi">${esc(t.alatta)}${nk ? ` · ${hu.format(nk.besz)} Ft/${esc(nk.egyseg)}` : ""}</div></div>
             <div class="ar">${hu.format(t.mennyi)} ${t.egyseg}</div>
-          </div>`).join("")}
+          </div>`;
+        }).join("")}
+        ${(() => {
+          const k = beszerzesiKoltseg(lista);
+          return `<div class="osszesen"><span class="c">Beszerzés a ${esc(P(nagyker.szallito).nev)} árain${k.hianyzo ? ` · ${k.hianyzo} tételre nincs ár` : ""}</span><span class="v">${Ft(k.ossz)}</span></div>`;
+        })()}
       </div>
       <p style="margin:0; font-size:.85rem; color:var(--muted)">
-        Ez determinisztikus számítás, nem becslés: ugyanaz a méret mindig ugyanezt a
-        mennyiséget adja. A modell nem számol — csak a paramétereket tölti ki.
+        Az egységárak a nagyker árlistájából jönnek (frissítve: ${datumHu(nagyker.frissitve)}) —
+        a Nagyker árak nézetben látod őket tételesen. Ez determinisztikus
+        számítás: a modell nem számol, csak a paramétereket tölti ki.
       </p>
     </div>
     <div class="lap-lab">
-      <button class="gomb fo" data-tett="anyag-rendeles">Elküldöm a BauMaxnak — jóváhagyom</button>
+      <button class="gomb fo" data-tett="anyag-rendeles">Elküldöm — jóváhagyom</button>
       <button class="gomb" data-tett="ajanlat-vissza">Vissza</button>
     </div>`;
 }
@@ -1753,12 +1980,12 @@ function tett(mit){
   if(mit === "anyag-rendeles"){
     const { a } = nezettAjanlat;
     const mennyi = anyagszukseglet(a.m2, a.fm, a.valtozat);
-    const cim = `Beszerzési lista — BauMax Trade Kft. (${new Intl.NumberFormat("hu-HU").format(a.m2)} m²)`;
+    const cim = `Beszerzési lista — ${P(nagyker.szallito).nev} (${new Intl.NumberFormat("hu-HU").format(a.m2)} m²)`;
     lapZar();
     if(online()){
       naplo.unshift({ ido:"08:26", mit:"Beszerzési lista kiküldése",
         reszlet:`${cim} · ${mennyi.length} tétel · jóváhagyva, elküldve`, allapot:"végrehajtva" });
-      valasz = { reteg:0, szoveg:`Elküldtem a beszerzési listát a <span class="kiemel">BauMax Trade Kft.</span> részére, ${mennyi.length} tétellel. Szólok, ha visszaigazolják.` };
+      valasz = { reteg:0, szoveg:`Elküldtem a beszerzési listát a <span class="kiemel">${esc(P(nagyker.szallito).nev)}</span> részére, ${mennyi.length} tétellel. Szólok, ha visszaigazolják.` };
       pirit("Beszerzési lista elküldve");
       ment();
     } else {
@@ -1767,6 +1994,39 @@ function tett(mit){
       pirit("Sorba állítva");
     }
     nezet = "ma"; rajzol(); return;
+  }
+  if(mit === "arfrissites-atvezet" || mit === "arfrissites-csakbesz"){
+    if(!arfrissites) return;
+    const teljes = mit === "arfrissites-atvezet";
+    const reszletek = [];
+    for(const v of arfrissites.valtozasok){
+      const nk = nagyker.tetelek.find(x => x.nev === v.nev);
+      const sajat = arlista.find(x => x.nev === v.nev);
+      let sor = `${v.nev}: ${nk ? nk.besz : "?"} → ${v.uj}`;
+      if(sajat && sajat.besz > 0){
+        if(teljes){
+          const ujAr = Math.round(v.uj * sajat.ar / sajat.besz / 10) * 10;
+          sor += ` (eladási ${sajat.ar} → ${ujAr})`;
+          sajat.ar = ujAr;
+        }
+        sajat.besz = v.uj;
+      }
+      if(nk) nk.besz = v.uj;
+      reszletek.push(sor);
+    }
+    nagyker.frissitve = arfrissites.kelt;
+    // Tételes napló, régi → új értékekkel — ugyanúgy, ahogy a kézi
+    // ármódosítás is tételesen naplóz.
+    naplo.unshift({ ido:"08:28", mit:"Nagyker árfrissítés átvezetése",
+      reszlet:`${P(nagyker.szallito).nev} · ${teljes ? "az árrés tartásával" : "csak beszerzési árak"} · jóváhagyva · ${reszletek.join(" · ")}`,
+      allapot:"végrehajtva" });
+    arfrissites = null;
+    ment(); lapZar();
+    valasz = { reteg:0, szoveg: teljes
+      ? `Átvezettem <span class="kiemel">${reszletek.length} tétel</span> új beszerzési árát, és az eladási árakat az árrésed tartásával. A következő ajánlat már ezekkel számol.`
+      : `Átvezettem a beszerzési árakat, az eladási áraid maradtak. Ahol a nagyker drágult, ott az árrésed szűkült; ahol olcsóbb lett, ott nőtt. Az ajánlataid összege nem változott.` };
+    nezet = "nagyker"; rajzol(); pirit("Árak átvezetve");
+    return;
   }
   if(mit === "ugy-jovahagy"){
     const u = ugyek[ugyIdx];
@@ -2028,6 +2288,13 @@ function kezel(szoveg, hangbol){
       lapNyit(anyagLap());
       return;
     }
+    case "nagyker": {
+      const dragult = arfrissites ? arfrissites.valtozasok.length : 0;
+      valasz = { hallottam, reteg:0, szoveg: arfrissites
+        ? `Új árlista érkezett a ${esc(P(nagyker.szallito).nev)} részéről (${datumHu(arfrissites.kelt)}) — <span class="kiemel">${dragult} tétel</span> vár átvezetésre. Nézd át, és te döntesz.`
+        : `A nagyker árlista naprakész (frissítve: ${datumHu(nagyker.frissitve)}). A szürke térkövet <span class="kiemel">${Ft((nagyker.tetelek.find(x => /szurke/.test(norm(x.nev))) || {}).besz || 0)}</span>-ért veszed.` };
+      nezet = "nagyker"; rajzol(); return;
+    }
     case "cegprofil":
       valasz = { hallottam, reteg:0, szoveg:"Itt vannak a cégadataid és az alapértelmezések. Az ajánlat és a kiküldött dokumentum ezekből dolgozik." };
       nezet = "cegprofil"; rajzol(); return;
@@ -2051,6 +2318,7 @@ const CHIPEK = [
   "Küldj fizetési felszólítást a Zöld Kertnek",
   "Mutasd az ajánlataimat",
   "Mennyi anyag kell 800 négyzetméterhez?",
+  "Mennyiért adja most a BauMax a térkövet?",
   "Mennyibe kerül a szürke térkő?",
   "Fotózok egy számlát",
   "Mi a mai teendőm?",
@@ -2114,7 +2382,7 @@ document.getElementById("tobbGomb").addEventListener("click", () => {
   lapNyit(`
     <div class="lap-fej"><button class="ikongomb" data-zar aria-label="Vissza">←</button><h2>Több</h2></div>
     <div class="lap-torzs">
-      ${[["ma","Ma"],["ajanlatok","Ajánlatok"],["penzugy","Kintlévőség"],["feladatok","Teendők"],["partnerek","Partnerek"],["arlista","Árlista"],["cegprofil","Cégadatok"],["naplo","AI napló"]]
+      ${[["ma","Ma"],["ajanlatok","Ajánlatok"],["penzugy","Kintlévőség"],["feladatok","Teendők"],["partnerek","Partnerek"],["arlista","Árlista"],["nagyker","Nagyker árak"],["cegprofil","Cégadatok"],["naplo","AI napló"]]
         .map(([id, nev]) => `<button class="sor" data-nez="${id}"><div class="fo"><div class="nev">${nev}</div></div></button>`).join("")}
       <div class="szekcio">Terepi próba</div>
       <button class="sor" id="offlineKapcsolo">

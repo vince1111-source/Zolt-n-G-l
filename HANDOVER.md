@@ -91,7 +91,7 @@ mérésektől függ, az a 6. modul mérete és a hang szerepe — az még nyitot
 |---|---|---|
 | **Adatbázis-séma** RLS-sel és a jóváhagyási kapuval | `db/` | `./db/futtat.sh` → 22 állítás zöld |
 | **Árkalkuláció** determinisztikus kódban | `mag/` | `node --test mag/*.teszt.mjs` → 12 teszt zöld |
-| **Telefon-első prototípus** | `prototype/CEGEM-AI-telefon.html` | `node prototype/fustproba.mjs` → 77 ellenőrzés zöld |
+| **Telefon-első prototípus** | `prototype/CEGEM-AI-telefon.html` | `node prototype/fustproba.mjs` → 99 ellenőrzés zöld |
 | Asztali prototípus (mind a 16 modul) | `prototype/CEGEM-AI-prototipus.html` | kézzel átnézve |
 | **Fejlesztői specifikáció** | `docs/fejlesztoi-specifikacio.md` + Word/PDF | — |
 | Spike mérőeszközök (4 db) | `spike/` | a 4. spike 0. rétege mérve |
@@ -162,7 +162,7 @@ prototype/
   telefon-artifact-body.html       ugyanaz Artifact-publikáláshoz (burok nélkül)
   CEGEM-AI-prototipus.html         asztali változat, mind a 16 modul
   artifact-body.html               ugyanaz Artifact-publikáláshoz
-  fustproba.mjs                    77 ellenőrzés a telefonos prototípuson
+  fustproba.mjs                    99 ellenőrzés a telefonos prototípuson
 
 docs/
   fejlesztoi-specifikacio.md       A FORRÁS — 14 fejezet, elfogadási kritériumokkal
@@ -191,7 +191,7 @@ spike/                             a 0. fázis mérőeszközei — nem termékk�
 ```bash
 node --test mag/*.teszt.mjs        # árkalkuláció — 12 teszt
 ./db/futtat.sh                     # séma + sarkalatos szabályok — 22 állítás
-node prototype/fustproba.mjs       # telefonos prototípus — 77 ellenőrzés
+node prototype/fustproba.mjs       # telefonos prototípus — 99 ellenőrzés
 cd spike && node parancs/merd.mjs  # a 0. réteg lefedettsége és a költségbecslés
 ```
 
