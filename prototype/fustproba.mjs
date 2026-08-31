@@ -532,6 +532,66 @@ console.log('\nÁrrés-szélsőségek és a nagyker-kapcsolat');
   await ctx.close();
 }
 
+/* ---------------------- 18. munkák: állapot, fotó, kapcsolódó ajánlat ---- */
+console.log('\nMunkák — helyszín, állapot, fotódokumentáció');
+{
+  const { ctx, oldal, hibak } = await ujOldal();
+  await oldal.fill('#bevitel', 'Hogy állnak a munkáim?');
+  await oldal.locator('#kuldGomb').click();
+  await oldal.waitForTimeout(400);
+  ok(await oldal.evaluate(() => nezet === 'munkak'), 'a parancs a munkák nézetre visz');
+  ok((await oldal.locator('[data-munka]').count()) === 3, 'mindhárom munka látszik');
+  await oldal.locator('[data-munka="m1"]').click();
+  await oldal.waitForTimeout(300);
+  ok((await oldal.locator('#lap .foto').count()) === 3, 'a fotódokumentáció megjelenik');
+  ok((await oldal.locator('#lap [data-ajanlat-nyit]').count()) === 1, 'a kapcsolódó ajánlat elérhető');
+  // Állapotváltás — naplózva.
+  await oldal.locator('[data-tett^="munka-allapot:"]').click();
+  await oldal.waitForTimeout(300);
+  ok(await oldal.evaluate(() => munkak.find(m => m.id === 'm1').allapot === 'befejezve'),
+    'az állapot átállt a következőre');
+  ok(await oldal.evaluate(() => naplo.some(n => n.mit.includes('Munka állapot'))),
+    'az állapotváltás a naplóban');
+  ok(hibak.length === 0, 'nincs konzolhiba', hibak.join(' | '));
+  await ctx.close();
+}
+
+/* ------------------ 19. az elfogadott ajánlat útja: díjbekérő → számla ---- */
+console.log('\nAjánlat → díjbekérő → számla lánc, kapukkal');
+{
+  const { ctx, oldal, hibak } = await ujOldal();
+  await oldal.locator('[data-megy="ajanlatok"]').click(); await oldal.waitForTimeout(300);
+  await oldal.locator('[data-ajanlat="AJ-2026/029"]').click(); // az elfogadott
+  await oldal.waitForTimeout(300);
+  ok((await oldal.locator('.lanc').count()) === 1, 'az elfogadott ajánlaton ott a lánc');
+  ok((await oldal.locator('.lanc .lepes.kesz').count()) === 1, 'az első lépés (elfogadva) kész');
+  // Díjbekérő: kapun át.
+  await oldal.locator('[data-tett="dijbekero-elokeszit"]').click(); await oldal.waitForTimeout(300);
+  ok(/40%/.test(await oldal.evaluate(() => document.getElementById('lap').textContent)),
+    'a díjbekérő lap kimondja az előleg mértékét');
+  await oldal.locator('[data-tett="dijbekero-kiallit"]').click(); await oldal.waitForTimeout(300);
+  ok(await oldal.evaluate(() => {
+    const l = ajanlatok.find(a => a.szam === 'AJ-2026/029').lanc;
+    return l && l.dijbekero && l.dijbekero.allapot === 'kiállítva';
+  }), 'a díjbekérő kiállítva, jóváhagyás után');
+  // Fizetés + számla.
+  await oldal.locator('[data-tett="dijbekero-fizetve"]').click(); await oldal.waitForTimeout(300);
+  await oldal.locator('[data-tett="szamla-kiallit"]').click(); await oldal.waitForTimeout(300);
+  ok(await oldal.evaluate(() => {
+    const l = ajanlatok.find(a => a.szam === 'AJ-2026/029').lanc;
+    return l && l.szamla && l.szamla.szam === 'SZ-2026/0163';
+  }), 'a számla a díjbekérőből készült (create-from-proforma)');
+  ok((await oldal.locator('.lanc .lepes.kesz').count()) === 3, 'a lánc mindhárom lépése kész');
+  ok(await oldal.evaluate(() => naplo.filter(n => /Billingo/.test(n.reszlet)).length === 2),
+    'mindkét Billingo-lépés naplózva, szimuláltként jelölve');
+  // El nem fogadott ajánlaton nincs lánc.
+  await oldal.locator('#lap .gombsor .gomb:last-child').click(); await oldal.waitForTimeout(250);
+  await oldal.locator('[data-ajanlat="AJ-2026/031"]').click(); await oldal.waitForTimeout(300);
+  ok((await oldal.locator('.lanc').count()) === 0, 'válaszra váró ajánlaton nincs lánc');
+  ok(hibak.length === 0, 'nincs konzolhiba', hibak.join(' | '));
+  await ctx.close();
+}
+
 /* ------------------------------------------------------------ 6. témák -- */
 console.log('\nMegjelenés');
 for (const [nev, opts] of [['világos', { colorScheme: 'light' }], ['sötét', { colorScheme: 'dark' }]]) {

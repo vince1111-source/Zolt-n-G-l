@@ -462,7 +462,8 @@ button:focus-visible, a:focus-visible{outline:3px solid var(--accent); outline-o
      nyomtatása (Cmd+P) sem viheti papírra — a lapokról csak a .dok
      dokumentum kerül papírra. */
   .lap .fedezet,.lap .feltetel,.lap .valasz,.lap .sor,.lap .gombsor,
-  .lap .tetelek,.lap .mezok,.lap .urlap,.lap .fotogomb{display:none !important}
+  .lap .tetelek,.lap .mezok,.lap .urlap,.lap .fotogomb,
+  .lap .lanc,.lap .fotoracs,.lap .szekcio{display:none !important}
   .lap{position:static; height:auto; background:#fff}
   .lap-torzs{overflow:visible; padding:0}
   .dok{border:none; padding:0; font-size:.9rem}
@@ -488,6 +489,38 @@ button:focus-visible, a:focus-visible{outline:3px solid var(--accent); outline-o
 }
 .mezo.javitott{background:var(--rendben-soft); border-left:4px solid var(--rendben)}
 .mezo.javitott .honnan{color:var(--rendben)}
+
+/* --- fotódokumentáció rácsa --- */
+.fotoracs{display:grid; grid-template-columns:repeat(auto-fill, minmax(96px, 1fr)); gap:.5rem}
+.foto{
+  aspect-ratio:4/3; border-radius:10px; border:1px solid var(--line); overflow:hidden;
+  position:relative; display:flex; align-items:flex-end; background:var(--surface-2);
+}
+.foto img{position:absolute; inset:0; width:100%; height:100%; object-fit:cover}
+.foto .fcimke{
+  position:relative; width:100%; padding:.25rem .4rem; font-size:.62rem; line-height:1.25;
+  font-family:"IBM Plex Mono",monospace; color:#fff; background:rgba(10,14,10,.62);
+}
+.fotoplusz{
+  aspect-ratio:4/3; border-radius:10px; border:2px dashed var(--line); cursor:pointer;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:.2rem;
+  color:var(--muted); background:none; font:inherit; font-size:.72rem; min-height:0;
+}
+.fotoplusz b{font-size:1.3rem; color:var(--accent)}
+.fotoplusz input{display:none}
+
+/* --- az ajánlat útja a pénzig: ajánlat → díjbekérő → számla --- */
+.lanc{display:flex; flex-direction:column; border:1px solid var(--line); border-radius:var(--r); overflow:hidden}
+.lanc .lepes{
+  display:flex; align-items:center; gap:.6rem; padding:.6rem .8rem;
+  border-bottom:1px solid var(--line-soft); min-height:48px;
+}
+.lanc .lepes:last-child{border-bottom:none}
+.lanc .pont2{width:10px; height:10px; border-radius:50%; flex:0 0 auto; border:2px solid var(--muted)}
+.lanc .lepes.kesz .pont2{background:var(--rendben); border-color:var(--rendben)}
+.lanc .lepes.aktiv .pont2{border-color:var(--figyelem); background:var(--figyelem-soft)}
+.lanc .lnev{flex:1; min-width:0; font-size:.92rem; font-weight:600}
+.lanc .lmi{font-size:.78rem; color:var(--muted); white-space:nowrap}
 
 /* --- fedezet-sáv: belső információ, az ügyfél-dokumentumra nem kerül rá --- */
 .fedezet{
@@ -618,6 +651,28 @@ let nagyker = {
   ],
 };
 
+/* ==========================================================================
+   11–12. modul — munkák. A vállalkozó élete nem ajánlatokban, hanem
+   helyszínekben telik: hol tartunk, ki van ott, mi van lefotózva.
+   A fotó vitás helyzetben pénz — ezért a munkához kötve tároljuk.
+   ========================================================================== */
+let munkak = [
+  { id:"m1", nev:"Kőszirt utcai burkolás", partner:"nagy", helyszin:"Budaörs, Kőszirt u. 4.",
+    m2:180, allapot:"folyamatban", hatarido:"2026-09-05", ajanlat:"AJ-2026/029",
+    fotok:[
+      { cimke:"előtte · 08. 18.", szin:"#8d939c" },
+      { cimke:"tükör kész · 08. 21.", szin:"#7a6a55" },
+      { cimke:"ágyazat · 08. 24.", szin:"#a3906f" },
+    ] },
+  { id:"m2", nev:"Fehérvári úti udvar", partner:"kovacs", helyszin:"Budapest, Fehérvári út 84.",
+    m2:800, allapot:"előkészítés", hatarido:"2026-09-15", ajanlat:null, fotok:[] },
+  { id:"m3", nev:"Bagoly utcai kert", partner:"zold", helyszin:"Érd, Bagoly u. 21.",
+    m2:340, allapot:"befejezve", hatarido:"2026-08-14", ajanlat:null,
+    fotok:[ { cimke:"előtte · 07. 28.", szin:"#95a08b" }, { cimke:"átadva · 08. 14.", szin:"#6f8f6a" } ] },
+];
+const MUNKA_ALLAPOTOK = ["előkészítés", "folyamatban", "befejezve"];
+const MUNKA_JELZES = { "előkészítés":"j-figyelem", "folyamatban":"j-rendben", "befejezve":"j-semleges" };
+
 /* A ma reggel érkezett árfrissítés — átvezetésre vár. */
 let arfrissites = {
   kelt:"2026-08-25",
@@ -739,6 +794,7 @@ const SZANDEKOK = [
   { id:"fizetendo",   re:/(mennyit kell kifizet|mit kell utalni|utalni|bejovo szaml|kinek tartozom)/ },
   { id:"teendo",      re:/(mai teendo|mi a dolgom|teendoim|mi van ma|mai feladat|napirend|mit kell ma)/ },
   { id:"osszefoglalo",re:/(helyzet a cegemben|hogy allunk|foglald ossze|osszefoglal|hogy all a ceg)/ },
+  { id:"munkak",      re:/(munkaim|munkak|hogy all a munka|hogy allnak a munka|helyszin|epitkezes|melyik munkan)/ },
   { id:"nagyker",     re:/(nagyker|beszerzesi ar|szallitoi ar|arres|mennyiert adja|arfrissites|mennyiert veszem)/ },
   { id:"arlista",     re:/(arlista|mennyibe kerul|mi az ara|listaar|mennyiert adom)/ },
 ];
@@ -873,7 +929,8 @@ let ajanlatok = [
   { szam:"AJ-2026/027", partner:"zold",  m2:340, valtozat:"normal", kelt:"2026-08-04", allapot:"elutasítva" },
 ].map(a => {
   const kep = ajanlatKeszites(a.partner, a.m2, a.valtozat);
-  return { ...a, brutto: kep.brutto, pillanatkep: kep };
+  // lanc: az elfogadott ajánlat útja a pénzig — díjbekérő, majd számla.
+  return { ...a, brutto: kep.brutto, pillanatkep: kep, lanc: null };
 });
 
 /* ==========================================================================
@@ -886,7 +943,8 @@ const TAROLO = "cegem-ai-demo-3";
 function ment(){
   try{
     localStorage.setItem(TAROLO, JSON.stringify({
-      ceg, partnerek, arlista, szamlak, bejovoSzamlak, feladatok, ajanlatok, ajanlatSzamlalo, naplo, sor, nagyker, arfrissites
+      ceg, partnerek, arlista, szamlak, bejovoSzamlak, feladatok, ajanlatok, ajanlatSzamlalo, naplo, sor, nagyker, arfrissites,
+      munkak: munkak.map(m => ({ ...m, fotok: m.fotok.map(f => ({ cimke:f.cimke, szin:f.szin || "#8d939c" })) }))
     }));
   }catch(_){ /* nincs tárolás — nem hiba, csak nem emlékszünk */ }
 }
@@ -908,6 +966,7 @@ function betolt(){
     if(Number.isFinite(x.ajanlatSzamlalo)) ajanlatSzamlalo = x.ajanlatSzamlalo;
     if(Array.isArray(x.sor)) sor = x.sor;
     if(x.nagyker && Array.isArray(x.nagyker.tetelek)) nagyker = x.nagyker;
+    if(Array.isArray(x.munkak)) munkak = x.munkak;
     if("arfrissites" in x) arfrissites =
       (x.arfrissites && Array.isArray(x.arfrissites.valtozasok)) ? x.arfrissites : null;
   }catch(_){ /* sérült tárolt állapot — inkább a mintaadat, mint egy törött demó */ }
@@ -935,6 +994,7 @@ function rajzol(){
     : nezet === "partnerek" ? vPartnerek()
     : nezet === "ajanlatok" ? vAjanlatok()
     : nezet === "nagyker" ? vNagyker()
+    : nezet === "munkak" ? vMunkak()
     : nezet === "cegprofil" ? vCegprofil()
     : nezet.startsWith("partner:") ? vPartner(nezet.slice(8))
     : nezet === "naplo" ? vNaplo()
@@ -952,6 +1012,8 @@ function rajzol(){
     }));
   fo.querySelectorAll("[data-ajanlat]").forEach(el =>
     el.addEventListener("click", () => ajanlatMegnyit(el.dataset.ajanlat)));
+  fo.querySelectorAll("[data-munka]").forEach(el =>
+    el.addEventListener("click", () => munkaLap(el.dataset.munka)));
   fo.querySelectorAll("[data-szerk]").forEach(el =>
     el.addEventListener("click", () => {
       const [mi, ertek] = el.dataset.szerk.split(":");
@@ -1012,6 +1074,10 @@ function vMa(){
     </button>
     <button class="sor" data-lap="szamla">
       <div class="fo"><div class="nev">Számla rögzítése</div><div class="alatta">Fotózd le — kiolvasom, te ellenőrzöd</div></div>
+    </button>
+    <button class="sor" data-megy="munkak">
+      <div class="fo"><div class="nev">Munkáim</div><div class="alatta">Helyszínek, állapot, fotódokumentáció</div></div>
+      <span class="jelzes j-rendben">${munkak.filter(m => m.allapot === "folyamatban").length} fut</span>
     </button>
     <button class="sor" data-megy="ajanlatok">
       <div class="fo"><div class="nev">Ajánlataim</div><div class="alatta">Mi lett abból, amit kiküldtem</div></div>
@@ -1194,6 +1260,89 @@ function vAjanlatok(){
     <p style="margin:0; font-size:.85rem; color:var(--muted)">
       Koppints bármelyikre: megnézheted úgy, ahogy az ügyfél látta.
     </p>`;
+}
+
+/* 11–12. modul — munkák nézet: hol tartunk, mi a következő. */
+function vMunkak(){
+  const sorrend = { "folyamatban":0, "előkészítés":1, "befejezve":2 };
+  const lista = [...munkak].sort((a,b) => sorrend[a.allapot] - sorrend[b.allapot]);
+  return `
+    <div class="cimsor"><h1>Munkáim</h1><span class="datum">${munkak.length} db</span></div>
+    ${valaszHtml()}
+    ${lista.map(m => `
+      <button class="sor" data-munka="${m.id}">
+        <div class="fo">
+          <div class="nev">${esc(m.nev)}</div>
+          <div class="alatta">${esc(P(m.partner).nev)} · ${new Intl.NumberFormat("hu-HU").format(m.m2)} m² · határidő ${datumHu(m.hatarido)}</div>
+        </div>
+        <div class="jobb">
+          <span class="jelzes ${MUNKA_JELZES[m.allapot]}">${esc(m.allapot)}</span>
+          ${m.fotok.length ? `<div class="alatta" style="margin-top:.2rem">${m.fotok.length} fotó</div>` : ""}
+        </div>
+      </button>`).join("")}
+    <p style="margin:0; font-size:.85rem; color:var(--muted)">
+      Koppints egy munkára: állapot, fotódokumentáció, kapcsolódó ajánlat.
+    </p>`;
+}
+
+function fotoHtml(f){
+  return `<div class="foto" ${f.szin ? `style="background:${f.szin}"` : ""}>
+    ${f.url ? `<img src="${f.url}" alt="">` : ""}
+    <span class="fcimke">${esc(f.cimke)}</span>
+  </div>`;
+}
+
+function munkaLap(id){
+  const m = munkak.find(x => x.id === id);
+  if(!m) return;
+  const kovetkezo = MUNKA_ALLAPOTOK[MUNKA_ALLAPOTOK.indexOf(m.allapot) + 1];
+  const aj = m.ajanlat ? ajanlatok.find(x => x.szam === m.ajanlat) : null;
+  const el = lapNyit(`
+    <div class="lap-fej">
+      <button class="ikongomb" data-zar aria-label="Vissza">←</button>
+      <h2>${esc(m.nev)}</h2>
+      <span class="jelzes ${MUNKA_JELZES[m.allapot]}">${esc(m.allapot)}</span>
+    </div>
+    <div class="lap-torzs">
+      <div class="sor" style="cursor:default">
+        <div class="fo">
+          <div class="nev">${esc(P(m.partner).nev)}</div>
+          <div class="alatta">${esc(m.helyszin)} · ${new Intl.NumberFormat("hu-HU").format(m.m2)} m² · határidő ${datumHu(m.hatarido)}</div>
+        </div>
+      </div>
+      ${aj ? `
+      <button class="sor" data-ajanlat-nyit="${aj.szam}">
+        <div class="fo"><div class="nev">Ajánlat: ${aj.szam}</div>
+        <div class="alatta">${Ft(aj.brutto)} · ${esc(aj.allapot)}</div></div>
+        <span class="jelzes ${AJANLAT_JELZES[aj.allapot] || "j-semleges"}">${esc(aj.allapot)}</span>
+      </button>` : ""}
+      <div class="szekcio">Fotódokumentáció</div>
+      <div class="fotoracs">
+        ${m.fotok.map(fotoHtml).join("")}
+        <label class="fotoplusz">
+          <b>+</b> Fotó
+          <input type="file" accept="image/*" capture="environment" id="munkaFoto">
+        </label>
+      </div>
+      <p style="margin:0; font-size:.82rem; color:var(--muted)">
+        A fotó a munkához kötve, dátummal kerül el — vitás helyzetben ez a
+        bizonyíték. A demóban a most készített kép a munkamenet végéig marad meg.
+      </p>
+    </div>
+    <div class="lap-lab">
+      ${kovetkezo ? `<button class="gomb fo" data-tett="munka-allapot:${m.id}">Állapot: ${esc(m.allapot)} → ${esc(kovetkezo)}</button>` : ""}
+      <button class="gomb" data-zar>Vissza</button>
+    </div>`);
+  el.querySelector("[data-ajanlat-nyit]")?.addEventListener("click", ev =>
+    ajanlatMegnyit(ev.currentTarget.dataset.ajanlatNyit));
+  const be = el.querySelector("#munkaFoto");
+  if(be) be.addEventListener("change", () => {
+    const f = be.files && be.files[0];
+    if(!f) return;
+    m.fotok.push({ cimke:"ma · 08. 25.", url:URL.createObjectURL(f) });
+    naplo.unshift({ ido:"08:35", mit:"Fotó a munkához", reszlet:`${m.nev} · dátummal rögzítve`, allapot:"kész" });
+    ment(); munkaLap(m.id); pirit("Fotó rögzítve");
+  });
 }
 
 /* Nagyker árak — a beszerzési oldal. Itt látszik, mennyiért veszed,
@@ -1645,6 +1794,7 @@ function dokumentumLap(){
         </div>
         <div class="dok-lab">${esc(ceg.nev)} · Cg. ${esc(ceg.cegjegyzek)} · ${esc(ceg.bank)}</div>
       </div>
+      ${lancHtml(szam, allapot)}
     </div>
     <div class="lap-lab">
       <button class="gomb fo" data-tett="nyomtat">Nyomtatás / PDF</button>
@@ -1704,6 +1854,78 @@ function anyagLap(){
       <button class="gomb fo" data-tett="anyag-rendeles">Elküldöm — jóváhagyom</button>
       <button class="gomb" data-tett="ajanlat-vissza">Vissza</button>
     </div>`;
+}
+
+/* ==========================================================================
+   Az ajánlat útja a pénzig: ajánlat → díjbekérő → számla. A díjbekérőt és
+   a számlát NEM mi állítjuk ki, hanem a számlázó (Billingo API v3:
+   proforma, majd create-from-proforma) — a demóban a hívás szimulált,
+   a jóváhagyási kapu viszont éles. Csak elfogadott ajánlatból indulhat.
+   ========================================================================== */
+function lancHtml(szam, allapot){
+  const rec = ajanlatok.find(x => x.szam === szam);
+  if(!rec || allapot !== "elfogadva") return "";
+  const l = rec.lanc || {};
+  const lepes = (kesz, aktiv, nev, mi) => `
+    <div class="lepes ${kesz ? "kesz" : aktiv ? "aktiv" : ""}">
+      <span class="pont2"></span>
+      <span class="lnev">${nev}</span>
+      <span class="lmi">${mi}</span>
+    </div>`;
+  return `
+    <div class="szekcio">Az ajánlat útja a pénzig</div>
+    <div class="lanc">
+      ${lepes(true, false, "Ajánlat elfogadva", esc(rec.szam))}
+      ${lepes(!!l.dijbekero, !l.dijbekero, "Előleg-díjbekérő",
+        l.dijbekero ? `${esc(l.dijbekero.szam)} · ${esc(l.dijbekero.allapot)}` : "következő lépés")}
+      ${lepes(!!l.szamla, !!l.dijbekero && l.dijbekero.allapot === "fizetve" && !l.szamla, "Számla",
+        l.szamla ? esc(l.szamla.szam) : "a díjbekérő fizetése után")}
+    </div>
+    ${!l.dijbekero ? `
+      <button class="gomb" data-tett="dijbekero-elokeszit">Díjbekérő készítése — Billingo</button>` : ""}
+    ${l.dijbekero && l.dijbekero.allapot === "kiállítva" ? `
+      <button class="gomb" data-tett="dijbekero-fizetve">Az előleg megérkezett</button>` : ""}
+    ${l.dijbekero && l.dijbekero.allapot === "fizetve" && !l.szamla ? `
+      <button class="gomb" data-tett="szamla-kiallit">Számla kiállítása — Billingo</button>` : ""}
+    <p style="margin:0; font-size:.78rem; color:var(--muted)">
+      A díjbekérőt és a számlát a Billingo állítja ki — mi nem építünk
+      számlázót. A demóban a hívás szimulált, kiküldés csak jóváhagyással.
+    </p>`;
+}
+
+/* Az előleg-díjbekérő jóváhagyó lapja — egy képernyő, egy döntés. */
+function dijbekeroLap(){
+  const rec = nezettAjanlat && ajanlatok.find(x => x.szam === nezettAjanlat.szam);
+  if(!rec) return;
+  const eloleg = Math.round(rec.brutto * 0.4);
+  lapNyit(`
+    <div class="lap-fej">
+      <button class="ikongomb" data-tett="dijbekero-vissza" aria-label="Vissza">←</button>
+      <h2>Előleg-díjbekérő</h2>
+    </div>
+    <div class="lap-torzs">
+      <div class="feltetel">
+        <div class="cim">Kiállítás előtt nézd át</div>
+        <ul>
+          <li>Az elfogadott ${esc(rec.szam)} ajánlatból, ${esc(P(rec.partner).nev)} részére.</li>
+          <li>Előleg: a bruttó végösszeg <b>40%-a</b> — ${Ft(eloleg)}.</li>
+          <li>A díjbekérőt a <b>Billingo</b> állítja ki és küldi (a demóban szimulált).</li>
+          <li>A munka indítása az előleg beérkezése után.</li>
+        </ul>
+      </div>
+      <div class="tetelek">
+        <div class="tetel">
+          <div><div class="megnev">Előleg — térburkolási munkák</div>
+          <div class="mennyi">az ajánlat bruttó összegének 40%-a</div></div>
+          <div class="ar">${Ft(eloleg)}</div>
+        </div>
+        <div class="osszesen"><span class="c">Díjbekérő összege</span><span class="v">${Ft(eloleg)}</span></div>
+      </div>
+    </div>
+    <div class="lap-lab">
+      <button class="gomb fo" data-tett="dijbekero-kiallit">Jóváhagyom — a Billingo kiállítja</button>
+      <button class="gomb veszelyes" data-tett="dijbekero-vissza">Mégsem</button>
+    </div>`);
 }
 
 /* Egy korábban kiadott ajánlat újranyitása: azt mutatjuk meg, amit az
@@ -1994,6 +2216,50 @@ function tett(mit){
       pirit("Sorba állítva");
     }
     nezet = "ma"; rajzol(); return;
+  }
+  if(mit === "dijbekero-elokeszit"){ dijbekeroLap(); return; }
+  if(mit === "dijbekero-vissza"){ lapNyit(dokumentumLap()); return; }
+  if(mit === "dijbekero-kiallit"){
+    const rec = nezettAjanlat && ajanlatok.find(x => x.szam === nezettAjanlat.szam);
+    if(!rec) return;
+    rec.lanc = rec.lanc || {};
+    rec.lanc.dijbekero = { szam:"DB-2026/0107", allapot:"kiállítva", kelt:"2026-08-25" };
+    naplo.unshift({ ido:"08:38", mit:"Előleg-díjbekérő kiállítása",
+      reszlet:`${P(rec.partner).nev} · ${rec.szam} → DB-2026/0107 · ${Ft(Math.round(rec.brutto * 0.4))} · Billingo (szimulált) · jóváhagyva`,
+      allapot:"végrehajtva" });
+    ment(); lapNyit(dokumentumLap()); pirit("Díjbekérő kiállítva");
+    return;
+  }
+  if(mit === "dijbekero-fizetve"){
+    const rec = nezettAjanlat && ajanlatok.find(x => x.szam === nezettAjanlat.szam);
+    if(!rec || !rec.lanc || !rec.lanc.dijbekero) return;
+    rec.lanc.dijbekero.allapot = "fizetve";
+    naplo.unshift({ ido:"08:40", mit:"Előleg beérkezett",
+      reszlet:`${rec.lanc.dijbekero.szam} · ${P(rec.partner).nev}`, allapot:"kész" });
+    ment(); lapNyit(dokumentumLap()); pirit("Előleg beérkezett");
+    return;
+  }
+  if(mit === "szamla-kiallit"){
+    const rec = nezettAjanlat && ajanlatok.find(x => x.szam === nezettAjanlat.szam);
+    if(!rec || !rec.lanc || !rec.lanc.dijbekero) return;
+    rec.lanc.szamla = { szam:"SZ-2026/0163", kelt:"2026-08-25" };
+    naplo.unshift({ ido:"08:41", mit:"Számla kiállítása a díjbekérőből",
+      reszlet:`${rec.lanc.dijbekero.szam} → SZ-2026/0163 · Billingo create-from-proforma (szimulált) · jóváhagyva`,
+      allapot:"végrehajtva" });
+    ment(); lapNyit(dokumentumLap()); pirit("Számla kiállítva");
+    return;
+  }
+  if(mit.startsWith("munka-allapot:")){
+    const m = munkak.find(x => x.id === mit.slice(14));
+    if(!m) return;
+    const kovetkezo = MUNKA_ALLAPOTOK[MUNKA_ALLAPOTOK.indexOf(m.allapot) + 1];
+    if(!kovetkezo) return;
+    const regi = m.allapot;
+    m.allapot = kovetkezo;
+    naplo.unshift({ ido:"08:36", mit:"Munka állapotának átállítása",
+      reszlet:`${m.nev} · ${regi} → ${kovetkezo}`, allapot:"kész" });
+    ment(); munkaLap(m.id); pirit(`Munka: ${kovetkezo}`);
+    return;
   }
   if(mit === "arfrissites-atvezet" || mit === "arfrissites-csakbesz"){
     if(!arfrissites) return;
@@ -2288,6 +2554,12 @@ function kezel(szoveg, hangbol){
       lapNyit(anyagLap());
       return;
     }
+    case "munkak": {
+      const fut = munkak.filter(m => m.allapot === "folyamatban");
+      valasz = { hallottam, reteg:0,
+        szoveg:`${munkak.length} munkád van nyilvántartva, ebből <span class="kiemel">${fut.length} fut</span>${fut.length ? ` — a legközelebbi határidő: ${esc(fut[0].nev)}, ${datumHu(fut[0].hatarido)}` : ""}.` };
+      nezet = "munkak"; rajzol(); return;
+    }
     case "nagyker": {
       const dragult = arfrissites ? arfrissites.valtozasok.length : 0;
       valasz = { hallottam, reteg:0, szoveg: arfrissites
@@ -2316,6 +2588,7 @@ const CHIPEK = [
   "Mutasd a lejárt számláimat",
   "Jövő kedden emlékeztess, hogy hívjam fel a Kovács Kft-t",
   "Küldj fizetési felszólítást a Zöld Kertnek",
+  "Hogy állnak a munkáim?",
   "Mutasd az ajánlataimat",
   "Mennyi anyag kell 800 négyzetméterhez?",
   "Mennyiért adja most a BauMax a térkövet?",
@@ -2382,7 +2655,7 @@ document.getElementById("tobbGomb").addEventListener("click", () => {
   lapNyit(`
     <div class="lap-fej"><button class="ikongomb" data-zar aria-label="Vissza">←</button><h2>Több</h2></div>
     <div class="lap-torzs">
-      ${[["ma","Ma"],["ajanlatok","Ajánlatok"],["penzugy","Kintlévőség"],["feladatok","Teendők"],["partnerek","Partnerek"],["arlista","Árlista"],["nagyker","Nagyker árak"],["cegprofil","Cégadatok"],["naplo","AI napló"]]
+      ${[["ma","Ma"],["munkak","Munkáim"],["ajanlatok","Ajánlatok"],["penzugy","Kintlévőség"],["feladatok","Teendők"],["partnerek","Partnerek"],["arlista","Árlista"],["nagyker","Nagyker árak"],["cegprofil","Cégadatok"],["naplo","AI napló"]]
         .map(([id, nev]) => `<button class="sor" data-nez="${id}"><div class="fo"><div class="nev">${nev}</div></div></button>`).join("")}
       <div class="szekcio">Terepi próba</div>
       <button class="sor" id="offlineKapcsolo">
