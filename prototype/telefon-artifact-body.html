@@ -1,7 +1,7 @@
 <title>CÉGEM.AI helyszíni nézet</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 
 <style>
 /* ============================================================================
@@ -11,75 +11,95 @@
    ========================================================================== */
 
 :root{
-  /* Alap: tiszta fehér. Nem dizájndöntés, hanem olvashatóság tűző napon. */
-  --ground:#ffffff;
+  /* Meleg krém alap, fehér kártyák, mélyzöld márka, lime cselekvőszín —
+     a szakember-szoftverek (Jobber, Tradify) vizuális nyelve. A napfény
+     üzemmód továbbra is tiszta fekete-fehérre vált. */
+  --ground:#f2f0e7;
   --surface:#ffffff;
-  --surface-2:#f2f0e9;
-  --surface-3:#faf9f5;
-  --line:#d3cfc2;
-  --line-soft:#e6e3d9;
-  --ink:#14130f;
-  --ink-2:#4a463c;
-  --muted:#6f6b5f;
-  --accent:#7a5c00;
+  --surface-2:#e9e6d9;
+  --surface-3:#fbfaf4;
+  --line:#d8d3c2;
+  --line-soft:#e5e1d2;
+  --ink:#16241b;
+  --ink-2:#45524a;
+  --muted:#6c7569;
+  --brand:#12382a;        /* fejléc és horgonyfelületek */
+  --brand-ink:#ffffff;
+  --brand-lagy:rgba(255,255,255,.28);
+  --accent:#166b41;       /* kiemelt szöveg, linkek */
   --accent-ink:#ffffff;
-  --accent-soft:#f7edcf;
+  --accent-soft:#e0f0e0;
+  --cta:#a5e838;          /* a cselekvés gombja — világít */
+  --cta-ink:#0d2a16;
+  --cta-udv:rgba(120,190,50,.4);
   --kritikus:#a32b17;
   --kritikus-soft:#fbe6e1;
   --rendben:#1f6b3f;
   --rendben-soft:#dff0e6;
   --figyelem:#8a5a00;
   --figyelem-soft:#f9edd6;
-  --arnyek:0 1px 2px rgba(20,19,15,.06), 0 8px 22px rgba(20,19,15,.07);
-  --dokk-arnyek:0 -2px 16px rgba(20,19,15,.10);
-  --r:10px;
+  --arnyek:0 1px 2px rgba(18,36,24,.05), 0 10px 26px rgba(18,36,24,.08);
+  --dokk-arnyek:0 -2px 16px rgba(18,36,24,.10);
+  --r:14px;
   --cel:56px;             /* legkisebb célfelület — kesztyűre méretezve */
 }
 
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --ground:#101014;
-    --surface:#1a1a1f;
-    --surface-2:#232329;
-    --surface-3:#16161b;
-    --line:#33333c;
-    --line-soft:#26262e;
-    --ink:#f1f0ea;
-    --ink-2:#bcb9ae;
-    --muted:#8b887e;
-    --accent:#e2b850;
-    --accent-ink:#191500;
-    --accent-soft:#2c2409;
+    --ground:#0e1512;
+    --surface:#17211a;
+    --surface-2:#1f2b22;
+    --surface-3:#121a15;
+    --line:#2d3b31;
+    --line-soft:#233029;
+    --ink:#eef2ea;
+    --ink-2:#b7c3b6;
+    --muted:#87938a;
+    --brand:#0b1f16;
+    --brand-ink:#eef2ea;
+    --brand-lagy:rgba(238,242,234,.25);
+    --accent:#8fdfa6;
+    --accent-ink:#0d2a16;
+    --accent-soft:#173324;
+    --cta:#a5e838;
+    --cta-ink:#0d2a16;
+    --cta-udv:rgba(165,232,56,.35);
     --kritikus:#f08a72;
     --kritikus-soft:#331914;
     --rendben:#79c99a;
     --rendben-soft:#152b1f;
     --figyelem:#e0b45f;
     --figyelem-soft:#2e2512;
-    --arnyek:0 1px 2px rgba(0,0,0,.5), 0 8px 22px rgba(0,0,0,.35);
+    --arnyek:0 1px 2px rgba(0,0,0,.5), 0 10px 26px rgba(0,0,0,.35);
     --dokk-arnyek:0 -2px 18px rgba(0,0,0,.5);
   }
 }
 :root[data-theme="dark"]{
-  --ground:#101014;
-  --surface:#1a1a1f;
-  --surface-2:#232329;
-  --surface-3:#16161b;
-  --line:#33333c;
-  --line-soft:#26262e;
-  --ink:#f1f0ea;
-  --ink-2:#bcb9ae;
-  --muted:#8b887e;
-  --accent:#e2b850;
-  --accent-ink:#191500;
-  --accent-soft:#2c2409;
+  --ground:#0e1512;
+  --surface:#17211a;
+  --surface-2:#1f2b22;
+  --surface-3:#121a15;
+  --line:#2d3b31;
+  --line-soft:#233029;
+  --ink:#eef2ea;
+  --ink-2:#b7c3b6;
+  --muted:#87938a;
+  --brand:#0b1f16;
+  --brand-ink:#eef2ea;
+  --brand-lagy:rgba(238,242,234,.25);
+  --accent:#8fdfa6;
+  --accent-ink:#0d2a16;
+  --accent-soft:#173324;
+  --cta:#a5e838;
+  --cta-ink:#0d2a16;
+  --cta-udv:rgba(165,232,56,.35);
   --kritikus:#f08a72;
   --kritikus-soft:#331914;
   --rendben:#79c99a;
   --rendben-soft:#152b1f;
   --figyelem:#e0b45f;
   --figyelem-soft:#2e2512;
-  --arnyek:0 1px 2px rgba(0,0,0,.5), 0 8px 22px rgba(0,0,0,.35);
+  --arnyek:0 1px 2px rgba(0,0,0,.5), 0 10px 26px rgba(0,0,0,.35);
   --dokk-arnyek:0 -2px 18px rgba(0,0,0,.5);
 }
 
@@ -89,7 +109,9 @@
   --ground:#ffffff; --surface:#ffffff; --surface-2:#ffffff; --surface-3:#ffffff;
   --line:#14130f; --line-soft:#8d8a80;
   --ink:#000000; --ink-2:#14130f; --muted:#2e2c26;
-  --accent:#4a3700; --accent-soft:#ffffff;
+  --brand:#ffffff; --brand-ink:#000000; --brand-lagy:#000000;
+  --accent:#0f3d24; --accent-soft:#ffffff;
+  --cta:#14130f; --cta-ink:#ffffff; --cta-udv:rgba(0,0,0,.3);
   --kritikus:#8c1d0a; --kritikus-soft:#ffffff;
   --rendben:#0f4d2a; --rendben-soft:#ffffff;
   --figyelem:#5c3b00; --figyelem-soft:#ffffff;
@@ -98,6 +120,8 @@
 :root[data-napfeny="1"] .kartya,
 :root[data-napfeny="1"] .sor,
 :root[data-napfeny="1"] .chip{border-width:2px}
+:root[data-napfeny="1"] .fejsav{border-bottom:2px solid #000}
+:root[data-napfeny="1"] .fejsav .ikongomb{border-width:2px}
 :root[data-napfeny="1"] body{font-weight:500}
 
 *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
@@ -124,28 +148,31 @@ body{
 
 /* ---------- felső sáv ---------- */
 .fejsav{
-  position:sticky; top:0; z-index:20; background:var(--ground);
-  border-bottom:1px solid var(--line);
-  padding:calc(env(safe-area-inset-top) + .55rem) .9rem .55rem;
+  position:sticky; top:0; z-index:20; background:var(--brand); color:var(--brand-ink);
+  padding:calc(env(safe-area-inset-top) + .6rem) .9rem .6rem;
   display:flex; align-items:center; gap:.6rem;
 }
-.marka{font-weight:700; letter-spacing:-.02em; font-size:1.02rem; flex:1; min-width:0;
+.marka{font-weight:800; letter-spacing:-.02em; font-size:1.08rem; flex:1; min-width:0;
   overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
-.marka span{color:var(--accent)}
-.marka small{display:block; font-weight:400; font-size:.72rem; color:var(--muted); letter-spacing:0}
+.marka span{color:var(--cta)}
+.marka small{display:block; font-weight:500; font-size:.72rem; color:var(--brand-ink);
+  opacity:.72; letter-spacing:0}
 .ikongomb{
   min-width:44px; height:44px; border:1px solid var(--line); background:var(--surface);
-  color:var(--ink); border-radius:var(--r); font-size:.72rem; font-weight:600;
+  color:var(--ink); border-radius:12px; font-size:.72rem; font-weight:600;
   display:flex; align-items:center; justify-content:center; gap:.3rem; cursor:pointer;
   font-family:"IBM Plex Mono",monospace; letter-spacing:.03em; padding:0 .5rem;
 }
-.ikongomb[aria-pressed="true"]{background:var(--accent); color:var(--accent-ink); border-color:var(--accent)}
+/* A fejlécben ülő gombok a márkasávhoz öltöznek. */
+.fejsav .ikongomb{background:transparent; border-color:var(--brand-lagy); color:var(--brand-ink)}
+.ikongomb[aria-pressed="true"], .fejsav .ikongomb[aria-pressed="true"]{
+  background:var(--cta); color:var(--cta-ink); border-color:var(--cta)}
 
 .halozat{
   display:flex; align-items:center; gap:.35rem; font-family:"IBM Plex Mono",monospace;
-  font-size:.68rem; color:var(--muted); letter-spacing:.04em;
+  font-size:.68rem; color:var(--brand-ink); opacity:.85; letter-spacing:.04em;
 }
-.pont{width:8px; height:8px; border-radius:50%; background:var(--rendben)}
+.pont{width:8px; height:8px; border-radius:50%; background:var(--cta)}
 .halozat.off .pont{background:var(--figyelem)}
 
 /* ---------- AI Act jelzés (kötelező) ---------- */
@@ -159,7 +186,7 @@ body{
 main{padding:1rem .9rem 1.2rem; display:flex; flex-direction:column; gap:.9rem; overflow-y:auto}
 main > *{flex-shrink:0}
 .cimsor{display:flex; align-items:baseline; justify-content:space-between; gap:.5rem}
-h1{margin:0; font-size:1.45rem; font-weight:700; letter-spacing:-.025em; text-wrap:balance}
+h1{margin:0; font-size:1.6rem; font-weight:800; letter-spacing:-.03em; text-wrap:balance}
 .datum{font-family:"IBM Plex Mono",monospace; font-size:.72rem; color:var(--muted); white-space:nowrap}
 .szekcio{
   font-family:"IBM Plex Mono",monospace; font-size:.68rem; letter-spacing:.12em;
@@ -180,7 +207,7 @@ h1{margin:0; font-size:1.45rem; font-weight:700; letter-spacing:-.025em; text-wr
   text-transform:uppercase; color:var(--muted);
 }
 .kartya .ertek{
-  font-size:1.9rem; font-weight:700; letter-spacing:-.03em; line-height:1.15;
+  font-size:2.05rem; font-weight:800; letter-spacing:-.035em; line-height:1.15;
   font-variant-numeric:tabular-nums;
 }
 .kartya.kritikus .ertek{color:var(--kritikus)}
@@ -199,7 +226,7 @@ h1{margin:0; font-size:1.45rem; font-weight:700; letter-spacing:-.025em; text-wr
 .sor .osszeg{font-weight:600}
 .jelzes{
   display:inline-block; font-family:"IBM Plex Mono",monospace; font-size:.68rem;
-  padding:.2em .5em; border-radius:4px; border:1px solid; letter-spacing:.03em; white-space:nowrap;
+  padding:.24em .6em; border-radius:999px; border:1px solid; letter-spacing:.03em; white-space:nowrap;
 }
 .j-kritikus{background:var(--kritikus-soft); color:var(--kritikus); border-color:var(--kritikus)}
 .j-figyelem{background:var(--figyelem-soft); color:var(--figyelem); border-color:var(--figyelem)}
@@ -227,17 +254,18 @@ h1{margin:0; font-size:1.45rem; font-weight:700; letter-spacing:-.025em; text-wr
 
 /* ---------- gombok ---------- */
 .gomb{
-  min-height:var(--cel); border-radius:var(--r); border:1px solid var(--line);
-  background:var(--surface); color:var(--ink); font:inherit; font-weight:600; font-size:1rem;
-  padding:0 1rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:.4rem;
+  min-height:var(--cel); border-radius:999px; border:1px solid var(--line);
+  background:var(--surface); color:var(--ink); font:inherit; font-weight:700; font-size:1rem;
+  padding:0 1.15rem; cursor:pointer; display:flex; align-items:center; justify-content:center; gap:.4rem;
   width:100%;
 }
-.gomb.fo{background:var(--accent); color:var(--accent-ink); border-color:var(--accent)}
+.gomb.fo{background:var(--cta); color:var(--cta-ink); border-color:var(--cta)}
 .gomb.veszelyes{color:var(--kritikus); border-color:var(--kritikus)}
 .gombsor{display:flex; flex-direction:column; gap:.5rem}
 .gombsor.ketto{flex-direction:row}
 .gombsor.ketto .gomb{flex:1}
 button:focus-visible, a:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
+.fejsav :focus-visible{outline-color:var(--cta)}
 
 /* ---------- javaslatchipek ---------- */
 .chipek{display:flex; gap:.5rem; overflow-x:auto; padding:.15rem .9rem .15rem;
@@ -259,15 +287,15 @@ button:focus-visible, a:focus-visible{outline:3px solid var(--accent); outline-o
 .dokksor{display:flex; align-items:center; gap:.75rem}
 .mikro{
   width:76px; height:76px; flex:0 0 76px; border-radius:50%;
-  background:var(--accent); color:var(--accent-ink); border:none;
+  background:var(--cta); color:var(--cta-ink); border:none;
   display:flex; align-items:center; justify-content:center; cursor:pointer;
-  box-shadow:0 0 0 0 rgba(122,92,0,.35); position:relative;
+  box-shadow:0 0 0 0 var(--cta-udv); position:relative;
 }
 .mikro svg{width:34px; height:34px}
 .mikro[data-figyel="1"]{animation:lelegzik 1.4s ease-in-out infinite}
 @keyframes lelegzik{
-  0%,100%{box-shadow:0 0 0 0 rgba(122,92,0,.35)}
-  50%{box-shadow:0 0 0 14px rgba(122,92,0,0)}
+  0%,100%{box-shadow:0 0 0 0 var(--cta-udv)}
+  50%{box-shadow:0 0 0 14px rgba(0,0,0,0)}
 }
 .mikrocimke{
   flex:1; min-width:0; font-size:.92rem; color:var(--ink-2); line-height:1.35;
