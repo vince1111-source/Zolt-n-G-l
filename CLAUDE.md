@@ -32,7 +32,7 @@ Kész és **bizonyítottan működik** (mindegyik futtatható, lásd a HANDOVER 
 |---|---|---|
 | Adatbázis-séma RLS-sel és a jóváhagyási kapuval | `db/` | `./db/futtat.sh` → 22 állítás |
 | Determinisztikus árkalkuláció | `mag/` | `node --test mag/*.teszt.mjs` → 12 teszt |
-| Telefon-első prototípus | `prototype/CEGEM-AI-telefon.html` | `node prototype/fustproba.mjs` → 30 ellenőrzés |
+| Telefon-első prototípus | `prototype/CEGEM-AI-telefon.html` | `node prototype/fustproba.mjs` → 77 ellenőrzés |
 | Fejlesztői specifikáció | `docs/fejlesztoi-specifikacio.md` | Word és PDF a `docs/kiadas/` mappában |
 
 **Az eredeti „semmit ne építs a mérések előtt" szabály árnyalódott:** a mag séma és

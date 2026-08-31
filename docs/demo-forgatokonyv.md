@@ -1,4 +1,4 @@
-# Demó forgatókönyv — 4 perc
+# Demó forgatókönyv — 4 perc (+2, ha kérdeznek)
 
 Ez a lap arra való, hogy a bemutató ne improvizáció legyen. **Telefonon mutasd**,
 a telefonos prototípussal — az asztali változat csak akkor, ha valaki a teljes,
@@ -104,7 +104,28 @@ fekete-fehér, vastagabb keretek.
 
 > „Ezt nem irodában használják."
 
-### 3:45 — Zárás
+### 3:45 — Ha van még két perc: a mag két új oldala
+
+Az ajánlat jóváhagyó lapján két új sor van, mindkettő ugyanabból a
+számításból dolgozik:
+
+- **„Így látja az ügyfél"** — a kiküldendő dokumentum, a cég fejlécével,
+  érvényességgel, fizetési feltétellel. A mondat hozzá:
+  > „Ez nem egy külön megírt levél. Ugyanaz a számítás, más ruhában —
+  > ezért nem tud mást mondani, mint amit jóváhagytál."
+  A **Nyomtatás / PDF** gomb valódi PDF-et ad a böngészőből.
+- **„Mit kell rendelni?"** — anyagszükséglet: raklapszám, zúzottkő tonnában,
+  ágyazóhomok, szegélykő, beton, fugahomok. Ugyanabból a méretből.
+
+És ami a bizalmat a gyakorlatban is megmutatja:
+
+- **Árlista → koppints egy árra → írd át.** A következő ajánlat már az új
+  árral megy ki. Ez élőben átírható a néző előtt.
+- **Ajánlataim** — mi lett abból, ami kiment: elfogadva, nincs válasz,
+  elutasítva. A „nincs válasz" ajánlatból lesz az utánkövetési teendő,
+  amit az „Intézd el" folyamat felhoz.
+
+### 4:30 — Zárás
 
 Egy mondat, és utána hallgass:
 

@@ -29,6 +29,12 @@ hangmérő lapon. Ami itt eldől, az ingyen van: nincs hálózat, nincs token.
 | Mai teendő | `mai teendo`, `mi a dolgom`, `teendoim`, `mi van ma`, `napirend`, `mit kell ma` | — | Feladatlista |
 | Összefoglaló | `helyzet a cegemben`, `hogy allunk`, `foglald ossze`, `osszefoglal`, `hogy all a ceg` | — | Napi állás |
 | Árlista | `arlista`, `mennyibe kerul`, `mi az ara`, `listaar`, `mennyiert adom` | — | Árlista nézet |
+| Ajánlatok | `ajanlataim`, `ajanlatok`, `kikuldott ajanlat`, `nyitott ajanlat` | — | A kiadott ajánlatok és a sorsuk |
+| Anyagszükséglet | `mennyi anyag`, `anyagszukseglet`, `mit kell rendelni`, `hany raklap`, `beszerzesi lista` | mennyiség* | Beszerzési lista ugyanabból a méretből |
+| Cégadatok | `cegadat`, `cegprofil`, `adoszamom`, `bankszamlaszamom`, `beallitas` | — | Cégprofil nézet |
+
+\* Az anyagszükséglet a mondatból veszi a méretet, vagy az utoljára nézett
+ajánlatból — ha egyik sincs, visszakérdez.
 
 **Ha hiányzik egy szükséges adat**, a rendszer visszakérdez („Melyik partnernek?"),
 nem találgat. Ha egyáltalán nem ismeri fel, kiírja, hogy továbbadná a modellnek —
@@ -42,8 +48,10 @@ a prototípusban nincs modellhívás.
 4. Jövő kedden emlékeztess, hogy hívjam fel a Kovács Kft-t
 5. Küldj fizetési felszólítást a Zöld Kertnek
 6. Mennyibe kerül a szürke térkő?
-7. Fotózok egy számlát
-8. Mi a mai teendőm?
+7. Mutasd az ajánlataimat
+8. Mennyi anyag kell 800 négyzetméterhez?
+9. Fotózok egy számlát
+10. Mi a mai teendőm?
 
 ### Számfelismerés
 
