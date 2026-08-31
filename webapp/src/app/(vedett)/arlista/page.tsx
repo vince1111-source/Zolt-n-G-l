@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { szerverKliens } from "@/lib/supabase/server";
 import { termekInaktivalasa } from "./actions";
-
-const forint = new Intl.NumberFormat("hu-HU");
+import { Ft } from "@/lib/format";
 
 function arres(termek: { beszerzesi_ar: number; eladasi_ar: number }) {
   if (!(termek.eladasi_ar > 0)) return null;
@@ -47,12 +46,12 @@ export default async function Arlista() {
                 <div className="text-sm text-muted">
                   {t.mertekegyseg}
                   {t.beszerzesi_ar > 0 &&
-                    ` · beszerzés ${forint.format(t.beszerzesi_ar)} Ft`}
+                    ` · beszerzés ${Ft(t.beszerzesi_ar)}`}
                 </div>
               </div>
               <div className="text-right whitespace-nowrap">
                 <div className="font-semibold tabular-nums">
-                  {forint.format(t.eladasi_ar)} Ft
+                  {Ft(t.eladasi_ar)}
                 </div>
                 {r !== null && t.beszerzesi_ar > 0 && (
                   <div

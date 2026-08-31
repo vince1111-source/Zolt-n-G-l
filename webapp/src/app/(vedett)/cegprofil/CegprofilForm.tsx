@@ -2,7 +2,7 @@
 
 import { useActionState } from "react";
 import { cegprofilMentese, type CegprofilAllapot } from "./actions";
-import type { Tables } from "@/lib/supabase/types-helpers";
+import type { Tables } from "@/lib/supabase/types";
 
 const kezdoAllapot: CegprofilAllapot = {};
 

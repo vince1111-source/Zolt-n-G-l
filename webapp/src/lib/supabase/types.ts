@@ -7,6 +7,8 @@ export type Json =
   | Json[]
 
 export type Database = {
+  // Allows to automatically instantiate createClient with right options
+  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
@@ -58,7 +60,29 @@ export type Database = {
           token_be?: number | null
           token_ki?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ai_naplo_ceg_id_fkey"
+            columns: ["ceg_id"]
+            isOneToOne: false
+            referencedRelation: "cegek"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_naplo_felhasznalo_id_fkey"
+            columns: ["felhasznalo_id"]
+            isOneToOne: false
+            referencedRelation: "felhasznalok"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_naplo_javasolt_muvelet_id_fkey"
+            columns: ["javasolt_muvelet_id"]
+            isOneToOne: false
+            referencedRelation: "javasolt_muveletek"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ajanlat_tetelek: {
         Row: {
@@ -94,7 +118,29 @@ export type Database = {
           sorrend?: number
           termek_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ajanlat_tetelek_ajanlat_id_fkey"
+            columns: ["ajanlat_id"]
+            isOneToOne: false
+            referencedRelation: "ajanlatok"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ajanlat_tetelek_termek_id_fkey"
+            columns: ["termek_id"]
+            isOneToOne: false
+            referencedRelation: "termek_arres"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ajanlat_tetelek_termek_id_fkey"
+            columns: ["termek_id"]
+            isOneToOne: false
+            referencedRelation: "termekek"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       ajanlatok: {
         Row: {
@@ -142,7 +188,22 @@ export type Database = {
           partner_id?: string
           sorszam?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "ajanlatok_ceg_id_fkey"
+            columns: ["ceg_id"]
+            isOneToOne: false
+            referencedRelation: "cegek"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ajanlatok_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partnerek"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cegek: {
         Row: {
@@ -208,7 +269,22 @@ export type Database = {
           id?: string
           tipus?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "dokumentumok_ceg_id_fkey"
+            columns: ["ceg_id"]
+            isOneToOne: false
+            referencedRelation: "cegek"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dokumentumok_feltoltotte_id_fkey"
+            columns: ["feltoltotte_id"]
+            isOneToOne: false
+            referencedRelation: "felhasznalok"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       feladatok: {
         Row: {
@@ -247,7 +323,22 @@ export type Database = {
           partner_id?: string | null
           surgos?: boolean
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "feladatok_ceg_id_fkey"
+            columns: ["ceg_id"]
+            isOneToOne: false
+            referencedRelation: "cegek"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feladatok_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partnerek"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       felhasznalok: {
         Row: {
@@ -277,7 +368,15 @@ export type Database = {
           nev?: string
           szerep?: Database["public"]["Enums"]["felhasznalo_szerep"]
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "felhasznalok_ceg_id_fkey"
+            columns: ["ceg_id"]
+            isOneToOne: false
+            referencedRelation: "cegek"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       javasolt_muveletek: {
         Row: {
@@ -322,7 +421,22 @@ export type Database = {
           tipus?: Database["public"]["Enums"]["muvelet_tipus"]
           vegrehajtva?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "javasolt_muveletek_ceg_id_fkey"
+            columns: ["ceg_id"]
+            isOneToOne: false
+            referencedRelation: "cegek"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "javasolt_muveletek_jovahagyta_id_fkey"
+            columns: ["jovahagyta_id"]
+            isOneToOne: false
+            referencedRelation: "felhasznalok"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       kiolvasott_mezok: {
         Row: {
@@ -364,7 +478,29 @@ export type Database = {
           javitva_ekkor?: string | null
           mezo_nev?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "kiolvasott_mezok_ceg_id_fkey"
+            columns: ["ceg_id"]
+            isOneToOne: false
+            referencedRelation: "cegek"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kiolvasott_mezok_dokumentum_id_fkey"
+            columns: ["dokumentum_id"]
+            isOneToOne: false
+            referencedRelation: "dokumentumok"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kiolvasott_mezok_javitotta_id_fkey"
+            columns: ["javitotta_id"]
+            isOneToOne: false
+            referencedRelation: "felhasznalok"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       partnerek: {
         Row: {
@@ -415,7 +551,15 @@ export type Database = {
           szallito?: boolean
           telefon?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "partnerek_ceg_id_fkey"
+            columns: ["ceg_id"]
+            isOneToOne: false
+            referencedRelation: "cegek"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       szamlak: {
         Row: {
@@ -475,7 +619,29 @@ export type Database = {
           sorszam?: string
           teljesites?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "szamlak_ceg_id_fkey"
+            columns: ["ceg_id"]
+            isOneToOne: false
+            referencedRelation: "cegek"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "szamlak_dokumentum_id_fkey"
+            columns: ["dokumentum_id"]
+            isOneToOne: false
+            referencedRelation: "dokumentumok"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "szamlak_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partnerek"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       termekek: {
         Row: {
@@ -517,7 +683,15 @@ export type Database = {
           mertekegyseg?: string
           nev?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "termekek_ceg_id_fkey"
+            columns: ["ceg_id"]
+            isOneToOne: false
+            referencedRelation: "cegek"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -529,7 +703,29 @@ export type Database = {
           id: string | null
           nev: string | null
         }
-        Relationships: []
+        Insert: {
+          arres?: never
+          arres_szazalek?: never
+          ceg_id?: string | null
+          id?: string | null
+          nev?: string | null
+        }
+        Update: {
+          arres?: never
+          arres_szazalek?: never
+          ceg_id?: string | null
+          id?: string | null
+          nev?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "termekek_ceg_id_fkey"
+            columns: ["ceg_id"]
+            isOneToOne: false
+            referencedRelation: "cegek"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Functions: {
@@ -567,3 +763,153 @@ export type Database = {
     CompositeTypes: Record<string, never>
   }
 }
+
+type DatabaseWithoutInternals = Omit<Database, "__InternalSupabase">
+
+type DefaultSchema = DatabaseWithoutInternals[Extract<keyof Database, "public">]
+
+export type Tables<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
+      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])[TableName] extends {
+      Row: infer R
+    }
+    ? R
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])
+    ? (DefaultSchema["Tables"] &
+        DefaultSchema["Views"])[DefaultSchemaTableNameOrOptions] extends {
+        Row: infer R
+      }
+      ? R
+      : never
+    : never
+
+export type TablesInsert<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Insert: infer I
+    }
+    ? I
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Insert: infer I
+      }
+      ? I
+      : never
+    : never
+
+export type TablesUpdate<
+  DefaultSchemaTableNameOrOptions extends
+    | keyof DefaultSchema["Tables"]
+    | { schema: keyof DatabaseWithoutInternals },
+  TableName extends DefaultSchemaTableNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
+    : never = never,
+> = DefaultSchemaTableNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"][TableName] extends {
+      Update: infer U
+    }
+    ? U
+    : never
+  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema["Tables"]
+    ? DefaultSchema["Tables"][DefaultSchemaTableNameOrOptions] extends {
+        Update: infer U
+      }
+      ? U
+      : never
+    : never
+
+export type Enums<
+  DefaultSchemaEnumNameOrOptions extends
+    | keyof DefaultSchema["Enums"]
+    | { schema: keyof DatabaseWithoutInternals },
+  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
+    : never = never,
+> = DefaultSchemaEnumNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"][EnumName]
+  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema["Enums"]
+    ? DefaultSchema["Enums"][DefaultSchemaEnumNameOrOptions]
+    : never
+
+export type CompositeTypes<
+  PublicCompositeTypeNameOrOptions extends
+    | keyof DefaultSchema["CompositeTypes"]
+    | { schema: keyof DatabaseWithoutInternals },
+  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+    schema: keyof DatabaseWithoutInternals
+  }
+    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
+    : never = never,
+> = PublicCompositeTypeNameOrOptions extends {
+  schema: keyof DatabaseWithoutInternals
+}
+  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"][CompositeTypeName]
+  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema["CompositeTypes"]
+    ? DefaultSchema["CompositeTypes"][PublicCompositeTypeNameOrOptions]
+    : never
+
+export const Constants = {
+  public: {
+    Enums: {
+      adat_forras: ["nav", "foto", "kezi", "szamlazo_api"],
+      ajanlat_allapot: [
+        "piszkozat",
+        "kikuldve",
+        "elfogadva",
+        "elutasitva",
+        "lejart",
+      ],
+      feladat_allapot: ["nyitott", "kesz", "torolve"],
+      felhasznalo_szerep: ["tulajdonos", "munkatars"],
+      muvelet_allapot: [
+        "javasolt",
+        "jovahagyott",
+        "vegrehajtott",
+        "kihagyott",
+        "elvetett",
+      ],
+      muvelet_tipus: [
+        "ajanlat_kikuldes",
+        "emlekezteto",
+        "email",
+        "utalasi_javaslat",
+      ],
+      szamla_allapot: ["nyitott", "fizetve", "sztornozott"],
+      szamla_irany: ["kimeno", "bejovo"],
+      termek_kategoria: ["munkadij", "anyag", "szolgaltatas"],
+    },
+  },
+} as const

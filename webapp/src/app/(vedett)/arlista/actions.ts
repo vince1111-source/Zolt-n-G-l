@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { szerverKliens } from "@/lib/supabase/server";
-import type { Enums } from "@/lib/supabase/types-helpers";
+import type { Enums } from "@/lib/supabase/types";
 
 export type TermekAllapot = { hiba?: string };
 

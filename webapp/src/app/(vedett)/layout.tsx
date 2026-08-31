@@ -42,6 +42,12 @@ export default async function VedettElrendezes({
             Partnerek
           </Link>
           <Link
+            href="/ajanlatok"
+            className="px-3 py-2 rounded-lg hover:bg-white/10 whitespace-nowrap flex-shrink-0"
+          >
+            Ajánlatok
+          </Link>
+          <Link
             href="/arlista"
             className="px-3 py-2 rounded-lg hover:bg-white/10 whitespace-nowrap flex-shrink-0"
           >
