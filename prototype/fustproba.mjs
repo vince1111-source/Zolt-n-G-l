@@ -576,18 +576,90 @@ console.log('\nAjánlat → díjbekérő → számla lánc, kapukkal');
   }), 'a díjbekérő kiállítva, jóváhagyás után');
   // Fizetés + számla.
   await oldal.locator('[data-tett="dijbekero-fizetve"]').click(); await oldal.waitForTimeout(300);
-  await oldal.locator('[data-tett="szamla-kiallit"]').click(); await oldal.waitForTimeout(300);
+  // A végszámla is jóváhagyó lapon megy át — nem egy koppintás.
+  await oldal.locator('[data-tett="vegszamla-elokeszit"]').click(); await oldal.waitForTimeout(300);
+  ok(/Levonva: befizetett előleg/.test(await oldal.evaluate(() => document.getElementById('lap').textContent)),
+    'a végszámla lap megmutatja, mi jön le az összegből');
+  await oldal.locator('[data-tett="vegszamla-kiallit"]').click(); await oldal.waitForTimeout(300);
   ok(await oldal.evaluate(() => {
     const l = ajanlatok.find(a => a.szam === 'AJ-2026/029').lanc;
-    return l && l.szamla && l.szamla.szam === 'SZ-2026/0163';
-  }), 'a számla a díjbekérőből készült (create-from-proforma)');
+    return l && l.szamla && l.szamla.szam === 'SZ-2026/0152';
+  }), 'a számla a díjbekérőből készült, folytatólagos sorszámmal');
+  ok(await oldal.evaluate(() => szamlak.some(sz => sz.szam === 'SZ-2026/0152' && sz.allapot === 'nyitott')),
+    'a kiállított számla bekerült a kintlévőségek közé');
   ok((await oldal.locator('.lanc .lepes.kesz').count()) === 3, 'a lánc mindhárom lépése kész');
   ok(await oldal.evaluate(() => naplo.filter(n => /Billingo/.test(n.reszlet)).length === 2),
     'mindkét Billingo-lépés naplózva, szimuláltként jelölve');
+  // A nyomtatás whitelist: csak az ügyfél dokumentuma megy papírra.
+  await oldal.emulateMedia({ media: 'print' });
+  ok(await oldal.evaluate(() => {
+    const lathato = [...document.querySelectorAll('#lap .lap-torzs > *')]
+      .filter(el => getComputedStyle(el).display !== 'none');
+    return lathato.length === 1 && lathato[0].classList.contains('dok');
+  }), 'nyomtatásban csak a .dok dokumentum látszik, a lánc és a magyarázat nem');
+  await oldal.emulateMedia({ media: 'screen' });
   // El nem fogadott ajánlaton nincs lánc.
   await oldal.locator('#lap .gombsor .gomb:last-child').click(); await oldal.waitForTimeout(250);
   await oldal.locator('[data-ajanlat="AJ-2026/031"]').click(); await oldal.waitForTimeout(300);
   ok((await oldal.locator('.lanc').count()) === 0, 'válaszra váró ajánlaton nincs lánc');
+  ok(hibak.length === 0, 'nincs konzolhiba', hibak.join(' | '));
+  await ctx.close();
+}
+
+/* ------------- 20. az átvizsgálás javított hibái ne jöjjenek vissza ------ */
+console.log('\nMunkák és lánc — a javított hibák');
+{
+  const { ctx, oldal, hibak } = await ujOldal();
+  // A háttérnézet nem maradhat elavult állapotváltás után.
+  await oldal.locator('[data-megy="munkak"]').click(); await oldal.waitForTimeout(300);
+  await oldal.locator('[data-munka="m2"]').click(); await oldal.waitForTimeout(300);
+  await oldal.locator('[data-tett^="munka-allapot:"]').click(); await oldal.waitForTimeout(300);
+  await oldal.locator('#lap .gombsor [data-zar]').click(); await oldal.waitForTimeout(300);
+  ok((await oldal.locator('[data-munka="m2"] .jelzes').textContent()) === 'folyamatban',
+    'a lista a lap bezárása után a friss állapotot mutatja');
+  // A „befejezve" nem zsákutca: van visszaléptetés.
+  await oldal.locator('[data-munka="m3"]').click(); await oldal.waitForTimeout(300);
+  ok((await oldal.locator('[data-tett^="munka-vissza:"]').count()) === 1,
+    'befejezett munkánál is van visszaléptetés');
+  await oldal.locator('[data-tett^="munka-vissza:"]').click(); await oldal.waitForTimeout(300);
+  ok(await oldal.evaluate(() => munkak.find(m => m.id === 'm3').allapot === 'folyamatban'),
+    'a visszaléptetés működik');
+  ok(await oldal.evaluate(() => naplo.some(n => /visszaléptetve/.test(n.reszlet))),
+    'a visszaléptetés a naplóban is látszik');
+  await oldal.locator('#lap .gombsor [data-zar]').click(); await oldal.waitForTimeout(250);
+  // A „helyszíni" szó nem viheti el az árlistás kérdést.
+  await oldal.fill('#bevitel', 'Mennyibe kerül a helyszíni felmérés?');
+  await oldal.locator('#kuldGomb').click(); await oldal.waitForTimeout(400);
+  ok(await oldal.evaluate(() => nezet === 'arlista'),
+    'a „helyszíni" szó nem téríti el az árlistás kérdést a munkákhoz');
+  ok(hibak.length === 0, 'nincs konzolhiba', hibak.join(' | '));
+  await ctx.close();
+}
+
+console.log('\nOffline pénzügyi lánc — nem mondja kiállítottnak');
+{
+  const { ctx, oldal, hibak } = await ujOldal();
+  await oldal.locator('#tobbGomb').click(); await oldal.waitForTimeout(250);
+  await oldal.locator('#offlineKapcsolo').click(); await oldal.waitForTimeout(300);
+  await oldal.locator('[data-megy="ajanlatok"]').click(); await oldal.waitForTimeout(300);
+  await oldal.locator('[data-ajanlat="AJ-2026/029"]').click(); await oldal.waitForTimeout(300);
+  await oldal.locator('[data-tett="dijbekero-elokeszit"]').click(); await oldal.waitForTimeout(300);
+  await oldal.locator('[data-tett="dijbekero-kiallit"]').click(); await oldal.waitForTimeout(400);
+  ok(await oldal.evaluate(() => {
+    const l = ajanlatok.find(a => a.szam === 'AJ-2026/029').lanc;
+    return l.dijbekero.allapot === 'küldésre vár';
+  }), 'offline a díjbekérő nem „kiállítva", hanem küldésre vár');
+  ok(await oldal.evaluate(() => sor.length === 1), 'és bekerült a küldési sorba');
+  ok(!(await oldal.evaluate(() => naplo.some(n => n.allapot === 'végrehajtva' && /Díjbekérő/.test(n.mit)))),
+    'a napló nem állítja végrehajtottnak');
+  // Kapcsolat vissza: most válik ténylegesen kiállítottá.
+  await oldal.evaluate(() => lapZar()); await oldal.waitForTimeout(200);
+  await oldal.locator('#tobbGomb').click(); await oldal.waitForTimeout(250);
+  await oldal.locator('#offlineKapcsolo').click(); await oldal.waitForTimeout(400);
+  ok(await oldal.evaluate(() => {
+    const l = ajanlatok.find(a => a.szam === 'AJ-2026/029').lanc;
+    return l.dijbekero.allapot === 'kiállítva' && sor.length === 0;
+  }), 'a kapcsolat visszatértével kiállítottá válik, és kiürül a sor');
   ok(hibak.length === 0, 'nincs konzolhiba', hibak.join(' | '));
   await ctx.close();
 }

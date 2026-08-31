@@ -32,7 +32,7 @@ Kész és **bizonyítottan működik** (mindegyik futtatható, lásd a HANDOVER 
 |---|---|---|
 | Adatbázis-séma RLS-sel és a jóváhagyási kapuval | `db/` | `./db/futtat.sh` → 22 állítás |
 | Determinisztikus árkalkuláció | `mag/` | `node --test mag/*.teszt.mjs` → 12 teszt |
-| Telefon-első prototípus | `prototype/CEGEM-AI-telefon.html` | `node prototype/fustproba.mjs` → 115 ellenőrzés |
+| Telefon-első prototípus | `prototype/CEGEM-AI-telefon.html` | `node prototype/fustproba.mjs` → 129 ellenőrzés |
 | Fejlesztői specifikáció | `docs/fejlesztoi-specifikacio.md` | Word és PDF a `docs/kiadas/` mappában |
 
 **Az eredeti „semmit ne építs a mérések előtt" szabály árnyalódott:** a mag séma és
@@ -143,9 +143,24 @@ a `spike/.gitignore` ezt kizárja.
   Telefon-első: nyomva tartós mikrofon, 56 px célfelületek, napfény üzemmód,
   teljes képernyős jóváhagyó lapok (egy képernyő = egy döntés). A 0. réteg
   felismerője beépítve, és a válasz alatt látszik, melyik réteg felelt.
-  Tartalmazza a számla fotózását megerősítő folyamattal (minden kiolvasott
-  adat mellett ott van, honnan jött, a bizonytalanok megjelölve), az offline
-  sort, és a partnerlistát.
+  Ez már nem képernyőterv: **működő funkciók**, és a változás megmarad a
+  böngészőben (localStorage, try/catch mögött — ha tiltott, a demó akkor is
+  megy, csak felejt). Ami benne van:
+
+  | Terület | Mit tud |
+  |---|---|
+  | Ajánlat | bármely partnernek, bármekkora felületre; módosítás beszédből; jóváhagyási kapu |
+  | Ügyfél-dokumentum | cégfejléces árajánlat, **Nyomtatás / PDF** valódi PDF-et ad |
+  | Lánc a pénzig | elfogadott ajánlat → előleg-díjbekérő → számla (**Billingo, szimulálva**), kapuval |
+  | Munkák | helyszín, állapot, határidő + **fotódokumentáció** a munkához kötve |
+  | Árréses árlista | beszerzési ár és árrés tételenként; szerkeszthető |
+  | Nagyker | szállítói árlista; **árfrissítés a kapun**, az árrés tartásával számolt új eladási árral |
+  | Fedezet | az ajánlat jóváhagyó lapján, **csak a vállalkozónak** — dokumentumra és nyomtatásba sem megy ki |
+  | Számlafotó | kamera, forrásmegjelölés, a bizonytalanok megjelölve és **javíthatók** |
+  | Terep | offline sor, napfény üzemmód |
+
+  ⚠ **Ami szimulált, azt a felület ki is mondja**: nincs valódi modellhívás,
+  a számlakiolvasás és a Billingo-hívás szimulált, semmi nem megy szerverre.
 - **`prototype/CEGEM-AI-prototipus.html`** — az asztali változat. Mind a 16
   modult mutatja, ezért bemutatóra továbbra is hasznos; a fejlesztés iránya
   viszont már nem ez.
@@ -156,7 +171,16 @@ módosítod, a másikat is igazítsd, különben a demó két különböző szá
 
 ## A prototípus módosítása
 
-Egyetlen fájl, nincs build. A szándékfelismerő a `handle(text, fromVoice)` függvény: új parancshoz tegyél egy `if(/minta/.test(t)){ ... }` ágat a fallback elé, és vedd fel a `CHIPS` tömbbe.
+Egyetlen fájl, nincs build. A szándékfelismerő a `kezel(szoveg, hangbol)` függvény,
+a minták a `SZANDEKOK` tömbben: új parancshoz vegyél fel egy `{ id, re, kell }`
+bejegyzést — **a sorrend számít**, a szűkebb minta előzze meg a tágabbat —, adj
+hozzá egy `case` ágat a `kezel()` switchében, és vedd fel a `CHIPEK` tömbbe.
+
+Két szabály, amit a füstpróba is őriz:
+- **Az árlistát név szerint keresd** (`arTetel`), soha nem index szerint — a
+  lista szerkeszthető, egy törlés nem boríthatja fel az árazást.
+- **Belső adat** (fedezet, beszerzési ár) nem kerülhet az ügyfél-dokumentumra
+  és a nyomtatásba sem; a `@media print` szabály whitelist, nem blacklist.
 
 Az „AI” benne **determinisztikus regex-alapú szándékfelismerő, nem LLM** — demóra jó, termékbe nem.
 
@@ -167,11 +191,17 @@ npm i playwright && npx playwright install chromium
 node prototype/fustproba.mjs
 ```
 
-Ez a telefonos prototípust járja végig: ajánlat jóváhagyással, számlarögzítés
-megerősítő folyamattal, végigvezetés, offline sor, világos/sötét/napfény
-megjelenés, 390 px szélesség, vízszintes túlcsordulás és 44 px alatti
-célfelületek. Az asztali prototípushoz nincs külön szkript — ott a 9
-példaparancsot és a jóváhagyási folyamatot kézzel nézd át.
+Ez a telefonos prototípust járja végig: ajánlat jóváhagyással és módosítással,
+számlarögzítés megerősítő folyamattal és mezőjavítással, végigvezetés, offline
+sor, ajánlatlista és dokumentum-előnézet, árlista- és partnerszerkesztés,
+nagyker árfrissítés a kapuval, fedezet, munkák és fotódokumentáció, a
+díjbekérő→számla lánc, világos/sötét/napfény megjelenés, 390 px szélesség,
+vízszintes túlcsordulás és 44 px alatti célfelületek.
+
+Az asztali prototípushoz nincs külön szkript — ott a 9 példaparancsot és a
+jóváhagyási folyamatot kézzel nézd át. ⚠ Az asztali változat **nem** tartalmazza
+a telefonos újdonságokat (nagyker, munkák, lánc); ha bemutatóra kell, ezt mondd
+meg előre.
 
 ## Amit ne csinálj
 

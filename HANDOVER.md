@@ -91,8 +91,11 @@ mérésektől függ, az a 6. modul mérete és a hang szerepe — az még nyitot
 |---|---|---|
 | **Adatbázis-séma** RLS-sel és a jóváhagyási kapuval | `db/` | `./db/futtat.sh` → 22 állítás zöld |
 | **Árkalkuláció** determinisztikus kódban | `mag/` | `node --test mag/*.teszt.mjs` → 12 teszt zöld |
-| **Telefon-első prototípus** | `prototype/CEGEM-AI-telefon.html` | `node prototype/fustproba.mjs` → 115 ellenőrzés zöld |
+| **Telefon-első prototípus** | `prototype/CEGEM-AI-telefon.html` | `node prototype/fustproba.mjs` → 129 ellenőrzés zöld |
 | Asztali prototípus (mind a 16 modul) | `prototype/CEGEM-AI-prototipus.html` | kézzel átnézve |
+| **Árréses árlista + nagyker** (beszerzési ár, árrés, fedezet) | a telefonos prototípusban | a füstpróba külön szakasza |
+| **Munkák + fotódokumentáció** | ugyanott | a füstpróba külön szakasza |
+| **Ajánlat → díjbekérő → számla lánc** (Billingo, szimulálva) | ugyanott | a füstpróba külön szakasza |
 | **Fejlesztői specifikáció** | `docs/fejlesztoi-specifikacio.md` + Word/PDF | — |
 | Spike mérőeszközök (4 db) | `spike/` | a 4. spike 0. rétege mérve |
 | Demó forgatókönyv | `docs/demo-forgatokonyv.md` | — |
@@ -108,6 +111,32 @@ mérésektől függ, az a 6. modul mérete és a hang szerepe — az még nyitot
 
 **A hangot a tulajdonos egyelőre félretette** — „lehet plugin, majd kitaláljuk".
 Ne ez legyen a következő fejlesztési irány, de a mérőeszköz készen áll.
+
+### Mit tud ma a telefonos prototípus
+
+Ez már nem képernyőterv: a felsoroltak **működnek**, adatot írnak, és a
+változás megmarad a böngészőben (localStorage, try/catch mögött — ha a
+böngésző tiltja, a demó attól még hibátlanul megy, csak felejt).
+
+| Terület | Mit tud |
+|---|---|
+| **Ajánlat** | Parancsból bármelyik partnernek, bármekkora felületre. Feltételezés-sáv, tételek az árlistából, módosítás beszédből, jóváhagyási kapu. |
+| **Ügyfél-dokumentum** | „Így látja az ügyfél" — cégfejléces árajánlat, érvényességgel és fizetési feltétellel; **Nyomtatás / PDF** valódi PDF-et ad. |
+| **Ajánlatok sorsa** | Kiküldve / nincs válasz / elfogadva / elutasítva. A „nincs válasz" utánkövetési teendővé válik. |
+| **Lánc a pénzig** | Elfogadott ajánlatból előleg-díjbekérő (bruttó 40%), majd számla — Billingo `proforma` + `create-from-proforma`, **szimulálva**, kapuval és naplóval. |
+| **Munkák** | Helyszín, partner, m², határidő, állapot (előkészítés → folyamatban → befejezve), kapcsolódó ajánlat. |
+| **Fotódokumentáció** | A munkához kötött, dátumozott fotók; új fotó a telefon kamerájából. |
+| **Árréses árlista** | Minden tételnél beszerzési ár és **árrés**; a szerkesztő beszerzési árat is kezel, és szól, ha az eladási ár alá megy. |
+| **Nagyker** | A szállító árlistája; **árfrissítés a jóváhagyási kapun**: a rendszer kiszámolja az új eladási árat az árrés tartásával, de nem vezeti át magától. |
+| **Fedezet** | Az ajánlat jóváhagyó lapján, **csak a vállalkozónak** — a dokumentumra és a nyomtatásba sem kerül ki. Veszteségnél piros. |
+| **Számlafotó** | Kamera, kiolvasott mezők forrásmegjelöléssel, a bizonytalanok megjelölve, **javíthatóan**; a javítás nyoma a naplóban. |
+| **Partnerek, cégadatok** | Felvétel és szerkesztés; a felvett partner nevét a 0. réteg felismeri. |
+| **Terep** | Offline sor (a művelet elkészül, a kiküldés vár), napfény üzemmód, 56 px célfelületek. |
+| **AI napló** | Minden lépés: mit javasolt, mit hagytál jóvá, mikor. |
+
+Amit **nem** tud, és ezt a felület ki is mondja: nincs valódi modellhívás (a
+felismerő determinisztikus regex), a számlakiolvasás és a Billingo-hívás
+szimulált, és semmi nem megy szerverre.
 
 ### Ami nem indult el
 
@@ -162,7 +191,7 @@ prototype/
   telefon-artifact-body.html       ugyanaz Artifact-publikáláshoz (burok nélkül)
   CEGEM-AI-prototipus.html         asztali változat, mind a 16 modul
   artifact-body.html               ugyanaz Artifact-publikáláshoz
-  fustproba.mjs                    115 ellenőrzés a telefonos prototípuson
+  fustproba.mjs                    129 ellenőrzés a telefonos prototípuson
 
 docs/
   fejlesztoi-specifikacio.md       A FORRÁS — 14 fejezet, elfogadási kritériumokkal
@@ -191,7 +220,7 @@ spike/                             a 0. fázis mérőeszközei — nem termékk�
 ```bash
 node --test mag/*.teszt.mjs        # árkalkuláció — 12 teszt
 ./db/futtat.sh                     # séma + sarkalatos szabályok — 22 állítás
-node prototype/fustproba.mjs       # telefonos prototípus — 115 ellenőrzés
+node prototype/fustproba.mjs       # telefonos prototípus — 129 ellenőrzés
 cd spike && node parancs/merd.mjs  # a 0. réteg lefedettsége és a költségbecslés
 ```
 
@@ -289,10 +318,33 @@ Billingo API · beszédfelismerés bekötve.
 | **NAV technikai felhasználó** regisztrálása | 1–3 hét | Ez dönti el a 6. modul méretét. Ezt érdemes először elindítani. |
 | **50–100 valódi bejövő számla** összegyűjtése | 1–2 nap | A kiolvasási pontosság mérése. A saját céged számlái legyenek — az adatfeldolgozói szerződés még nincs meg. |
 | **Hangmérés** Chrome-ban, két környezetben | 20 perc | Eldönti, fő út-e a hang, és megadja a 0. réteg valódi lefedettségét is. |
-| **Billingo/Számlázz.hu próbafiók** | 1 nap | A díjbekérő-lánc ellenőrzése. |
+| **Billingo próbafiók + API-kulcs** | 1 nap | A díjbekérő-lánc a prototípusban megvan, de szimulált. Ezzel élesíthető. |
+| **A nagyker megnevezése és árlistája** | fél nap | Melyik tüzéptől vásárol a cég, milyen kondícióval — lásd 7.1. |
 | **Valódi árlista** a demóhoz | fél nap | A demó nagyságrenddel meggyőzőbb lesz vele. |
 | Supabase projekt EU-s régióban | 1 óra | A séma telepítéséhez. |
 | Ügyvéd: adatkezelési tájékoztató, adatfeldolgozói szerződés, ÁSZF | hetek | Éles indulás előtt. |
+
+### 7.1 A nagyker bekötése — mit tudunk ma
+
+A prototípus árréses árlistája és árfrissítés-folyamata készen áll; ami hiányzik,
+az az **adat**: melyik szállítótól vásárol a cég, és milyen kondícióval.
+
+Szabolcs-Szatmár-Bereg megyében a kivitelezők jellemzően hálózatos tüzépekből
+vásárolnak — Nyíregyháza környékén [Kovács Tüzép](https://tuzepweb.hu/) (Hufbau),
+[Újház Farm-Ker](https://ujhazfarmker.hu/) és az [Újház Tüzép a Debreceni úton](https://www.buildox.hu/)
+(Leier, Frühwald, Semmelrock, SW Maroskő térkő; három megyébe szállít),
+[Rácz Tüzép](https://racztuzep.hu/) (Materix), [Borzsa Tüzép](https://borzsatuzep.109.hu/).
+Gyártói oldalon a régióban **Leier, Frühwald, Semmelrock** a jellemző márka.
+
+⚠ **Ezeknek nincs nyilvános API-juk.** Árlistájuk viszont van: webshop-ár, illetve
+a szerződött partnernek e-mailben küldött XLS/PDF, egyedi kedvezménnyel. Ezért a
+bekötés két lépcsős:
+
+1. **Kézi betöltés** — a cég saját árlistája kerül be (fél nap). Innentől az
+   árfrissítés-folyamat valódi adattal megy.
+2. **Automatikus frissítés** — webshop-figyelés, vagy a beküldött árlista
+   beolvasása ugyanazzal a technikával, mint a számlaolvasás. Csak akkor
+   érdemes, ha az 1. lépcső bevált.
 
 ---
 
@@ -300,17 +352,26 @@ Billingo API · beszédfelismerés bekötve.
 
 Ezek egyike sem függ a spike-októl és a hangtól.
 
-1. **A többi determinisztikus számítás a magba.** Fizetési határidő a partner
-   adatlapjából, kintlévőség-összesítés, anyagszükséglet. Ugyanaz a szabály:
-   amit ki lehet számolni, azt ne a modell találja ki. Mintát a
-   `mag/arkalkulacio.mjs` ad, tesztekkel együtt.
-2. **Ajánlat PDF-sablon.** HTML→nyomtatás, a cég logójával. A technika megvan:
-   `docs/kiadas/md2pdf.mjs` ugyanezt csinálja Chromiummal.
+1. **A determinisztikus számítások átemelése a magba.** Az anyagszükséglet, a
+   fedezet és az árrés-tartó árfrissítés **már megvan a prototípusban** —
+   emeld át `mag/`-ba, tesztekkel, ahogy az árkalkuláció is ott van. Ami még
+   hiányzik: fizetési határidő a partner adatlapjából, kintlévőség-összesítés.
+   Ugyanaz a szabály: amit ki lehet számolni, azt ne a modell találja ki.
+2. **Ajánlat PDF-sablon.** A prototípus dokumentum-előnézete (`dokumentumLap`)
+   és a `@media print` szabályai adják a sablont — csak a cég logója hiányzik
+   belőle. Szerveroldalra a `docs/kiadas/md2pdf.mjs` Chromium-technikája megy.
 3. **Az AI-réteg eszközkészlete kódban**, zárt sémákkal, a jóváhagyási kapuhoz
    kötve. Modellhívás nélkül is tesztelhető, hogy a kapu nem kerülhető meg.
    Az eszközlista a specifikáció 6.2 fejezetében van.
 4. **Next.js váz** a séma fölé: belépés, cégprofil, partner- és árlista-CRUD.
 5. **Supabase telepítés** — a `db/README.md` két beállítást ír le, ami kell hozzá.
+6. **A séma bővítése a prototípus új fogalmaival.** A `munkak` (helyszín,
+   állapot, fotó) és a `beszerzesi_ar` / `nagyker_arlista` még nincs benne a
+   `db/migraciok/0001_alap.sql`-ben. Ha hozzányúlsz, a `db/futtat.sh`
+   tesztjeinek utána is zöldnek kell lenniük.
+7. **Billingo élesítés** — a `dijbekero-kiallit` és `szamla-kiallit` ág ma
+   szimulál. Próbafiókkal a `proforma` és a `create-from-proforma` hívás
+   bekötendő, a jóváhagyási kapu és a napló változatlanul hagyásával.
 
 ---
 
@@ -330,6 +391,21 @@ Ezek valódi hibák voltak, nem elméleti kockázatok. Érdemes tudni róluk.
 | **iOS Safari + Web Speech API** | Támogatott 14.5 óta, de szeszélyes (a mikrofon nem mindig áll le). Tartalék kell mögé. |
 | **iOS PWA + push** | Csak akkor megy, ha a felhasználó tényleg hozzáadta a kezdőképernyőhöz. Ezt végig kell vezetni rajta. |
 | **`node --test mag/`** | Nem működik — a futtató nem ismeri fel a `*.teszt.mjs` mintát mappából. `node --test mag/*.teszt.mjs` kell. |
+| **Fix indexek a szerkeszthető árlistán** | Az ajánlatkalkuláció `arlista[0]…[5]`-tel olvasott. Amint a felhasználó törölhetett tételt, az egész ajánlat `TypeError`-ral elszállt — és a csonka lista mentődött is. **Név szerint keress, ne index szerint**, és a hiányzó tételt nevezd néven a hibaüzenetben. |
+| **A modell-módosítás ága eltérítette a teljes parancsokat** | Az „ajánlat módosítása" várakozás minden mennyiséget tartalmazó mondatot magának vett — így „készíts ajánlatot a Szabónak 300 m²-re" a **Kovács** ajánlatát írta át. A rövid-válasz ág csak akkor futhat, ha a mondat önmagában nem teljes parancs. |
+| **A fotógomb elnyelte a saját kattintását** | A `<label>`-en ülő `preventDefault()` miatt a rejtett file input soha nem nyílt meg: telefonon a „Fotózd le" gomb **nem indított kamerát**. A demó-utat külön gombra kell tenni. |
+| **Belső adat a nyomtatásban** | A `@media print` csak a felületi elemeket rejtette. A jóváhagyó lapon nyomott Cmd+P a **fedezetet** vitte papírra, dokumentumnak látszó formában. A print-szabálynak whitelistnek kell lennie, nem blacklistnek. |
+| **Beégetett partnernév a naplóban** | Az ajánlat-jóváhagyás fixen „Kovács Építő Kft."-t írt a naplóba és az offline sorba. A napló **hitelessége** a 2. sarkalatos szabály — mindig a valódi rekordból írj. |
+| **Zöld „rendben" negatív fedezetre** | A fedezet-sáv veszteségnél is zöld maradt. Ami veszteséges, az legyen piros, és mondja is ki. |
+| **Napfény módban eltűnő jelölés** | A `*-soft` háttérszínek napfény módban mind fehérek, így a bizonytalan/javított mező jelölése láthatatlan lett. **Keret is kell, ne csak háttérszín.** |
+| **A kiadott ajánlat újraszámolása** | A régi ajánlat megnyitása a **mai** árlistából számolt — árfrissítés után mást mutatott, mint amit az ügyfél kapott. A kiadott ajánlat a **kiadáskori árak pillanatképét** hordozza. |
+| **Offline megkerülte a pénzügyi láncot** | A díjbekérő és a számla kiállítása nem nézte az `online()`-t: térerő nélkül is „kiállítva" lett, a napló pedig „végrehajtva". Minden külső hatású műveletnek **ugyanazon a sor-mintán** kell átmennie. |
+| **Kiállított számla, ami sehol nem létezik** | A lánc kiállított egy számlát, de nem tette be a `szamlak` közé — nem jelent meg a kintlévőségben, a partnerlapon és az emlékeztetőkben sem. |
+| **Egy koppintásra kiállított számla** | A díjbekérőnek volt jóváhagyó lapja, a számlának nem — mégis „jóváhagyva"-t naplózott. Ha a napló azt írja, jóváhagyva, kellett hozzá egy képernyő, ahol a felhasználó látta, mit hagy jóvá. |
+| **Elavult háttérnézet** | A teljes képernyős lapon végzett módosítás után `rajzol()` nélkül a mögötte lévő lista és a Ma-képernyő a régi HTML maradt. |
+| **Fotó, ami újratöltés után üres csempe** | A blob-URL halott újratöltés után, a rekord viszont megmaradt: „4 fotó" állt a listában, a negyedik üres. Vagy a képet is megőrzöd, vagy a rekordot se hagyd ott. |
+| **Beégetett sorszám és dátum** | `DB-2026/0107`, `SZ-2026/0163`, „ma · 08. 25." — két művelet ugyanazt kapta. Számláló kell, és a fotónál valódi óraidő. |
+| **Egyirányú állapotgép** | A munka `befejezve` állapotából nem volt visszaút, pedig egyetlen koppintással oda lehetett jutni. |
 
 ---
 
@@ -355,8 +431,9 @@ szereplő 10 000–20 000 Ft — vagy ugyanazon az áron lényegesen jobb fedeze
 
 | Kérdés | Ki dönti el |
 |---|---|
-| Kinek mutatjuk be először a demót? | Vince — ez dönti el, mit érdemes csiszolni |
-| Számlázó: Számlázz.hu vagy Billingo? | próbafiók + díjszabás |
+| Kinek mutatjuk be először a demót? | Vince — az első címzett Gál Zoltán |
+| Számlázó: Számlázz.hu vagy **Billingo**? | A prototípus a Billingo folyamatára épül (`proforma` + `create-from-proforma`), mert az API-leírás alapján ez a lánc működik. Próbafiókkal véglegesítendő. |
+| Melyik nagykertől vásárol a cég? | Zoli — ez dönti el, melyik árlistát töltjük be (lásd 7.1) |
 | A hang fő út vagy kényelmi kiegészítő? | 3. spike (egyelőre félretéve) |
 | Van-e valódi cég, amin élesben tesztelhető? | Vince |
 | Saját fejlesztés vagy külsős kivitelezés? | üzleti döntés |
