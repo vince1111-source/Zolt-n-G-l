@@ -1,429 +1,394 @@
 # CÉGEM.AI — projektátadás
 
-**Készült:** 2026. augusztus 25. · Claude (Cowork) munkamenet
-**Tulajdonos:** Vince
-**Cél:** ez a dokumentum önmagában elegendő ahhoz, hogy a projektet Claude Code módban folytatni lehessen. Nem feltételez semmit a korábbi beszélgetésből.
+**Frissítve:** 2026. augusztus 31. · **Tulajdonos:** Vince
+**Ág:** `claude/projekt-folytatasa-p0titv` · **Repó:** `vince1111-source/Zolt-n-G-l`
+
+> Ez a dokumentum önmagában elegendő ahhoz, hogy a projektet egy friss Claude Code
+> munkamenet folytatni tudja. Nem feltételez semmit korábbi beszélgetésből.
 
 ---
 
-## 0. Gyorsindítás Claude Code-ban
+## 0. Gyorsindítás
 
 ```bash
-cd cegem-ai
-# nézd meg a prototípust (a mikrofonhoz Chrome kell)
-open prototype/CEGEM-AI-prototipus.html      # macOS
-xdg-open prototype/CEGEM-AI-prototipus.html  # Linux
+# 1. Nézd meg, mi van kész, és hogy tényleg működik-e
+node --test mag/*.teszt.mjs        # 12 teszt — az árkalkuláció
+./db/futtat.sh                     # 22 állítás — a sarkalatos szabályok (PostgreSQL kell)
+cd spike && node parancs/merd.mjs  # a lépcsős parancsfelismerés mérése
+
+# 2. Nézd meg a terméket (telefonon a legjobb, Chrome-ban)
+xdg-open prototype/CEGEM-AI-telefon.html
+
+# 3. Olvasd el, ebben a sorrendben
+#    CLAUDE.md                     — a szabályok, minden munkamenet elején betöltődik
+#    docs/iranyvaltas.md           — a legfrissebb irány és indoklása
+#    docs/fejlesztoi-specifikacio.md — a részletes követelmények
 ```
 
-Az első mondat, amivel Claude Code-ot érdemes indítani:
+**A `db/futtat.sh`-hoz fut PostgreSQL kell.** Ha nincs, a séma és a tesztek
+akkor is olvashatók; a bizonyításhoz viszont el kell indítani egyet
+(`initdb` + `pg_ctl`, lásd `db/README.md`).
 
-> Olvasd el a HANDOVER.md-t és a CLAUDE.md-t. A `prototype/CEGEM-AI-prototipus.html` a jelenlegi állapot. [ide jön a következő feladat]
+### Az első mondat, amivel a munkamenetet érdemes indítani
 
-Ami már készen van, és amit **nem kell újra elvégezni**: piackutatás, jogi felmérés, modulonkénti becslés, ütemterv, technológiai döntések, működő kattintható prototípus. Mind ebben a mappában van.
-
----
-
-## 0.1 Irányváltás — 2026. augusztus 26.
-
-Négy új kikötés érkezett, ami több fejezetet felülír: **építőipari dolgozók a
-felhasználók**, **webapp kell** (telepíthető PWA, nem natív alkalmazás),
-**amit be lehet kötni, azt bekötjük**, és **az AI felhasználónkénti költsége
-maradjon alacsony**. A következményeket — telefon-első felület, lépcsős
-AI-réteg, bekötendő vs. saját képességek, kisebb MVP — a
-[`docs/iranyvaltas.md`](docs/iranyvaltas.md) írja le. Ahol az alábbi fejezetek
-ettől eltérnek, az irányváltás a mérvadó.
+> Olvasd el a HANDOVER.md-t és a CLAUDE.md-t, majd futtasd le a három
+> ellenőrzést a 0. fejezetből. Utána [ide jön a feladat].
 
 ---
 
 ## 1. Mi ez a projekt
 
-Magyar nyelvű AI vállalkozói asszisztens kis- és középvállalkozásoknak. Központi működési elv:
+Magyar nyelvű AI vállalkozói asszisztens kisvállalkozásoknak. Központi elv:
 
-> **„Mondd el, mit intézzek el helyettem.”**
+> **„Mondd el, mit intézzek el helyettem."**
 
-A vállalkozó ne menüt tanuljon, hanem természetes magyar nyelven — lehetőleg beszéddel — mondja meg, mit szeretne. A rendszer ismeri a cég adatait, partnereit, árait, számláit és határidőit, és a napi adminisztratív munkát előkészíti vagy jóváhagyás után elvégzi.
+A vállalkozó ne menüt tanuljon, hanem természetes magyar nyelven mondja meg, mit
+szeretne. A rendszer ismeri a cég adatait, partnereit, árait, számláit és
+határidőit, és a napi adminisztrációt előkészíti vagy jóváhagyás után elvégzi.
 
-**Kritikus biztonsági alapelv, ami az egész architektúrát meghatározza:** pénzügyi, kommunikációs vagy más külső hatású műveletet az AI soha nem hajt végre automatikusan. Megmutatja, mit készül tenni, és egyértelmű jóváhagyást kér.
+**A kritikus alapelv, ami az egész architektúrát meghatározza:** pénzügyi,
+kommunikációs vagy más külső hatású műveletet az AI **soha nem hajt végre
+automatikusan**. Megmutatja, mit készül tenni, és egyértelmű jóváhagyást kér.
 
-### Az eredeti 16 modul
+### A célfelhasználó
 
-| # | Modul | Lényege |
+**Építőiparban dolgozó ember, nem irodai ügyintéző.** Első célcsoport: térkövező
+/ kivitelező kisvállalkozás.
+
+| Körülmény | Következmény a termékre |
+|---|---|
+| Telefon, egy kéz | Egykezes elérés, a fő művelet hüvelykujjal elérhető |
+| Kesztyű | Minimum **56 px** célfelület |
+| Tűző nap | Erős kontraszt + külön napfény üzemmód |
+| Építkezési zaj | Nyomva tartós mikrofon, nem folyamatos figyelés |
+| Gyenge térerő | Offline váz, sorba állított műveletek |
+| Nincs ideje menüzni | Kevés képernyő, **egy képernyő = egy döntés** |
+
+**Webapp, nem natív alkalmazás** — telepíthető PWA. Ez a felhasználó döntése volt,
+és jó döntés: nincs app store-súrlódás, a frissítés azonnali, a kamera és a
+mikrofon elérhető a böngészőből.
+
+### Amivel nem versenyzünk
+
+A magyar piacon a részfunkciókra van szereplő (Számlázz.hu, Billingo, MiniCRM,
+Kulcs-Soft). **A megkülönböztetés kizárólag az AI-réteg.** A terméket nem szabad
+CRM-ként vagy számlázóként pozicionálni.
+
+---
+
+## 2. Hol tartunk most
+
+**0. fázis — a spike-mérések még nyitottak, de a mag már épül.**
+
+Ami eredetileg úgy szólt, hogy „semmit ne építs a mérések előtt", időközben
+árnyalódott: kiderült, hogy a **mag séma és az árkalkuláció minden spike-kimenetel
+mellett ugyanaz**, ezért ezek elkészültek és bizonyítottan működnek. Ami a
+mérésektől függ, az a 6. modul mérete és a hang szerepe — az még nyitott.
+
+### Ami kész és bizonyított
+
+| Mi | Hol | Bizonyíték |
 |---|---|---|
-| 1 | AI főképernyő és hangvezérlés | Beszéd vagy szöveg, nincs menürendszer |
-| 2 | Személyre szabott céges AI | Cégenként elkülönített környezet: alapadatok, logó, bankszámla, sablonok |
-| 3 | Partner- és ügyféladatbázis | Adatlap partnerenként, minden hozzá tartozó dokumentummal |
-| 4 | Intelligens partnerelőzmények | Az AI értelmezi a kapcsolatot, nem csak tárolja |
-| 5 | Pénzügyi áttekintő | Bejövő, kimenő, esedékes, lejárt, várható |
-| 6 | Bejövő számlák kezelése | Fotó/feltöltés → adatkiolvasás → partnerhez rendelés |
-| 7 | Kimenő számlák és kintlévőségek | Határidőfigyelés, emlékeztető, felszólítás |
-| 8 | Intelligens dokumentumfelismerés | Típusfelismerés, adatkiolvasás, határidőfigyelés |
-| 9 | Partnerközpont | Egy adatlapon minden: számlák, ajánlatok, levelek, feladatok |
-| 10 | Intelligens e-mail-kezelés | Beérkező levelek osztályozása, választervezet jóváhagyással |
-| 11 | Feladatok, határidők, naptár | Hangutasításból is, dokumentumból felismert határidőkkel |
-| 12 | AI vezetői asszisztens | „Mi a helyzet a cégemben?” — reggeli és esti összefoglaló |
-| 13 | Intelligens árajánlat-készítés | Szóban mondott ajánlatból logózott PDF, saját árakkal |
-| 14 | Termék-, szolgáltatás- és árlista | Az ajánlatkészítés alapja |
-| 15 | Szerződés- és dokumentumelemzés | „Mi a lényeg?”, „Van benne kötbér?” — jogi disclaimerrel |
-| 16 | „Csináld meg helyettem” AI-üzemmód | Teendők összegyűjtése, priorizálása, végigvezetés jóváhagyással |
+| **Adatbázis-séma** RLS-sel és a jóváhagyási kapuval | `db/` | `./db/futtat.sh` → 22 állítás zöld |
+| **Árkalkuláció** determinisztikus kódban | `mag/` | `node --test mag/*.teszt.mjs` → 12 teszt zöld |
+| **Telefon-első prototípus** | `prototype/CEGEM-AI-telefon.html` | `node prototype/fustproba.mjs` → 30 ellenőrzés zöld |
+| Asztali prototípus (mind a 16 modul) | `prototype/CEGEM-AI-prototipus.html` | kézzel átnézve |
+| **Fejlesztői specifikáció** | `docs/fejlesztoi-specifikacio.md` + Word/PDF | — |
+| Spike mérőeszközök (4 db) | `spike/` | a 4. spike 0. rétege mérve |
+| Demó forgatókönyv | `docs/demo-forgatokonyv.md` | — |
 
----
+### Ami mérésre vár (Vince adatai kellenek)
 
-## 2. Amit már eldöntöttünk (és miért)
-
-Ezek nem javaslatok, hanem a felmérés alapján meghozott döntések. Ha valamelyiktől el akarsz térni, tudd, mit adsz fel.
-
-### 2.1 Ne mind a 16 modult egyszerre
-
-A teljes rendszer **350–500 fejlesztői nap**, két fejlesztővel 9–12 hónap, mielőtt egyetlen fizető ügyfél lenne. Az MVP ehelyett 110–140 nap.
-
-### 2.2 Az MVP az „ajánlatgyár”, nem az általános asszisztens
-
-**MVP modulok: 1, 2, 3, 6, 11, 12, 13, 14.** A mag a 13+14 (ajánlatkészítés + árlista). Indok:
-
-- Ez a legmeggyőzőbb, azonnal érthető funkció egy kivitelezőnek.
-- **Nem függ egyetlen külső engedélytől sem** — se NAV, se Google, se bank.
-- A többi modul (pénzügy, e-mail, ügynök) mind hosszabb átfutású függőségre épül.
-
-### 2.3 Egy szakma, nem „a vállalkozók”
-
-Első célcsoport: **térkövező / kivitelező kisvállalkozás**. A prototípus mintaadatai is ezek. Az általánosítás ráér — egy szűk, konkrét terméket sokkal könnyebb eladni és validálni.
-
-### 2.4 Számlázást ne építs, integrálj
-
-Saját számlázóprogramnak meg kell felelnie a **23/2014. (VI. 30.) NGM rendeletnek**, adóhatósági ellenőrzési adatszolgáltatással. Ehelyett: **Számlázz.hu Számla Agent API** vagy **Billingo API** — a NAV-adatszolgáltatás így az ő felelősségük marad.
-
-### 2.5 Két architekturális döntés, amit az elején kell meghozni
-
-**a) Minden AI-művelet naplózott és visszajátszható.** Mit látott a modell, mit javasolt, mit hagyott jóvá a felhasználó, mikor. Enélkül egy rossz ajánlatnál vagy hibás számlapárosításnál nem védhető a termék, és az AI Act átláthatósági követelménye sem teljesíthető. A prototípusban ez az „AI napló” nézet.
-
-**b) A jóváhagyási kapu az adatmodell része, nem a felületé.** Minden külső hatású művelet állapotgépen megy át:
-
-```
-javasolt → jóváhagyott → végrehajtott
-         ↘ kihagyott / elvetett
-```
-
-Így a 16. modul biztonsági alapelvét a rendszer kényszeríti ki, nem a jó szándék. Ezt **az első adatmigrációban** hozd létre, ne utólag told be.
-
----
-
-## 3. A négy valódi szűk keresztmetszet
-
-Egyik sem kódolási probléma. Mindegyik naptári időt eszik, és nem gyorsítható több fejlesztővel. **Ezeket indítsd el a lehető legkorábban, párhuzamosan a fejlesztéssel.**
-
-| Akadály | Átfutás | Mit kell tenni |
-|---|---|---|
-| **Gmail-hozzáférés** (10. modul) | hetek–hónapok | A levélolvasás „restricted scope”. Márkaellenőrzés, majd **CASA biztonsági átvizsgálás** Google által elfogadott auditorral, **évente megismételve**. Több ezer dollár. A Microsoft 365 / Graph oldal lényegesen egyszerűbb — érdemes azzal kezdeni. |
-| **NAV technikai felhasználó** | 1–3 hét | Nem ügyfélkapu: külön regisztráció, aláírókulcs + cserekulcs, SHA-512 aláírás, 5 percig élő token a `/tokenExchange` végponton. A v3 séma évente változik → állandó karbantartás. **Ügyfelenként külön technikai felhasználó kell** — ezt a beléptetési (onboarding) folyamatba is bele kell tervezni. |
-| **Banki adatok** (5., 7. modul) | 1–3 hónap | A „ki tartozik nekünk” csak a beérkezett utalások ismeretében pontos. PSD2 alatt AISP-engedély kell, vagy licencelt aggregátor: **GoCardless (ex-Nordigen), Salt Edge, Tink**. A magyar bankok többsége elérhető. Szerződés + havidíj. |
-| **Magyar hang és számlaolvasás** | 1–2 hét | A hangvezérlés a demó lelke, de a magyar ASR cégnevekkel, összegekkel, építkezési zajban nem magától értetődő. A magyar számlaformátumok kiolvasási pontosságát **50–100 valódi számlán meg kell mérni**. Ez a legolcsóbb kockázatcsökkentés az egész projektben. |
-
-### Egy technikai nyeremény, amit ki kell használni
-
-A NAV Online Számla API nem csak beküldésre való. A **`queryInvoiceDigest` hívás `INBOUND` iránnyal** elvileg lekérdezi azokat a számlákat, amiket **a te adószámodra** állítottak ki. Ha ez a gyakorlatban is működik a cég saját technikai felhasználójával, akkor a **6. modul jelentős része megoldható fotózás nélkül, automatikusan**.
-
-**Ezt az első héten kell kipróbálni**, mert az egész bejövő-számla ág scope-ját eldönti. A prototípusban ezt már feltételeztük: a pénzügyi nézetben a bejövő számlák „NAV lekérdezés” forrásjelöléssel szerepelnek.
-
----
-
-## 4. Modulonkénti munkabecslés
-
-Tapasztalt fejlesztő becsült munkanapjai, front-end + back-end + teszt együtt.
-
-| # | Modul | Nap | Ütem | Megjegyzés |
-|---|---|---|---|---|
-| — | **Alapplatform** | 60–90 | MVP | Multi-tenant DB sorszintű izolációval, belépés, jogosultságok, audit napló, előfizetés-kezelés, üzemeltetés, dizájnrendszer. Nincs az eredeti listán, de nélküle semmi sincs. |
-| 2 | Céges AI | 15–20 | MVP | Cégprofil, sablonok, logó. Egyszerű, de mindent érint. |
-| 3 | Partnerek | 10–15 | MVP | Érdemes NAV adószám-ellenőrzéssel kiegészíteni (adószámból cégadat). |
-| 14 | Árlista | 10–15 | MVP | Unalmas, de a 13. enélkül nem működik. |
-| 13 | Ajánlatkészítés | 25–35 | MVP | **A legmeggyőzőbb demó.** Nem függ külső engedélytől. |
-| 1 | AI-főképernyő | 15–25 | MVP | Szövegesen 8–10 nap; a hangvezérlés külön tétel. |
-| 6 | Bejövő számlák | 20–30 | MVP | A nyers kiolvasás LLM-mel ma jó; a nehéz rész a **megerősítő folyamat** és a partnerpárosítás. |
-| 11 | Feladatok, határidők | 15–25 | MVP | Külső naptár-szinkron (Google/MS) külön 10–15 nap. |
-| 12 | Vezetői összefoglaló | 15–20 | MVP | Az MVP-ben egyszerű reggeli összegzés. |
-| 7 | Kimenő számlák | 20–30 | V1 | Számlázó API + határidőfigyelés + emlékeztető. |
-| 5 | Pénzügyi áttekintő | 15–25 | V1 | Nagyrészt a 6+7 adataiból. Bank nélkül nem teljesen pontos. |
-| 9 | Partnerközpont | 10–15 | V1 | Olcsó modul, nagy érzékelt érték. |
-| 4 | Partnerelőzmények | 8–12 | V1 | A 9-re ültetett AI-összegzés. |
-| 8 | Dokumentumfelismerés | 15–25 | V1 | A 6. kiterjesztése minden dokumentumtípusra. |
-| 15 | Szerződéselemzés | 15–20 | V1 | Technikailag a legkönnyebb AI-funkció; a munka nagyja a jogi keretezés. |
-| 10 | E-mail-kezelés | 30–45 | V2 | A kód 30–45 nap, de a Gmail-engedély hónapokat is jelenthet. |
-| 16 | „Csináld meg helyettem” | 30–50 | V2 | Csak akkor építhető, ha minden alatta lévő modul stabil. |
-| — | **Megfelelőség** | 20–30 | MVP | GDPR, adatkezelési tájékoztató, adatfeldolgozói szerződés, AI Act 50. cikk, adatexport/törlés. |
-| | **Összesen** | **350–500** | | + kb. 20% tesztelés és visszajelzés alapú átalakítás |
-
-**Költség-nagyságrend** (magyar fejlesztői napidíj kb. 120–200 e Ft/nap, nem árajánlat):
-
-- Teljes rendszer külsős kivitelezésben: **45–100 M Ft**
-- MVP (110–140 nap): **14–28 M Ft**
-
----
-
-## 5. Ütemterv
-
-### 0. fázis — Spike (1–2 hét) ← **ITT TARTUNK**
-
-Három kérdés eldöntése **kód írása előtt**:
-
-1. Működik-e a NAV `queryInvoiceDigest` INBOUND lekérdezés saját technikai felhasználóval?
-2. Mennyire pontos a magyar számlaolvasás 50–100 valódi számlán?
-3. Használható-e a magyar hangfelismerés a célközönség valós körülményei között?
-
-**A mérőeszközök elkészültek** — lásd `spike/README.md`. Mindhárom kérdéshez van
-futtatható szkript, ami a végén nem nyers adatot ad, hanem azt a mérőszámot,
-ami alapján a döntés meghozható:
-
-| # | Eszköz | Fő mérőszám | Mi hiányzik hozzá |
+| # | Kérdés | Eszköz | Mi hiányzik |
 |---|---|---|---|
-| 1 | `spike/nav/nav-lekerdezes.mjs` | mezőnkénti kitöltöttség a NAV válaszában | NAV technikai felhasználó (1–3 hét regisztráció) |
-| 2 | `spike/szamlaolvasas/` | **csendes hiba** — rossz érték, amit a modell nem jelölt be | 50–100 valódi számla + Anthropic API kulcs |
-| 3 | `spike/hang/hang-teszt.html` | **szándékpontosság** — a helyes művelet indul-e el | 20 perc mérés Chrome-ban, több környezetben |
-| 4 | `spike/parancs/merd.mjs` | havi AI-költség felhasználónként | a 0. réteg már mérve; az 1. réteghez API kulcs |
+| 1 | Működik a NAV `queryInvoiceDigest` INBOUND? | `spike/nav/` | technikai felhasználó (1–3 hét átfutás) |
+| 2 | Milyen pontos a magyar számlaolvasás? | `spike/szamlaolvasas/` | 50–100 valódi számla + API kulcs |
+| 3 | Használható a magyar hangfelismerés zajban? | `spike/hang/` | 20 perc mérés Chrome-ban |
+| 4 | Mennyibe kerül havonta az AI? | `spike/parancs/` | a 0. réteg mérve; az 1. réteghez API kulcs |
 
-A 2. és 3. spike ma elvégezhető. Az 1. regisztrációját érdemes ma elindítani,
-mert az a leghosszabb átfutású.
+**A hangot a tulajdonos egyelőre félretette** — „lehet plugin, majd kitaláljuk".
+Ne ez legyen a következő fejlesztési irány, de a mérőeszköz készen áll.
 
-Kimenet: eldől, mekkora az MVP. A döntési lap: `spike/eredmenyek/EREDMENY-SABLON.md`.
+### Ami nem indult el
 
-### 1. fázis — MVP (3–4 hónap)
-
-Az „ajánlatgyár”: cégprofil, partnerek, árlista, természetes nyelvű ajánlatkészítés logózott PDF-fel, bejövő számla fotózása, feladatok és határidők, reggeli összefoglaló. Szövegvezérlés biztosan, hang ha a spike zöld.
-**Modulok: 1 · 2 · 3 · 6 · 11 · 12 · 13 · 14**
-
-### 2. fázis — V1 (+4–5 hónap)
-
-A pénzügyi kör bezárása: számlázó-integráció, kintlévőségek, fizetési emlékeztetők, partnerközpont előzményekkel, dokumentum- és szerződéselemzés. **Itt kezdődik párhuzamosan a banki aggregátorral és a Google-lel az engedélyeztetés.**
-**Modulok: 4 · 5 · 7 · 8 · 9 · 15**
-
-### 3. fázis — V2 (+3–4 hónap)
-
-E-mail-integráció és a „Csináld meg helyettem” üzemmód.
-**Modulok: 10 · 16 · banki adatkapcsolat**
+Next.js alkalmazásváz, Supabase projekt, bármilyen külső integráció élesben.
 
 ---
 
-## 6. Technológiai stack
+## 3. A sarkalatos szabályok
 
-| Réteg | Döntés | Indok |
+Ez a hét pont nem alkuképes. **Ha valamelyiktől el akarsz térni, kérdezz.**
+Ahol „kikényszerítve" szerepel, ott már nem ígéret: kód őrzi.
+
+| # | Szabály | Hol van kikényszerítve |
 |---|---|---|
-| Adatbázis | **PostgreSQL sorszintű biztonsággal (RLS)**, Supabase, EU-s régió | A cégenkénti elkülönítés (2. modul) adatbázis-szinten garantált, nem alkalmazáslogikában. GDPR-adatrezidencia. |
-| Alkalmazás | **Next.js / TypeScript** | Egy kódbázis webre és telepíthető formában. Hangrögzítés miatt PWA vagy vékony natív burok. |
-| AI-réteg | **Claude, eszközhívással (tool use)** | Minden modul egy-egy jól definiált eszköz, az asszisztens ezeket hívja. Ez teszi a 16. modult megvalósíthatóvá: nem külön AI, hanem **ugyanaz az eszközkészlet hosszabb láncban**. |
-| Számlázás | Számlázz.hu Számla Agent vagy Billingo API | Lásd 2.4. |
-| Dokumentumkiolvasás | Elsődlegesen **látásalapú LLM strukturált kimenettel**, tartalék OCR rossz fotókra | 2026-ban a nyers kiolvasás LLM-mel jobb, mint a klasszikus OCR magyar számlákon. |
-| PDF | **HTML-sablon → nyomtatás** (Playwright/Gotenberg) | A cég arculata így sablonszerkeszthető marad. |
-| Beszédfelismerés | Mérés után dönteni: Web Speech API (ingyenes, Chrome), ElevenLabs Scribe, Deepgram, Speechmatics | Magyar pontosság a döntő, nem az ár. |
+| 1 | **Jóváhagyási kapu az adatmodellben.** Külső hatású művelet állapotgépen megy át: `javasolt → jóváhagyott → végrehajtott` (mellékág: `kihagyott`, `elvetett`). Nincs `javasolt → végrehajtott` él. | `db/migraciok/0001_alap.sql` — trigger + ellenőrzés. Teszt bizonyítja. |
+| 2 | **Minden AI-művelet naplózva**, bemenettel és kimenettel együtt, és a napló **nem írható át**. | `ai_naplo` tábla + trigger. Teszt bizonyítja. |
+| 3 | **Multi-tenant izoláció adatbázis-szinten** (RLS), nem alkalmazáslogikában. | `force row level security` minden táblán. Teszt bizonyítja. |
+| 4 | **Számlázást nem építünk**, integrálunk. | Döntés, lásd 6.4. |
+| 5 | **Minden AI által kiolvasott adat mellett látszódjon a forrás**, és legyen egy koppintással javítható. Bizonytalanságnál kérdezzen, ne találgasson. | `szamlak.forras` kötelező, `kiolvasott_mezok` tábla. A telefonos prototípus meg is mutatja. |
+| 6 | **AI Act 50. cikk** — a felületen jelezni kell, hogy AI-val beszél a felhasználó. | A telefonos prototípus fejlécében állandóan látszik. |
+| 7 | **Jogi tartalomnál** a szóhasználat „kivonat és figyelemfelhívás", soha nem „elemzés" vagy „vélemény"; a felelősségkorlátozás magán a funkción. | Csak V1-ben lesz releváns (15. modul). |
 
-### Az AI-réteg felépítése (ez a projekt szíve)
+### Két további szabály, ami a gyakorlatból jött
 
-Ne „chatbotot” építs, ami mellékesen elér adatokat. Építs **eszközkészletet**, és az asszisztens ezeket hívja:
-
-```
-tools:
-  partner_kereses(nev|adoszam)
-  partner_adatlap(partner_id)
-  szamla_lista(irany, statusz, partner_id?, hatarido_elott?)
-  arlista_lekerdezes(kereses?)
-  ajanlat_keszites(partner_id, tetelek[], kedvezmeny?)   → javasolt állapot
-  ajanlat_kikuldes(ajanlat_id)                            → JÓVÁHAGYÁS KELL
-  feladat_letrehozas(cim, hatarido, partner_id?)
-  email_tervezet(cimzett, targy, szoveg)                  → javasolt állapot
-  email_kuldes(tervezet_id)                               → JÓVÁHAGYÁS KELL
-  dokumentum_kiolvasas(fajl_id)                           → megerősítést kér
-  napi_osszefoglalo()
-```
-
-A 16. modul (`„Intézd el a mai sürgős dolgaimat”`) ebből a készletből épül: összegyűjtés → priorizálás → tételenként javaslat → jóváhagyási kapu → végrehajtás → naplózás. **Nem külön rendszer.**
+- **A modell megért, nem számol.** Az árkalkuláció determinisztikus kód
+  (`mag/arkalkulacio.mjs`). A nyelvi modell csak a paramétereket tölti ki.
+- **A „mit feltételeztem" lista ugyanabból a számításból származik**, mint az
+  összeg — nem külön szöveg. Egy külön írt szöveg előbb-utóbb hazudna.
 
 ---
 
-## 7. Jogi és megfelelőségi keret
+## 4. A repó térképe
 
-| Terület | Állapot 2026. augusztusban | Teendő |
+```
+CLAUDE.md                          minden munkamenet elején betöltődik — a szabályok
+HANDOVER.md                        ez a fájl
+README.md                          rövid belépő
+
+mag/                               A TERMÉK MAGJA — saját, nem bekötendő
+  arkalkulacio.mjs                 determinisztikus ajánlatszámítás
+  arkalkulacio.teszt.mjs           12 teszt, köztük a demó végösszegének rögzítése
+
+db/                                AZ ADATRÉTEG — fut és bizonyít
+  migraciok/0001_alap.sql          12 tábla, RLS, az állapotgép triggere
+  tesztek/sarkalatos_szabalyok.sql 22 állítás, közvetlen SQL-lel
+  mintaadat/kohalo.sql             a prototípus adatai
+  futtat.sh                        egy parancs: séma + tesztek
+  README.md                        Supabase-telepítés, tervezési döntések
+
+prototype/
+  CEGEM-AI-telefon.html            A FŐ IRÁNY — telefon-első, önálló HTML
+  telefon-artifact-body.html       ugyanaz Artifact-publikáláshoz (burok nélkül)
+  CEGEM-AI-prototipus.html         asztali változat, mind a 16 modul
+  artifact-body.html               ugyanaz Artifact-publikáláshoz
+  fustproba.mjs                    30 ellenőrzés a telefonos prototípuson
+
+docs/
+  fejlesztoi-specifikacio.md       A FORRÁS — 14 fejezet, elfogadási kritériumokkal
+  kiadas/                          abból generált Word + PDF, és a generátorok
+  iranyvaltas.md                   a 2026-08-26-i irányváltás és indoklása
+  demo-forgatokonyv.md             4 perces bemutató, kérdés-válaszokkal
+  megvalosithatosagi-terv.html     a felmérés (nap- és költségbecslések)
+  parancsok.md                     mindkét prototípus felismert parancsai
+  screenshots/
+
+spike/                             a 0. fázis mérőeszközei — nem termékkód
+  nav/            NAV bejövő számla lekérdezés (1. kérdés)
+  szamlaolvasas/  kiolvasási pontosság, a CSENDES HIBA mérése (2. kérdés)
+  hang/           magyar hangfelismerés, szándékpontossággal (3. kérdés)
+  parancs/        lépcsős parancsfelismerés költsége (4. kérdés)
+  eredmenyek/     ide kerülnek a riportok és a döntési lap
+```
+
+**Valódi ügyféladat nem kerülhet a repóba** (számla, NAV-válasz, hangfelvétel,
+`.env`) — a `spike/.gitignore` ezt kizárja.
+
+---
+
+## 5. Hogyan ellenőrzöd, hogy nem rontottál el semmit
+
+```bash
+node --test mag/*.teszt.mjs        # árkalkuláció — 12 teszt
+./db/futtat.sh                     # séma + sarkalatos szabályok — 22 állítás
+node prototype/fustproba.mjs       # telefonos prototípus — 30 ellenőrzés
+cd spike && node parancs/merd.mjs  # a 0. réteg lefedettsége és a költségbecslés
+```
+
+A füstpróbához Playwright kell (`npm i playwright && npx playwright install
+chromium`); hálózat nélkül is lefut, mert a külső kéréseket lezárja.
+
+**Ha az árlistát módosítod**, három helyen kell egyeznie: `mag/arkalkulacio.teszt.mjs`,
+`prototype/CEGEM-AI-telefon.html`, `prototype/CEGEM-AI-prototipus.html`. A
+füstpróba ellenőrzi, hogy a két prototípus ugyanazt a végösszeget adja
+(**12 485 922 Ft** a 800 m²-es demóparancsra). Ha ez elmozdul, a demó két
+különböző számot mondana — és a bizalom pont ezen múlik.
+
+---
+
+## 6. Az eddigi döntések és miért
+
+### 6.1 Nem mind a 16 modult egyszerre
+
+A teljes rendszer 350–500 fejlesztői nap. Az MVP a **13+14 modulra** épül
+(ajánlatkészítés + árlista), mert ez a legmeggyőzőbb funkció egy kivitelezőnek,
+és **nem függ egyetlen külső engedélytől sem**.
+
+**MVP modulok: 1, 2, 3, 11, 12, 13, 14** — és **6 feltételesen** (csak ha az
+1. spike zöld; különben V1). Így az MVP 85–105 nap a korábbi 110–140 helyett.
+
+V1: 4, 5, 7, 8, 9, 15. V2: 10 (e-mail), 16 (ügynök), bank.
+
+⚠ **A 10. modult nem szabad korábban elkezdeni:** a Gmail levélolvasás
+„restricted scope", ami CASA biztonsági átvizsgálást igényel Google által
+elfogadott auditorral, évente megismételve. Hónapok és több ezer dollár.
+
+### 6.2 Lépcsős AI — a költséget a hívások száma dönti el
+
+```
+0. RÉTEG   determinisztikus mintaillesztés     0 Ft · azonnali · offline is
+1. RÉTEG   olcsó modell, ZÁRT sémával          csak amit a 0. nem kezelt
+2. RÉTEG   erős modell                         csak nyílt feladatra
+```
+
+Két szabály: **bizonytalanságnál a 0. réteg továbbad, nem találgat** (a kihagyás
+olcsó, a téves felismerés kárt okoz), és **a modell megért, nem számol**.
+
+Mért becslés: a parancsfelismerés lépcsősen ~10 Ft/hó/felhasználó, minden hívást
+modellel ~150 Ft. A teljes AI-költség becslése **~250 Ft/hó/felhasználó** —
+nagyságrenddel a felmérésben szereplő 2 000–6 000 Ft alatt. ⚠ **Ez felső becslés**,
+mert a mérőkorpuszt és a felismerő mintáit ugyanaz írta; a valódi számot a
+3. spike átiratai adják.
+
+Amit figyelni kell, különben mégis elszalad: korlátlan beszélgetéshossz,
+képernyőnyitásonként újragenerált napi összefoglaló, és számolás a modellben.
+
+### 6.3 Mit ne építsünk meg
+
+| Képesség | Döntés | Mivel |
 |---|---|---|
-| **AI Act 50. cikk** | **Már hatályos** (2026. augusztus 2-tól) | A felületen egyértelműen jelezni kell, hogy a felhasználó AI-val beszél. Az AI által generált tartalmat gépi olvasásra alkalmas módon meg kell jelölni. Nem blokkoló, de kötelező háttérmunka. |
-| AI Act magas kockázat | A Digital Omnibus **2027 decemberéig kitolta** | Egy vállalkozói asszisztens nem tartozik ide (nem Annex III). Nem érint. |
-| **GDPR** | — | Az ügyfeleid partneradatai felett **adatfeldolgozó** vagy: adatfeldolgozói szerződés, alvállalkozói lista (benne az AI-szolgáltató), EU-s tárolás, törlési és exportálási funkció. Az AI-szolgáltatóval **rögzíteni kell, hogy az adatokat nem használják tanításra**. |
-| **Számlázás** | — | Amíg integrálsz, nem vagy számlázóprogram. Saját kibocsátásnál jogszabályi megfelelés + NAV-bejelentés kell. |
-| **Szerződéselemzés** (15.) | — | A jogi tanácsadás Magyarországon szabályozott tevékenység. A megfogalmazás legyen következetesen **„kivonat és figyelemfelhívás”**, ne „elemzés” vagy „vélemény”. A felelősségkorlátozás jelenjen meg **magán a funkción**, ne csak az ÁSZF-ben. |
+| Számlakiállítás, NAV-adatszolgáltatás | bekötni | Számlázz.hu vagy Billingo |
+| Beszédfelismerés | bekötni | böngésző + ElevenLabs/Deepgram tartalék |
+| Belépés, tárolás, fájlok | bekötni | Supabase (EU-s régió) |
+| Díjbekérő és számla | bekötni | Billingo API v3 |
+| Naptár-szinkron | bekötni, de V1 | Google / Microsoft |
+| Banki adatok | bekötni, de V2 | GoCardless / Salt Edge / Tink |
+| **AI-réteg** | **saját** | ez a termék |
+| **Jóváhagyási kapu + AI napló** | **saját** | ez a bizalom és a jogi védhetőség |
+| **Árréses árlista** | **saját** | a számlázók terméklistája nem kezel árrést |
+| **Helyszíni felület** | **saját** | ezt senki nem adja készen |
 
----
+### 6.4 Az ajánlatot nem lehet kiszervezni — ellenőriztük
 
-## 8. Üzleti keret
+A Billingo API v3 létrehozható dokumentumtípusai: `invoice`, `proforma`,
+`advance`, `draft`. **Árajánlat nincs köztük** — az csak a felületen létezik.
+Ez inkább jó hír: az ajánlat úgyis a termék magja.
 
-### Üzemeltetési költség felhasználónként
-
-Aktív használat mellett az AI-hívások + beszédfelismerés + dokumentumkiolvasás együtt reálisan **2 000–6 000 Ft/hó/felhasználó**.
-
-→ A fenntartható előfizetés nagyságrendileg **10 000–20 000 Ft/hó/felhasználó**. **Ezt a kalkulációt az árazás előtt kell elvégezni, nem után.**
-
-### Verseny
-
-A magyar piacon a részfunkciókra van szereplő: Számlázz.hu, Billingo, KBOSS, MiniCRM, Kulcs-Soft, Octopus. **A megkülönböztetés kizárólag az AI-réteg** — hogy egyetlen asszisztens fogja össze a napi információt, és természetes magyar nyelven vezérelhető. Ne CRM-ként, ne számlázóként pozicionáld.
-
-### Amit érdemes átgondolni
-
-- **Mit ígér a hangvezérlés.** Ha az első benyomás a hang, akkor a hangnak kell a legjobban működnie. Ha a spike azt mutatja, hogy magyarul zajban gyenge → a szöveges parancssáv legyen a fő út, a hang kényelmi kiegészítő. **Előre eldönteni olcsóbb, mint utólag.**
-- **Bizalom mint funkció.** A célközönség adóügyekben hibázni nem szeret. Minden kiolvasott adat mellett látszódjon, honnan jött, és legyen egy kattintással javítható. A „biztos vagyok benne / ellenőrizd” megkülönböztetés önmagában termékelőny. A prototípusban ez az ajánlat feletti sárga **„Amit feltételeztem — ellenőrizd”** sáv.
-
----
-
-## 9. A prototípus
-
-**Két prototípus van.** Az irányváltás óta a telefonos a fő irány.
-
-| Fájl | Mi ez |
-|---|---|
-| `prototype/CEGEM-AI-telefon.html` | **A fő irány.** Telefon-első: nyomva tartós mikrofon, 56 px célfelületek, napfény üzemmód, teljes képernyős jóváhagyó lapok. Tartalmazza az ajánlatot módosítással, a számlafotózást megerősítő folyamattal, a végigvezetést, az offline sort és az AI naplót. |
-| `prototype/CEGEM-AI-prototipus.html` | Az asztali változat, mind a 16 modullal — a teljes vízió. Bemutatóra fejlesztőnek vagy befektetőnek hasznos, ügyfélnek nem. |
-
-Mindkettőhöz tartozik egy `…artifact-body.html` változat, `<!doctype>/<head>/<body>`
-burok nélkül (a Claude Artifact publikálás így várja).
-
-Módosítás után futtatandó: `node prototype/fustproba.mjs` — 30 ellenőrzés a
-telefonos prototípuson, hálózat nélkül is fut.
-
-**Élő linkek:**
-- Prototípus: https://claude.ai/code/artifact/111a40b5-b3cd-4a22-a748-c6d247f3d96d
-- Megvalósítási terv: https://claude.ai/code/artifact/979f5767-3a9b-405f-9f0b-0aae6fafdc0d
-
-### Mit tud
-
-| Modul | Prototípusban |
-|---|---|
-| 1 | Hangvezérelt parancssáv (Web Speech API, `hu-HU`) + hangos válasz (`speechSynthesis`), minden képernyő alján. Szöveges bevitel mindig működik. |
-| 2 | Kőháló Kft. cégprofil, logó az ajánlat PDF-en |
-| 3, 9 | Partnerlista + partnerközpont adatlap teljes előzménnyel |
-| 4 | AI-összefoglaló a partner adatlapján (forgalom, tartozás, következő teendő) |
-| 5, 7 | Pénzügyi nézet: kimenő/bejövő, lejárt/esedékes, forrásjelöléssel |
-| 6 | Szimulált: a bejövő számlák „NAV lekérdezés” és „fotó feltöltés” forrással szerepelnek |
-| 11 | Feladatlista, hangutasításból is („Jövő kedden emlékeztess…”) |
-| 12 | Reggeli vezetői összefoglaló, „Mi a helyzet a cégemben?” |
-| 13 | **Teljes ajánlatgyár**: természetes nyelvű bemenet → kalkuláció → logózott A4 → jóváhagyás → kiküldés + automatikus utánkövetési feladat |
-| 14 | 11 tételes árlista árréssel |
-| 15 | Szimulált szerződéskivonat jogi disclaimerrel |
-| 16 | **Teljes végigvezetés**: ügyek összegyűjtése, priorizálás, tételenkénti jóváhagyási kapu, `1/4` léptetés |
-| — | **AI napló** — minden lépés naplózva (mit látott, mit javasolt, mi lett vele) |
-
-### Mi szimulált (fontos!)
-
-- **Az „AI” egy determinisztikus magyar szándékfelismerő**, nem LLM. Az artifact-környezetben nincs modellhívás. A parancsfelismerés `norm()` + regex párokkal működik a `handle()` függvényben. Demóra tökéletes (kiszámítható), termékbe nem elég.
-- **Semmi nem kerül kiküldésre**, semmi nem tárolódik. Az oldal újratöltése visszaállít mindent.
-- Az adatok kitaláltak (`partnerek`, `arlista`, `szamlak`, `ajanlatok`, `feladatok` tömbök a `<script>` elején).
-
-### Mikrofon
-
-Beágyazott nézetben (artifact iframe) a böngésző jellemzően **letiltja a mikrofont** — a kód ezt elkapja és magyar üzenetet ír ki. Közvetlenül Chrome-ban megnyitva működik. Firefox/Safari nem támogatja a `webkitSpeechRecognition`-t.
-
-### Kód-térkép (`prototype/CEGEM-AI-prototipus.html`)
+Amit viszont érdemes bekötni, az a folyamat második fele:
 
 ```
-<style>          CSS-tokenek, világos + sötét téma (data-theme + prefers-color-scheme)
-<script>
-  TODAY, Ft(), dstr(), D(), days()      segédek (a demó dátuma fixen 2026-08-25)
-  CO, partnerek, arlista, szamlak,      mintaadatok
-  ajanlatok, feladatok, naplo
-  lejartKi(), nyitottKi(), nyitottBe()  származtatott lekérdezések
-  NAV[], renderNav(), go(), render()    nézetváltás
-  vHome, vPartnerek, vPartner,          nézetek (HTML-t adnak vissza)
-  vPenzugy, vAjanlatok, vQuoteDoc,
-  vArlista, vFeladatok, vNaplo
-  say(), speak(), micBtn listener       asszisztens ki/bemenet
-  findPartner(), buildQuote()           üzleti logika
-  gate(), pending                       JÓVÁHAGYÁSI KAPU
-  buildAgentQueue(), showAgentStep()    16. modul végigvezetés
-  handle(text, fromVoice)               ← A SZÁNDÉKFELISMERŐ. Itt bővíts parancsot.
-  CHIPS[]                               a példaparancsok a sáv alatt
-</script>
+ajánlat (nálunk)  →  díjbekérő (proforma az API-n)  →  számla (create-from-proforma)
 ```
 
-**Új parancs hozzáadása:** tegyél egy `if(/minta/.test(t)){ ... }` ágat a `handle()`-be a fallback elé, és vedd fel a `CHIPS` tömbbe.
+⚠ Ez a nyilvános API-leírásból származik, nem éles hívásból — **próbafiókkal
+ellenőrizni kell**. A Számlázz.hu Számla Agentnél ugyanezt nem sikerült
+ellenőrizni (a dokumentációs oldalukat a hálózat nem engedte lekérni).
 
-### Tesztelve
+### 6.5 Technológiai stack
 
-Playwright headless Chromiummal: mind a 9 példaparancs, a teljes 4 lépéses jóváhagyási folyamat, AI napló, ajánlatgenerálás (12 485 922 Ft bruttó, 6 tétel), világos és sötét téma, 390 px mobil nézet, vízszintes túlcsordulás. **Nem találtunk hibát.** Képernyőképek: `docs/screenshots/`.
+Next.js / TypeScript **telepíthető PWA-ként** · Supabase (PostgreSQL + RLS,
+EU-s régió) · lépcsős AI-réteg · HTML→PDF a dokumentumokhoz · Számlázz.hu vagy
+Billingo API · beszédfelismerés bekötve.
 
 ---
 
-## 10. Következő lépések — konkrétan, sorrendben
+## 7. Ami Vince dolga (fejlesztő nem tudja elvégezni)
 
-### A) Spike-ok (ezek a legfontosabbak, kód előtt)
+| Tétel | Átfutás | Miért blokkol |
+|---|---|---|
+| **NAV technikai felhasználó** regisztrálása | 1–3 hét | Ez dönti el a 6. modul méretét. Ezt érdemes először elindítani. |
+| **50–100 valódi bejövő számla** összegyűjtése | 1–2 nap | A kiolvasási pontosság mérése. A saját céged számlái legyenek — az adatfeldolgozói szerződés még nincs meg. |
+| **Hangmérés** Chrome-ban, két környezetben | 20 perc | Eldönti, fő út-e a hang, és megadja a 0. réteg valódi lefedettségét is. |
+| **Billingo/Számlázz.hu próbafiók** | 1 nap | A díjbekérő-lánc ellenőrzése. |
+| **Valódi árlista** a demóhoz | fél nap | A demó nagyságrenddel meggyőzőbb lesz vele. |
+| Supabase projekt EU-s régióban | 1 óra | A séma telepítéséhez. |
+| Ügyvéd: adatkezelési tájékoztató, adatfeldolgozói szerződés, ÁSZF | hetek | Éles indulás előtt. |
 
-A mérőeszközök készen állnak a `spike/` mappában; ami hátravan, az hozzáférés és adat.
+---
 
-- [x] ~~Mérőeszközök elkészítése mindhárom kérdéshez~~ — `spike/README.md`
-- [ ] **NAV technikai felhasználó regisztrálása** egy saját teszt-adószámra, majd
-      `node spike/nav/nav-lekerdezes.mjs --muvelet bejovo`. Kimenet: működik-e, milyen
-      jogosultsággal, milyen adatmélységgel. **Ezt indítsd el először**, 1–3 hét átfutás.
-- [ ] **50–100 valódi magyar bejövő számla összegyűjtése** (fotó és PDF vegyesen, köztük
-      rossz minőségűek) a `spike/szamlaolvasas/szamlak/` mappába, majd `kiolvas.mjs` +
-      `ertekel.mjs`. Fő mérőszám a **csendes hiba**: rossz érték, amit a modell nem jelölt be.
-- [ ] **Magyar hangfelismerés mérése** a `spike/hang/hang-teszt.html` lappal, legalább két
-      környezetben (csendes iroda és zajos helyszín), majd ugyanazokat a felvételeket
-      legalább két másik szolgáltatóhoz átküldve `wer.mjs`-sel összevetni.
-- [ ] **A döntési lap kitöltése:** `spike/eredmenyek/EREDMENY-SABLON.md`, és a jelen
-      dokumentum 5. fejezetének frissítése az eredmények alapján.
+## 8. A következő fejlesztői lépések, sorrendben
 
-### B) Termékdöntések (a spike eredménye után)
+Ezek egyike sem függ a spike-októl és a hangtól.
 
-- [ ] Hang fő út marad, vagy kényelmi kiegészítő lesz?
-- [ ] Számlázó partner: Számlázz.hu vagy Billingo? (API-minőség és díjszabás alapján)
-- [ ] Árazás véglegesítése az üzemeltetési költség kalkulációja után.
+1. **A többi determinisztikus számítás a magba.** Fizetési határidő a partner
+   adatlapjából, kintlévőség-összesítés, anyagszükséglet. Ugyanaz a szabály:
+   amit ki lehet számolni, azt ne a modell találja ki. Mintát a
+   `mag/arkalkulacio.mjs` ad, tesztekkel együtt.
+2. **Ajánlat PDF-sablon.** HTML→nyomtatás, a cég logójával. A technika megvan:
+   `docs/kiadas/md2pdf.mjs` ugyanezt csinálja Chromiummal.
+3. **Az AI-réteg eszközkészlete kódban**, zárt sémákkal, a jóváhagyási kapuhoz
+   kötve. Modellhívás nélkül is tesztelhető, hogy a kapu nem kerülhető meg.
+   Az eszközlista a specifikáció 6.2 fejezetében van.
+4. **Next.js váz** a séma fölé: belépés, cégprofil, partner- és árlista-CRUD.
+5. **Supabase telepítés** — a `db/README.md` két beállítást ír le, ami kell hozzá.
 
-### C) MVP fejlesztés indítása
+---
 
-- [x] ~~Séma sorszintű biztonsággal, a `javasolt_muveletek` állapotgéppel az első
-      migrációban~~ — `db/migraciok/0001_alap.sql`. A `db/futtat.sh` felépíti és
-      21 állítással bizonyítja a sarkalatos szabályokat. Supabase-re telepíthető,
-      két beállítással: lásd `db/README.md`.
-- [ ] Supabase projekt EU-s régióban, a fenti migráció alkalmazása
-- [ ] A `ceg_id` bekötése a JWT-be (custom access token hook)
-- [ ] Next.js váz, belépés, cégprofil
-- [ ] Partner + árlista CRUD (a prototípus adatszerkezete átvehető)
-- [ ] Claude eszközkészlet (lásd 6. fejezet) + parancssáv
-- [ ] Ajánlatkészítés → HTML sablon → PDF
-- [ ] Számlafotó feltöltés + kiolvasás + megerősítő folyamat
-- [ ] AI napló nézet
+## 9. Buktatók — amibe ez a projekt már belefutott
 
-### D) Párhuzamosan, mert hosszú az átfutás
+Ezek valódi hibák voltak, nem elméleti kockázatok. Érdemes tudni róluk.
 
-- [ ] Microsoft 365 / Graph OAuth regisztráció (egyszerűbb, mint a Google — ezzel kezdd)
-- [ ] Google Cloud projekt + márkaellenőrzés elindítása
-- [ ] Banki aggregátor árajánlatok bekérése (GoCardless, Salt Edge, Tink)
-- [ ] Adatkezelési tájékoztató + adatfeldolgozói szerződés + ÁSZF ügyvéddel
+| Buktató | Mi történt |
+|---|---|
+| **Flex-oszlop zsugorítás** | A jóváhagyó lapon levágta a tétellista alját, így **a végösszeg egyáltalán nem látszott**. A füstpróba most külön ellenőrzi. |
+| **Inline `<span>`-ek** | A címke, az érték és a forrás egy sorba folyt a kiolvasott mezőknél. Kétszer is előfordult, két külön helyen. `display:block` kell. |
+| **Nem törhető tartalom a rácsban** | A chipsáv szétfeszítette az elrendezést 390 px-en. `grid-template-columns: minmax(0,1fr)` + `min-width:0`. |
+| **`force row level security` hiánya** | Enélkül a tábla tulajdonosa mindent lát, és az izolációs teszt **hamis biztonságot adna**. |
+| **Partnernév a parancsban** | A „Hogy állunk a BauMax-szal?" az általános összefoglalóra futott. A partnerspecifikus ágnak meg kell előznie az általánost. |
+| **Zöld jelzés várakozó állapotra** | A „javasolt" címke zölden késznek olvasódott, pedig az ellenkezőjét jelenti. |
+| **LibreOffice ebben a környezetben** | Egy sima `.txt`-t sem tud megnyitni. A PDF ezért Chromium nyomtatásából készül, nem a Wordből. |
+| **iOS Safari + Web Speech API** | Támogatott 14.5 óta, de szeszélyes (a mikrofon nem mindig áll le). Tartalék kell mögé. |
+| **iOS PWA + push** | Csak akkor megy, ha a felhasználó tényleg hozzáadta a kezdőképernyőhöz. Ezt végig kell vezetni rajta. |
+| **`node --test mag/`** | Nem működik — a futtató nem ismeri fel a `*.teszt.mjs` mintát mappából. `node --test mag/*.teszt.mjs` kell. |
 
-### E) Ha fejlesztőktől kérsz árajánlatot
+---
 
-**Elkészült.** `docs/fejlesztoi-specifikacio.md` a forrás, a Word- és PDF-változat
-a `docs/kiadas/` mappában van. Tartalmazza a sarkalatos követelményeket elfogadási
-kritériumokkal, a teljes adatmodellt, a modulonkénti követelményeket, az
-integrációkat és a becsléseket. Ez a dokumentum + a telefonos prototípus együtt
-elég egy fejlesztői árajánlathoz.
+## 10. Becslések és üzleti keret
 
-> **Ajánlott sorrend:** előbb prototípus (kész), aztán specifikáció. A prototípus után írt specifikáció kevesebb félreértést tartalmaz, és a fejlesztők is szűkebb sávban áraznak, ha van mit megnézniük.
+| Ütem | Modulok | Nap | Nagyságrend (120–200 e Ft/nap) |
+|---|---|---|---|
+| MVP a 6. modul nélkül | 1, 2, 3, 11, 12, 13, 14 | 85–105 | 10–21 M Ft |
+| MVP a 6. modullal | + 6 | 105–135 | 13–27 M Ft |
+| V1 | 4, 5, 7, 8, 9, 15 | +85–125 | 10–25 M Ft |
+| V2 | 10, 16, bank | +60–95 | 7–19 M Ft |
+
+Plusz kb. 20% tesztelés és visszajelzés alapú átalakítás.
+
+**Üzemeltetés:** a mért becslés ~250 Ft/hó/felhasználó AI-költség. Ha ez éles
+adaton is tartható, a fenntartható előfizetés lejjebb vihető, mint a felmérésben
+szereplő 10 000–20 000 Ft — vagy ugyanazon az áron lényegesen jobb fedezettel megy.
+**Ezt a 2. spike után kell véglegesíteni.**
 
 ---
 
 ## 11. Nyitott kérdések
 
-1. Ki lesz a felelős fejlesztő/csapat? Az integrációs fiókok (NAV, Google, bank, számlázó) **a te cégadataidra szólnak** — ezeket AI nem tudja elintézni.
-2. Van-e már cég, amin az MVP-t élesben lehet tesztelni? (Egy valódi térkövező vállalkozás, aki hajlandó a saját számláit betölteni, többet ér, mint három hónap tervezés.)
-3. Saját fejlesztés vagy külsős kivitelezés? A becslések mindkettőre érvényesek, de a felelősség eloszlása más.
-4. Nemzetközi terv: a leírás említi. Ha ez cél, a **NAV-integráció ne épüljön be mélyen az adatmodellbe** — legyen országspecifikus adapter mögé rejtve.
+| Kérdés | Ki dönti el |
+|---|---|
+| Kinek mutatjuk be először a demót? | Vince — ez dönti el, mit érdemes csiszolni |
+| Számlázó: Számlázz.hu vagy Billingo? | próbafiók + díjszabás |
+| A hang fő út vagy kényelmi kiegészítő? | 3. spike (egyelőre félretéve) |
+| Van-e valódi cég, amin élesben tesztelhető? | Vince |
+| Saját fejlesztés vagy külsős kivitelezés? | üzleti döntés |
+| Nemzetközi terv? | ha igen, a NAV-integráció országspecifikus adapter mögé kerüljön |
 
 ---
 
-## 12. Forrásjegyzék
+## 12. Jogi és megfelelőségi keret
+
+| Terület | Állapot | Teendő |
+|---|---|---|
+| **AI Act 50. cikk** | hatályos 2026. augusztus 2. óta | A felületen jelezni, hogy AI-val beszél a felhasználó; az AI-tartalmat gépi olvasásra alkalmasan megjelölni. A prototípus ezt már mutatja. |
+| AI Act magas kockázat | 2027 decemberéig kitolva | Egy vállalkozói asszisztens nem Annex III — nem érint. |
+| **GDPR** | — | Adatfeldolgozói szerződés, alvállalkozói lista (benne az AI-szolgáltató), EU-s tárolás, export és törlés. Az AI-szolgáltatóval rögzíteni, hogy **nem használják tanításra**. |
+| **Számlázás** | — | Amíg integrálunk, nem vagyunk számlázóprogram. |
+| **Szerződéskivonat** (V1) | — | „Kivonat és figyelemfelhívás", nem „elemzés". Felelősségkorlátozás magán a funkción. |
+
+---
+
+## 13. Forrásjegyzék
 
 - [NAV Online Számla dokumentációk](https://onlineszamla.nav.gov.hu/dokumentaciok)
-- [NAV Online Számla GitHub (nav-gov-hu/Online-Invoice)](https://github.com/nav-gov-hu/Online-Invoice)
-- [NAV integrációs fejlesztői útmutató 2026](https://www.dfieldsolutions.hu/blog/nav-online-szamla-integracio-2026)
+- [NAV Online Számla GitHub](https://github.com/nav-gov-hu/Online-Invoice)
 - [Számlázz.hu Számla Agent API](https://www.szamlazz.hu/szamla-agent-api)
 - [Billingo API](https://www.billingo.hu/szolgaltatasok/api)
 - [Google restricted scope verification](https://developers.google.com/identity/protocols/oauth2/production-readiness/restricted-scope-verification)
-- [AI Act — 2026. augusztusi kötelezettségek](https://www.digitalapplied.com/blog/eu-ai-act-august-2026-transparency-obligations-agency-checklist)
 - [Open Banking Hungary](https://www.openbankingtracker.com/country/hungary)
 
 ---
 
-*A nap- és költségbecslések nagyságrendi tájékoztatásra szolgálnak, nem árajánlatok. A szabályozási hivatkozások 2026. augusztusi állapotot tükröznek; a NAV séma, a Google-hitelesítési folyamat és az AI Act végrehajtási szabályai változhatnak. Jogi megfelelőség kérdésében ügyvédi és könyvelői egyeztetés szükséges.*
+*A nap- és költségbecslések nagyságrendi tájékoztatásra szolgálnak, nem
+árajánlatok. A szabályozási hivatkozások 2026. augusztusi állapotot tükröznek; a
+NAV séma, a Google-hitelesítési folyamat és az AI Act végrehajtási szabályai
+változhatnak. Jogi megfelelőség kérdésében ügyvédi és könyvelői egyeztetés
+szükséges.*

@@ -6,7 +6,7 @@ lefut, és a sarkalatos szabályokat **bizonyítja is**.
 ```
 db/
   migraciok/0001_alap.sql            a séma, RLS-sel és az állapotgéppel
-  tesztek/sarkalatos_szabalyok.sql   a bizonyítás — 21 állítás
+  tesztek/sarkalatos_szabalyok.sql   a bizonyítás — 22 állítás
   mintaadat/kohalo.sql               a prototípus adatai, hogy a demó és a DB egyezzen
   futtat.sh                          egy parancs: séma + tesztek
 ```

@@ -1,6 +1,6 @@
 # 4. spike — parancsfelismerés költsége
 
-*Készült: 2026-08-26 · 68 mondatos korpusz · csak a 0. réteg mérve*
+*Készült: 2026-08-30 · 68 mondatos korpusz · csak a 0. réteg mérve*
 
 A kérdés nem az, hogy egy nyelvi modell érti-e a magyar parancsokat — érti.
 A kérdés az, hogy **mennyit kell fizetni érte havonta felhasználónként**, és

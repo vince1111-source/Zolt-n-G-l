@@ -24,9 +24,24 @@ Magyar nyelvű AI vállalkozói asszisztens kisvállalkozásoknak. Elv: *„Mond
 
 ## Hol tartunk
 
-**0. fázis — Spike, mérés alatt.** A prototípus kész (`prototype/CEGEM-AI-prototipus.html`),
-és a három spike-kérdés **mérőeszközei is elkészültek** (`spike/`). Ami hiányzik, az az
-adat és a hozzáférés — ezt Vince tudja megadni, nem az AI:
+**0. fázis — a mérések nyitottak, de a mag már épül.**
+
+Kész és **bizonyítottan működik** (mindegyik futtatható, lásd a HANDOVER 0. fejezetét):
+
+| Mi | Hol | Ellenőrzés |
+|---|---|---|
+| Adatbázis-séma RLS-sel és a jóváhagyási kapuval | `db/` | `./db/futtat.sh` → 22 állítás |
+| Determinisztikus árkalkuláció | `mag/` | `node --test mag/*.teszt.mjs` → 12 teszt |
+| Telefon-első prototípus | `prototype/CEGEM-AI-telefon.html` | `node prototype/fustproba.mjs` → 30 ellenőrzés |
+| Fejlesztői specifikáció | `docs/fejlesztoi-specifikacio.md` | Word és PDF a `docs/kiadas/` mappában |
+
+**Az eredeti „semmit ne építs a mérések előtt" szabály árnyalódott:** a mag séma és
+az árkalkuláció minden spike-kimenetel mellett ugyanaz, ezért elkészültek. Ami a
+mérésektől függ, az a 6. modul mérete és a hang szerepe — **azokba ne kezdj bele**,
+amíg nincs eredmény.
+
+A mérőeszközök készen állnak; ami hiányzik, az adat és hozzáférés — ezt Vince tudja
+megadni, nem az AI:
 
 | # | Kérdés | Eszköz | Mire vár |
 |---|---|---|---|
@@ -41,7 +56,10 @@ amit a modell nem jelölt be. A 3. spike fő mérőszáma nem a WER, hanem a
 
 Az eredményeket a `spike/eredmenyek/EREDMENY-SABLON.md` másolatába kell írni.
 
-Ne kezdj MVP-fejlesztésbe, amíg ezek nyitottak — a válaszuk megváltoztatja a scope-ot.
+**A hangot a tulajdonos egyelőre félretette** („lehet plugin, majd kitaláljuk") —
+ne ez legyen a következő fejlesztési irány, de a mérőeszköz készen áll.
+
+A következő fejlesztői lépések sorrendje a HANDOVER 8. fejezetében van.
 
 ## Tervezett stack
 
@@ -53,7 +71,7 @@ dokumentumokhoz · Számlázz.hu vagy Billingo API · beszédfelismerés bekötv
 ## Célfelhasználó: helyszínen dolgozó, nem irodában
 
 Telefon, egy kéz, napfény, por, kesztyű, gyenge térerő, zaj. Ebből:
-**telefon-első felület**, min. 48 px célfelületek, erős kontraszt, nyomva-tartós
+**telefon-első felület**, min. 56 px célfelületek, erős kontraszt, nyomva-tartós
 mikrofon (nem folyamatos figyelés), offline váz. Az asztali nézet a származtatott.
 
 ## Költségszabály — a lépcsős AI
@@ -105,7 +123,7 @@ prototype/telefon-artifact-body.html  ugyanaz Artifact-publikáláshoz
 mag/                              a termék magja: determinisztikus árkalkuláció + tesztek
 db/                               adatbázis: séma, RLS, állapotgép + bizonyító tesztek
   migraciok/0001_alap.sql         az első migráció — a sarkalatos szabályokkal
-  tesztek/                        21 állítás, ami bizonyítja is őket
+  tesztek/                        22 állítás, ami bizonyítja is őket
   futtat.sh                       egy parancs: séma + tesztek
 spike/                            0. fázis mérőeszközei — lásd spike/README.md
   nav/                            NAV bejövő számla lekérdezés (1. kérdés)
