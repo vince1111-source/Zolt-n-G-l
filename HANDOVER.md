@@ -12,7 +12,7 @@
 
 ```bash
 # 1. Nézd meg, mi van kész, és hogy tényleg működik-e
-node --test mag/*.teszt.mjs        # 24 teszt — árkalkuláció, fizetési határidő, kintlévőség
+node --test mag/*.teszt.mjs        # 34 teszt — árkalkuláció, fizetési határidő, kintlévőség, AI-eszközök
 ./db/futtat.sh                     # 22 állítás — a sarkalatos szabályok (PostgreSQL kell)
 cd spike && node parancs/merd.mjs  # a lépcsős parancsfelismerés mérése
 
@@ -90,7 +90,7 @@ mérésektől függ, az a 6. modul mérete és a hang szerepe — az még nyitot
 | Mi | Hol | Bizonyíték |
 |---|---|---|
 | **Adatbázis-séma** RLS-sel és a jóváhagyási kapuval | `db/` | `./db/futtat.sh` → 22 állítás zöld |
-| **Mag** — árkalkuláció, fizetési határidő, kintlévőség | `mag/` | `node --test mag/*.teszt.mjs` → 24 teszt zöld |
+| **Mag** — árkalkuláció, fizetési határidő, kintlévőség, AI-eszközkészlet | `mag/` | `node --test mag/*.teszt.mjs` → 34 teszt zöld |
 | **Telefon-első prototípus** | `prototype/CEGEM-AI-telefon.html` | `node prototype/fustproba.mjs` → 129 ellenőrzés zöld |
 | Asztali prototípus (mind a 16 modul) | `prototype/CEGEM-AI-prototipus.html` | kézzel átnézve |
 | **Árréses árlista + nagyker** (beszerzési ár, árrés, fedezet) | a telefonos prototípusban | a füstpróba külön szakasza |
@@ -153,7 +153,7 @@ szerint tiszta. A `webapp/` mappában van, indítás: `npm run dev --prefix weba
 | **Partnerek** | Felvétel, szerkesztés, archiválás; kedvezmény, fizetési határidő, „szállító" jelölés. |
 | **Árlista** | Beszerzési ár + eladási ár tételenként, számolt árrés. |
 | **Ajánlatkészítés** | Partner + dinamikus tételsor; **az egységár mindig a szerver saját árlistájából jön**, sosem a kliens beküldött adatából. |
-| **Ajánlat állapotgépe** | piszkozat → kiküldve → elfogadva/elutasítva. |
+| **Ajánlat állapotgépe** | piszkozat → kiküldve → elfogadva/elutasítva. A kiküldés a `javasolt_muveletek` jóváhagyási kapun megy át (valódi, nem díszlet), a nyoma a lapon is látszik. |
 | **Ügyfél-dokumentum** | Nyomtatható, cégfejléces előnézet, whitelist-alapú `@media print` szabállyal (csak a dokumentum mehet papírra). |
 | **Teendők** | Felvétel, sürgősség, határidő, partnerhez köthető, kész/törölve. |
 | **Sorszintű izoláció** | Minden lekérdezés a bejelentkezett felhasználó jogán fut (RLS) — nem alkalmazáslogikai szűréssel. |
@@ -208,6 +208,8 @@ mag/                               A TERMÉK MAGJA — saját, nem bekötendő
   fizetesi_hatarido.teszt.mjs      6 teszt
   kintlevoseg.mjs                  nyitott/lejárt összesítés, partnerenkénti bontással
   kintlevoseg.teszt.mjs            6 teszt
+  eszkozok.mjs                     az AI-réteg eszközkészlete, zárt sémákkal + a kapu állapotgépe
+  eszkozok.teszt.mjs               11 teszt
 
 db/                                AZ ADATRÉTEG — fut és bizonyít
   migraciok/0001_alap.sql          12 tábla, RLS, az állapotgép triggere
@@ -248,7 +250,7 @@ spike/                             a 0. fázis mérőeszközei — nem termékk�
 ## 5. Hogyan ellenőrzöd, hogy nem rontottál el semmit
 
 ```bash
-node --test mag/*.teszt.mjs        # mag — 24 teszt
+node --test mag/*.teszt.mjs        # mag — 34 teszt
 ./db/futtat.sh                     # séma + sarkalatos szabályok — 22 állítás
 node prototype/fustproba.mjs       # telefonos prototípus — 129 ellenőrzés
 cd spike && node parancs/merd.mjs  # a 0. réteg lefedettsége és a költségbecslés
@@ -396,9 +398,17 @@ Ezek egyike sem függ a spike-októl és a hangtól. **1., 4. és 5. pont elkés
    dokumentum mehet papírra, semmi más). Ami hiányzik: a cég logója, és egy
    szerveroldali PDF-export (a `docs/kiadas/md2pdf.mjs` Chromium-technikája
    ugyanerre a HTML-re ráépíthető, ha kell letölthető fájl is).
-3. **Az AI-réteg eszközkészlete kódban**, zárt sémákkal, a jóváhagyási kapuhoz
-   kötve. Modellhívás nélkül is tesztelhető, hogy a kapu nem kerülhető meg.
-   Az eszközlista a specifikáció 6.2 fejezetében van.
+3. ✅ **Az AI-réteg eszközkészlete kódban.** `mag/eszkozok.mjs` — a
+   specifikáció 6.2 fejezetének mind a 11 eszköze, zárt JSON-sémával és
+   azzal a jelöléssel, hogy melyik igényel jóváhagyást. Ugyanott a
+   jóváhagyási kapu állapotgépe (`allapotatmenetErvenyesE`) alkalmazás-
+   oldalon megismételve — 11 teszt bizonyítja, hogy modellhívás nélkül is
+   kimutatható, ha egy hívó megpróbálná kihagyni a kaput.
+   A **webapp már ténylegesen ezen megy**: az ajánlat kiküldése
+   (`ajanlatKikuldese`) egy `javasolt_muveletek` sort hoz létre és azt
+   vezeti végig `javasolt → jóváhagyott → végrehajtott` állapotokon,
+   mielőtt az ajánlat allapot mezője ténylegesen `kikuldve`-re vált — ez
+   eddig hiányzott, a korábbi kód egyenesen írta át az állapotot.
 4. ✅ **Next.js váz a séma fölé.** A `webapp/` mappában: Supabase Auth-tal
    (regisztráció + bejelentkezés + e-mail-megerősítés), és valódi CRUD-dal —
    cégprofil, partnerek, árlista, **ajánlatkészítés** (a szerver a saját

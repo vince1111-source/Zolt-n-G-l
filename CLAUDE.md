@@ -31,7 +31,7 @@ Kész és **bizonyítottan működik** (mindegyik futtatható, lásd a HANDOVER 
 | Mi | Hol | Ellenőrzés |
 |---|---|---|
 | Adatbázis-séma RLS-sel és a jóváhagyási kapuval | `db/` | `./db/futtat.sh` → 22 állítás |
-| Mag — árkalkuláció, fizetési határidő, kintlévőség | `mag/` | `node --test mag/*.teszt.mjs` → 24 teszt |
+| Mag — árkalkuláció, fizetési határidő, kintlévőség, AI-eszközkészlet | `mag/` | `node --test mag/*.teszt.mjs` → 34 teszt |
 | Telefon-első prototípus | `prototype/CEGEM-AI-telefon.html` | `node prototype/fustproba.mjs` → 129 ellenőrzés |
 | Fejlesztői specifikáció | `docs/fejlesztoi-specifikacio.md` | Word és PDF a `docs/kiadas/` mappában |
 

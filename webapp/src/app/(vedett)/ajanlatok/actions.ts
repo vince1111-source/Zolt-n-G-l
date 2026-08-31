@@ -137,12 +137,74 @@ export async function ajanlatLetrehozasa(
   redirect(`/ajanlatok/${ujAjanlat.id}`);
 }
 
-export async function ajanlatAllapotValtas(id: string, ujAllapot: string) {
+/**
+ * Az „elfogadták" / „elutasították" gombok — ezek nem küldenek semmit,
+ * csak azt rögzítik, amit a partner amúgy is visszajelzett. Nem külső
+ * hatású művelet, ezért nem megy a jóváhagyási kapun keresztül.
+ * A kiküldést lásd külön: `ajanlatKikuldese`.
+ */
+export async function ajanlatAllapotValtas(id: string, ujAllapot: "elfogadva" | "elutasitva") {
   const supabase = await szerverKliens();
-  await supabase
+  await supabase.from("ajanlatok").update({ allapot: ujAllapot }).eq("id", id);
+  revalidatePath(`/ajanlatok/${id}`);
+  revalidatePath("/ajanlatok");
+}
+
+/**
+ * Az ajánlat kiküldése — ez a fejlesztői specifikáció 6.2 fejezetében az
+ * `ajanlat_kikuldes` eszköz, ami „→ JÓVÁHAGYÁS"-sal van jelölve: külső
+ * hatású művelet, tehát a `javasolt_muveletek` kapun kell átmennie, nem
+ * írhatja át közvetlenül az ajánlat állapotát.
+ *
+ * Mivel itt egy ember kattint a „Kiküldöm" gombra (nincs közbülső AI-
+ * javaslat, amit külön jóvá kellene hagyni), a kattintás MAGA a
+ * jóváhagyás — de a nyoma ugyanúgy megmarad: a javasolt_muveletek sor
+ * javasolt → jóváhagyott → végrehajtott állapotokon megy át, mielőtt az
+ * ajánlat allapot mezője ténylegesen kikuldve-re vált. Ha ezt valaha egy
+ * AI-réteg indítja emberi jóváhagyás előtt, csak az első lépés (a
+ * javasolt sor létrehozása) marad — a többi már egy külön jóváhagyó
+ * lépésre vár.
+ */
+export async function ajanlatKikuldese(id: string) {
+  const { felhasznalo } = await sajatCegVagyIranyitas();
+  const supabase = await szerverKliens();
+
+  const { data: ajanlat } = await supabase
     .from("ajanlatok")
-    .update({ allapot: ujAllapot as "kikuldve" | "elfogadva" | "elutasitva" })
-    .eq("id", id);
+    .select("sorszam, brutto, partnerek(nev)")
+    .eq("id", id)
+    .maybeSingle();
+  if (!ajanlat) return;
+
+  const { data: javaslat, error: javaslatHiba } = await supabase
+    .from("javasolt_muveletek")
+    .insert({
+      tipus: "ajanlat_kikuldes",
+      hivatkozott_tabla: "ajanlatok",
+      hivatkozott_id: id,
+      javaslat: {
+        sorszam: ajanlat.sorszam,
+        brutto: ajanlat.brutto,
+        partner: ajanlat.partnerek?.nev ?? null,
+      },
+    })
+    .select("id")
+    .single();
+  if (javaslatHiba || !javaslat) return;
+
+  const most = new Date().toISOString();
+  await supabase
+    .from("javasolt_muveletek")
+    .update({ allapot: "jovahagyott", jovahagyta_id: felhasznalo.id, jovahagyva: most })
+    .eq("id", javaslat.id);
+
+  await supabase
+    .from("javasolt_muveletek")
+    .update({ allapot: "vegrehajtott", vegrehajtva: most })
+    .eq("id", javaslat.id);
+
+  await supabase.from("ajanlatok").update({ allapot: "kikuldve" }).eq("id", id);
+
   revalidatePath(`/ajanlatok/${id}`);
   revalidatePath("/ajanlatok");
 }

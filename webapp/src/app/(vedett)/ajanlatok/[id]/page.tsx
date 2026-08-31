@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { szerverKliens } from "@/lib/supabase/server";
 import { Ft } from "@/lib/format";
-import { ajanlatAllapotValtas } from "../actions";
+import { ajanlatAllapotValtas, ajanlatKikuldese } from "../actions";
 
 export default async function AjanlatReszletei({
   params,
@@ -24,15 +24,21 @@ export default async function AjanlatReszletei({
     .eq("ajanlat_id", id)
     .order("sorrend");
 
-  const kovetkezoLepesek: Record<string, [string, string][]> = {
-    piszkozat: [["kikuldve", "Kiküldöm"]],
+  // A jóváhagyási kapu nyoma — ha ezt az ajánlatot már kiküldtük, itt
+  // látszik, ki hagyta jóvá és mikor. Ez nem díszlet: a `javasolt_muveletek`
+  // sor az egyetlen hely, ami bizonyítja, hogy a kiküldés a kapun ment át.
+  const { data: jovahagyasok } = await supabase
+    .from("javasolt_muveletek")
+    .select("*, felhasznalok(nev)")
+    .eq("hivatkozott_tabla", "ajanlatok")
+    .eq("hivatkozott_id", id)
+    .order("javasolva", { ascending: false });
+
+  const visszajelzesGombok: Record<string, ["elfogadva" | "elutasitva", string][]> = {
     kikuldve: [
       ["elfogadva", "Elfogadták"],
       ["elutasitva", "Elutasították"],
     ],
-    elfogadva: [],
-    elutasitva: [],
-    lejart: [],
   };
 
   return (
@@ -83,7 +89,17 @@ export default async function AjanlatReszletei({
       </div>
 
       <div className="flex flex-wrap gap-2">
-        {kovetkezoLepesek[ajanlat.allapot]?.map(([cel, cimke]) => (
+        {ajanlat.allapot === "piszkozat" && (
+          <form action={ajanlatKikuldese.bind(null, id)}>
+            <button
+              type="submit"
+              className="bg-cta text-cta-ink font-bold rounded-full px-5 py-3"
+            >
+              Kiküldöm
+            </button>
+          </form>
+        )}
+        {visszajelzesGombok[ajanlat.allapot]?.map(([cel, cimke]) => (
           <form key={cel} action={ajanlatAllapotValtas.bind(null, id, cel)}>
             <button
               type="submit"
@@ -100,6 +116,23 @@ export default async function AjanlatReszletei({
           Így látja az ügyfél
         </Link>
       </div>
+
+      {!!jovahagyasok?.length && (
+        <div className="text-sm">
+          <div className="text-xs uppercase tracking-wider text-muted font-mono mb-2">
+            Jóváhagyási napló
+          </div>
+          <div className="flex flex-col gap-1">
+            {jovahagyasok.map((j) => (
+              <div key={j.id} className="text-muted">
+                {j.vegrehajtva
+                  ? `Kiküldve · ${j.felhasznalok?.nev ?? "?"} hagyta jóvá, ${new Date(j.vegrehajtva).toLocaleString("hu-HU")}`
+                  : `${j.allapot} · ${new Date(j.javasolva).toLocaleString("hu-HU")}`}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
