@@ -31,7 +31,7 @@ Kész és **bizonyítottan működik** (mindegyik futtatható, lásd a HANDOVER 
 | Mi | Hol | Ellenőrzés |
 |---|---|---|
 | Adatbázis-séma RLS-sel és a jóváhagyási kapuval | `db/` | `./db/futtat.sh` → 22 állítás |
-| Determinisztikus árkalkuláció | `mag/` | `node --test mag/*.teszt.mjs` → 12 teszt |
+| Mag — árkalkuláció, fizetési határidő, kintlévőség | `mag/` | `node --test mag/*.teszt.mjs` → 24 teszt |
 | Telefon-első prototípus | `prototype/CEGEM-AI-telefon.html` | `node prototype/fustproba.mjs` → 129 ellenőrzés |
 | Fejlesztői specifikáció | `docs/fejlesztoi-specifikacio.md` | Word és PDF a `docs/kiadas/` mappában |
 
@@ -120,11 +120,16 @@ prototype/CEGEM-AI-prototipus.html  asztali prototípus — önálló HTML, ninc
 prototype/artifact-body.html      ugyanaz Artifact-publikáláshoz (burok nélkül)
 prototype/CEGEM-AI-telefon.html   telefon-első prototípus (az irányváltás után ez a fő irány)
 prototype/telefon-artifact-body.html  ugyanaz Artifact-publikáláshoz
-mag/                              a termék magja: determinisztikus árkalkuláció + tesztek
+mag/                              a termék magja: árkalkuláció, fizetési határidő, kintlévőség + tesztek
 db/                               adatbázis: séma, RLS, állapotgép + bizonyító tesztek
   migraciok/0001_alap.sql         az első migráció — a sarkalatos szabályokkal
+  migraciok/0002_auth_kotes.sql   Supabase Auth kötés (felhasznalok.auth_user_id, regisztráció)
+  migraciok/0003_biztonsagi_javitasok.sql  a Supabase advisor által talált javítások
   tesztek/                        22 állítás, ami bizonyítja is őket
   futtat.sh                       egy parancs: séma + tesztek
+webapp/                          a valódi backend: Next.js + Supabase Auth + CRUD, éles adatbázissal
+  .env.local.example              a kapcsolódási adatok mintája
+  src/app/(vedett)/               bejelentkezés mögötti oldalak: ajánlat, partner, árlista, teendő, cégprofil
 spike/                            0. fázis mérőeszközei — lásd spike/README.md
   nav/                            NAV bejövő számla lekérdezés (1. kérdés)
   szamlaolvasas/                  kiolvasási pontosság mérése (2. kérdés)

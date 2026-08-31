@@ -54,6 +54,12 @@ export default async function VedettElrendezes({
             Árlista
           </Link>
           <Link
+            href="/feladatok"
+            className="px-3 py-2 rounded-lg hover:bg-white/10 whitespace-nowrap flex-shrink-0"
+          >
+            Teendők
+          </Link>
+          <Link
             href="/cegprofil"
             className="px-3 py-2 rounded-lg hover:bg-white/10 whitespace-nowrap flex-shrink-0"
           >

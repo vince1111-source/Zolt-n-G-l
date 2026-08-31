@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import { szerverKliens } from "@/lib/supabase/server";
 import { Ft } from "@/lib/format";
 import { ajanlatAllapotValtas } from "../actions";
@@ -81,20 +82,24 @@ export default async function AjanlatReszletei({
         </div>
       </div>
 
-      {kovetkezoLepesek[ajanlat.allapot]?.length > 0 && (
-        <div className="flex gap-2">
-          {kovetkezoLepesek[ajanlat.allapot].map(([cel, cimke]) => (
-            <form key={cel} action={ajanlatAllapotValtas.bind(null, id, cel)}>
-              <button
-                type="submit"
-                className="bg-cta text-cta-ink font-bold rounded-full px-5 py-3"
-              >
-                {cimke}
-              </button>
-            </form>
-          ))}
-        </div>
-      )}
+      <div className="flex flex-wrap gap-2">
+        {kovetkezoLepesek[ajanlat.allapot]?.map(([cel, cimke]) => (
+          <form key={cel} action={ajanlatAllapotValtas.bind(null, id, cel)}>
+            <button
+              type="submit"
+              className="bg-cta text-cta-ink font-bold rounded-full px-5 py-3"
+            >
+              {cimke}
+            </button>
+          </form>
+        ))}
+        <Link
+          href={`/ajanlatok/${id}/dokumentum`}
+          className="px-5 py-3 rounded-full border border-line hover:border-cta font-semibold"
+        >
+          Így látja az ügyfél
+        </Link>
+      </div>
     </div>
   );
 }

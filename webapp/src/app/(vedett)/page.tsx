@@ -70,12 +70,15 @@ export default async function Attekintes() {
           </div>
           <div className="text-3xl font-extrabold mt-1">{termekekSzama ?? 0}</div>
         </Link>
-        <div className="bg-surface border border-line rounded-xl p-5">
+        <Link
+          href="/feladatok"
+          className="bg-surface border border-line rounded-xl p-5 hover:border-cta transition-colors"
+        >
           <div className="text-xs uppercase tracking-wider text-muted font-mono">
             Nyitott teendő
           </div>
           <div className="text-3xl font-extrabold mt-1">{feladatokSzama ?? 0}</div>
-        </div>
+        </Link>
       </div>
 
       <div className="bg-surface border border-line rounded-xl p-5">

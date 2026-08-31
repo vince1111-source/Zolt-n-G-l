@@ -107,6 +107,11 @@ export async function ajanlatLetrehozasa(
       afa,
       brutto,
       kedvezmeny_szazalek: partner.kedvezmeny_szazalek,
+      // Az ajánlat 30 napig érvényes, ha másképp nem szóltunk — ez kerül
+      // rá az ügyfélnek szóló dokumentumra is.
+      ervenyes_ig: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        .toISOString()
+        .slice(0, 10),
     })
     .select("id")
     .single();

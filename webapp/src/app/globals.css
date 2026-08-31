@@ -65,3 +65,21 @@ label {
   font-size: 0.85rem;
   color: var(--color-muted);
 }
+
+/* Nyomtatáskor csak az ügyfélnek szóló dokumentum mehet papírra — ez
+   WHITELIST, nem tiltólista: minden más (fejléc, gombok, belső adat)
+   alapból rejtett, és csak a .nyomtathato-dokumentum válik láthatóvá. */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .nyomtathato-dokumentum,
+  .nyomtathato-dokumentum * {
+    visibility: visible;
+  }
+  .nyomtathato-dokumentum {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+  }
+}

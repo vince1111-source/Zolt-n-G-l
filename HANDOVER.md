@@ -12,7 +12,7 @@
 
 ```bash
 # 1. Nézd meg, mi van kész, és hogy tényleg működik-e
-node --test mag/*.teszt.mjs        # 12 teszt — az árkalkuláció
+node --test mag/*.teszt.mjs        # 24 teszt — árkalkuláció, fizetési határidő, kintlévőség
 ./db/futtat.sh                     # 22 állítás — a sarkalatos szabályok (PostgreSQL kell)
 cd spike && node parancs/merd.mjs  # a lépcsős parancsfelismerés mérése
 
@@ -90,12 +90,13 @@ mérésektől függ, az a 6. modul mérete és a hang szerepe — az még nyitot
 | Mi | Hol | Bizonyíték |
 |---|---|---|
 | **Adatbázis-séma** RLS-sel és a jóváhagyási kapuval | `db/` | `./db/futtat.sh` → 22 állítás zöld |
-| **Árkalkuláció** determinisztikus kódban | `mag/` | `node --test mag/*.teszt.mjs` → 12 teszt zöld |
+| **Mag** — árkalkuláció, fizetési határidő, kintlévőség | `mag/` | `node --test mag/*.teszt.mjs` → 24 teszt zöld |
 | **Telefon-első prototípus** | `prototype/CEGEM-AI-telefon.html` | `node prototype/fustproba.mjs` → 129 ellenőrzés zöld |
 | Asztali prototípus (mind a 16 modul) | `prototype/CEGEM-AI-prototipus.html` | kézzel átnézve |
 | **Árréses árlista + nagyker** (beszerzési ár, árrés, fedezet) | a telefonos prototípusban | a füstpróba külön szakasza |
 | **Munkák + fotódokumentáció** | ugyanott | a füstpróba külön szakasza |
 | **Ajánlat → díjbekérő → számla lánc** (Billingo, szimulálva) | ugyanott | a füstpróba külön szakasza |
+| **Valódi backend** (Next.js + Supabase, hitelesítéssel, éles adatbázissal) | `webapp/` | `npm run build --prefix webapp` zöld; lásd lentebb |
 | **Fejlesztői specifikáció** | `docs/fejlesztoi-specifikacio.md` + Word/PDF | — |
 | Spike mérőeszközök (4 db) | `spike/` | a 4. spike 0. rétege mérve |
 | Demó forgatókönyv | `docs/demo-forgatokonyv.md` | — |
@@ -138,9 +139,34 @@ Amit **nem** tud, és ezt a felület ki is mondja: nincs valódi modellhívás (
 felismerő determinisztikus regex), a számlakiolvasás és a Billingo-hívás
 szimulált, és semmi nem megy szerverre.
 
-### Ami nem indult el
+### A valódi backend — Next.js + Supabase, éles adatbázissal
 
-Next.js alkalmazásváz, Supabase projekt, bármilyen külső integráció élesben.
+Ez már nem váz: fut, valódi adatbázisba ír, és a biztonsági tanácsadó
+szerint tiszta. A `webapp/` mappában van, indítás: `npm run dev --prefix webapp`
+(vagy `cd webapp && npm run dev`), a kapcsolódási adatok mintája
+`webapp/.env.local.example`.
+
+| Terület | Mit tud |
+|---|---|
+| **Hitelesítés** | Supabase Auth — regisztráció (cég + felhasználó egy lépésben), bejelentkezés, e-mail-megerősítés. |
+| **Cégprofil** | Szerkeszthető: név, adószám, székhely, bankszámla, elérhetőség. |
+| **Partnerek** | Felvétel, szerkesztés, archiválás; kedvezmény, fizetési határidő, „szállító" jelölés. |
+| **Árlista** | Beszerzési ár + eladási ár tételenként, számolt árrés. |
+| **Ajánlatkészítés** | Partner + dinamikus tételsor; **az egységár mindig a szerver saját árlistájából jön**, sosem a kliens beküldött adatából. |
+| **Ajánlat állapotgépe** | piszkozat → kiküldve → elfogadva/elutasítva. |
+| **Ügyfél-dokumentum** | Nyomtatható, cégfejléces előnézet, whitelist-alapú `@media print` szabállyal (csak a dokumentum mehet papírra). |
+| **Teendők** | Felvétel, sürgősség, határidő, partnerhez köthető, kész/törölve. |
+| **Sorszintű izoláció** | Minden lekérdezés a bejelentkezett felhasználó jogán fut (RLS) — nem alkalmazáslogikai szűréssel. |
+
+Amit még nem tud: a terepi funkciók (számlafotó, munkák + fotódokumentáció,
+nagyker árfrissítés, offline sor, hang) — ezek egyelőre csak a telefonos
+prototípusban élnek, lásd 8.1. fejezet.
+
+⚠ **Amit élesben magadnak kell kipróbálnod**: a regisztráció→e-mail-megerősítés
+kört helyben nem tudtuk automatikusan végigmérni, mert a Supabase próba-
+projekt beépített levélküldője szigorúan korlátozott (`email rate limit
+exceeded`). Ez külső, ideiglenes korlát, nem hiba — egy valódi e-mail-címmel
+végzett regisztráció végig fog menni.
 
 ---
 
@@ -178,6 +204,10 @@ README.md                          rövid belépő
 mag/                               A TERMÉK MAGJA — saját, nem bekötendő
   arkalkulacio.mjs                 determinisztikus ajánlatszámítás
   arkalkulacio.teszt.mjs           12 teszt, köztük a demó végösszegének rögzítése
+  fizetesi_hatarido.mjs            determinisztikus határidő a partner napszámából
+  fizetesi_hatarido.teszt.mjs      6 teszt
+  kintlevoseg.mjs                  nyitott/lejárt összesítés, partnerenkénti bontással
+  kintlevoseg.teszt.mjs            6 teszt
 
 db/                                AZ ADATRÉTEG — fut és bizonyít
   migraciok/0001_alap.sql          12 tábla, RLS, az állapotgép triggere
@@ -218,7 +248,7 @@ spike/                             a 0. fázis mérőeszközei — nem termékk�
 ## 5. Hogyan ellenőrzöd, hogy nem rontottál el semmit
 
 ```bash
-node --test mag/*.teszt.mjs        # árkalkuláció — 12 teszt
+node --test mag/*.teszt.mjs        # mag — 24 teszt
 ./db/futtat.sh                     # séma + sarkalatos szabályok — 22 állítás
 node prototype/fustproba.mjs       # telefonos prototípus — 129 ellenőrzés
 cd spike && node parancs/merd.mjs  # a 0. réteg lefedettsége és a költségbecslés
@@ -350,28 +380,51 @@ bekötés két lépcsős:
 
 ## 8. A következő fejlesztői lépések, sorrendben
 
-Ezek egyike sem függ a spike-októl és a hangtól.
+Ezek egyike sem függ a spike-októl és a hangtól. **1., 4. és 5. pont elkészült**
+— itt hagyva, hogy lássa a következő fejlesztő, mi történt és miért.
 
-1. **A determinisztikus számítások átemelése a magba.** Az anyagszükséglet, a
-   fedezet és az árrés-tartó árfrissítés **már megvan a prototípusban** —
-   emeld át `mag/`-ba, tesztekkel, ahogy az árkalkuláció is ott van. Ami még
-   hiányzik: fizetési határidő a partner adatlapjából, kintlévőség-összesítés.
-   Ugyanaz a szabály: amit ki lehet számolni, azt ne a modell találja ki.
-2. **Ajánlat PDF-sablon.** A prototípus dokumentum-előnézete (`dokumentumLap`)
-   és a `@media print` szabályai adják a sablont — csak a cég logója hiányzik
-   belőle. Szerveroldalra a `docs/kiadas/md2pdf.mjs` Chromium-technikája megy.
+1. ✅ **A determinisztikus számítások a magban.** `mag/fizetesi_hatarido.mjs`
+   (a határidő a partner napszámából) és `mag/kintlevoseg.mjs`
+   (nyitott/lejárt összesítés, partnerenkénti bontással) elkészült,
+   tesztekkel — `node --test mag/*.teszt.mjs` → 24 teszt zöld. Az
+   anyagszükséglet, a fedezet és az árrés-tartó árfrissítés még csak a
+   telefonos prototípusban van meg — ha a webapp megkapja a munkák/nagyker
+   modult, ezeket is át kell emelni ugyanígy.
+2. **Ajánlat PDF-sablon.** A webapp `/ajanlatok/[id]/dokumentum` oldala
+   megkapta a nyomtatható, cégfejléces előnézetet — böngésző-nyomtatással
+   (`window.print()`), whitelist-alapú `@media print` szabállyal (csak a
+   dokumentum mehet papírra, semmi más). Ami hiányzik: a cég logója, és egy
+   szerveroldali PDF-export (a `docs/kiadas/md2pdf.mjs` Chromium-technikája
+   ugyanerre a HTML-re ráépíthető, ha kell letölthető fájl is).
 3. **Az AI-réteg eszközkészlete kódban**, zárt sémákkal, a jóváhagyási kapuhoz
    kötve. Modellhívás nélkül is tesztelhető, hogy a kapu nem kerülhető meg.
    Az eszközlista a specifikáció 6.2 fejezetében van.
-4. **Next.js váz** a séma fölé: belépés, cégprofil, partner- és árlista-CRUD.
-5. **Supabase telepítés** — a `db/README.md` két beállítást ír le, ami kell hozzá.
+4. ✅ **Next.js váz a séma fölé.** A `webapp/` mappában: Supabase Auth-tal
+   (regisztráció + bejelentkezés + e-mail-megerősítés), és valódi CRUD-dal —
+   cégprofil, partnerek, árlista, **ajánlatkészítés** (a szerver a saját
+   árlistából olvas, sosem a kliens beküldött árából), teendők.
+5. ✅ **Supabase telepítve.** `vince1111-source's Project`, `eu-central-1`,
+   ingyenes csomag — az 0001–0003 migráció rajta fut, a biztonsági
+   tanácsadó szerint tiszta. A kapcsolódási adatok mintája:
+   `webapp/.env.local.example`.
 6. **A séma bővítése a prototípus új fogalmaival.** A `munkak` (helyszín,
-   állapot, fotó) és a `beszerzesi_ar` / `nagyker_arlista` még nincs benne a
-   `db/migraciok/0001_alap.sql`-ben. Ha hozzányúlsz, a `db/futtat.sh`
-   tesztjeinek utána is zöldnek kell lenniük.
+   állapot, fotó) tábla és egy dedikált `nagyker_arlista` (a beszállító
+   katalógusa, elkülönítve a cég saját árlistájától) még nincs benne a
+   sémában — a `termekek.beszerzesi_ar` viszont már az 0001 óta megvan.
+   Ha hozzányúlsz, a `db/futtat.sh` tesztjeinek utána is zöldnek kell
+   lenniük.
 7. **Billingo élesítés** — a `dijbekero-kiallit` és `szamla-kiallit` ág ma
    szimulál. Próbafiókkal a `proforma` és a `create-from-proforma` hívás
    bekötendő, a jóváhagyási kapu és a napló változatlanul hagyásával.
+
+### 8.1 Ami a valódi backendből még hiányzik a telefonos prototípushoz képest
+
+A `webapp/` most a **belső irodai** oldalt fedi (cégprofil, partnerek,
+árlista, ajánlat, teendő) — a helyszíni, terepi funkciók (számlafotó,
+munkák + fotódokumentáció, nagyker árfrissítés, offline sor, hangvezérlés)
+egyelőre csak a telefonos prototípusban élnek. Ha a webapp lesz az éles
+termék, ezeket egyenként kell átültetni, ugyanazokkal a szabályokkal
+(jóváhagyási kapu, forrásjelölés, kiadáskori ár-pillanatkép).
 
 ---
 
