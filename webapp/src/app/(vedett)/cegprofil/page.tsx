@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Building2 } from "lucide-react";
 import { sajatCegVagyIranyitas } from "@/lib/sajat-ceg";
 import { szerverKliens } from "@/lib/supabase/server";
 import { CegprofilForm } from "./CegprofilForm";
@@ -24,7 +25,7 @@ export default async function Cegprofil() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight">Cégadatok</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight flex items-center gap-2"><Building2 size={22} className="text-cta" aria-hidden />Cégadatok</h1>
         <p className="text-muted mt-1">
           Ezek jelennek meg az ajánlatok fejlécében és a kiküldött
           dokumentumokon.

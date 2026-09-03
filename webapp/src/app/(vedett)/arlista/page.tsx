@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Tag } from "lucide-react";
 import { szerverKliens } from "@/lib/supabase/server";
 import { termekInaktivalasa } from "./actions";
 import { Ft } from "@/lib/format";
@@ -25,7 +26,7 @@ export default async function Arlista() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight">Árlista</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight flex items-center gap-2"><Tag size={22} className="text-cta" aria-hidden />Árlista</h1>
           <p className="text-muted mt-1">{termekek?.length ?? 0} tétel</p>
         </div>
         <Link href="/arlista/uj" className={gombElsodleges}>

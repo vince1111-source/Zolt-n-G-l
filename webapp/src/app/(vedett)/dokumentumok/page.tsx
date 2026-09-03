@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FolderOpen } from "lucide-react";
 import { szerverKliens } from "@/lib/supabase/server";
 import { gombElsodleges, gombVeszelyes, kartya } from "@/components/ui/classes";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -15,7 +16,7 @@ export default async function Dokumentumok() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight">Dokumentumok</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight flex items-center gap-2"><FolderOpen size={22} className="text-cta" aria-hidden />Dokumentumok</h1>
           <p className="text-muted mt-1">{dokumentumok?.length ?? 0} dokumentum</p>
         </div>
         <Link href="/dokumentumok/uj" className={gombElsodleges}>

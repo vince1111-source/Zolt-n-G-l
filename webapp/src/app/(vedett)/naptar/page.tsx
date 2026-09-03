@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Calendar } from "lucide-react";
 import { szerverKliens } from "@/lib/supabase/server";
 import { hetElsoDatum, hetNapjai, budapestMaDatum, budapestNapString, datumSzoveg } from "@/lib/het";
 import { esemenyTorlese } from "./actions";
@@ -35,7 +36,7 @@ export default async function Naptar({
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight">Naptár</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight flex items-center gap-2"><Calendar size={22} className="text-cta" aria-hidden />Naptár</h1>
           <p className="text-muted mt-1">
             {datumSzoveg(napok[0])} – {datumSzoveg(napok[6])}
           </p>

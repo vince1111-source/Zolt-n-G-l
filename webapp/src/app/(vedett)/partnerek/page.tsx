@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Users } from "lucide-react";
 import { szerverKliens } from "@/lib/supabase/server";
 import { partnerArchivalasa } from "./actions";
 
@@ -14,7 +15,7 @@ export default async function Partnerek() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight">Partnerek</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight flex items-center gap-2"><Users size={22} className="text-cta" aria-hidden />Partnerek</h1>
           <p className="text-muted mt-1">{partnerek?.length ?? 0} partner</p>
         </div>
         <Link

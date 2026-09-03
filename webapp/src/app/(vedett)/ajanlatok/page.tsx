@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FileText } from "lucide-react";
 import { szerverKliens } from "@/lib/supabase/server";
 import { Ft } from "@/lib/format";
 import { Badge } from "@/components/ui/Badge";
@@ -33,7 +34,7 @@ export default async function Ajanlatok() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold tracking-tight">Ajánlatok</h1>
+          <h1 className="text-2xl font-extrabold tracking-tight flex items-center gap-2"><FileText size={22} className="text-cta" aria-hidden />Ajánlatok</h1>
           <p className="text-muted mt-1">{ajanlatok?.length ?? 0} ajánlat</p>
         </div>
         <Link href="/ajanlatok/uj" className={gombElsodleges}>

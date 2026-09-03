@@ -1,4 +1,5 @@
 import { szerverKliens } from "@/lib/supabase/server";
+import { ListChecks } from "lucide-react";
 import { UjFeladatForm } from "./UjFeladatForm";
 import { feladatKeszre, feladatTorlese } from "./actions";
 import { Badge } from "@/components/ui/Badge";
@@ -22,7 +23,7 @@ export default async function Feladatok() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-extrabold tracking-tight">Teendők</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight flex items-center gap-2"><ListChecks size={22} className="text-cta" aria-hidden />Teendők</h1>
         <p className="text-muted mt-1">{feladatok?.length ?? 0} nyitott</p>
       </div>
 
