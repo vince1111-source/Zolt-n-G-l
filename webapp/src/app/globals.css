@@ -1,19 +1,93 @@
 @import "tailwindcss";
 
+/*
+ * Világos alapréteg — ide kerül MINDEN token alapértéke. A sötét mód
+ * (rendszerszintű `prefers-color-scheme`) és a napfény mód (kézi kapcsoló,
+ * `[data-napfeny="true"]`) ugyanezeket a token-neveket írja felül, sosem
+ * definiál újakat — így minden komponens, ami a tokenekre épül, automatikusan
+ * helyesen viselkedik mindhárom módban, módonkénti kódduplikáció nélkül.
+ */
 :root {
-  --background: #f2f0e7;
-  --foreground: #16241b;
-  --color-brand: #12382a;
+  /* Vince kétszer is jelezte, hogy ez még mindig fehérnek hat — az első
+     korrekció (kb. 86-91% világosság) még túl közel volt a fehérhez,
+     képernyőn gyakorlatilag megkülönböztethetetlenül. Ez most egy
+     egyértelműen, vitathatatlanul szürke (nem "piszkosfehér") tónus,
+     jóval lejjebb véve a világosságot. */
+  --background: #adb3c2;
+  --foreground: #16171c;
+  --color-brand: #16171c;
   --color-brand-ink: #ffffff;
-  --color-cta: #a5e838;
-  --color-cta-ink: #0d2a16;
-  --color-surface: #ffffff;
-  --color-line: #d8d3c2;
-  --color-muted: #6c7569;
-  --color-kritikus: #a32b17;
-  --color-kritikus-soft: #fbe6e1;
-  --color-rendben: #1f6b3f;
-  --color-rendben-soft: #dff0e6;
+  --color-cta: #372da8;
+  --color-cta-ink: #ffffff;
+  --color-surface: #c3c8d5;
+  --color-line: #8b91a3;
+  --color-muted: #40434e;
+  --color-kritikus: #c22b1f;
+  --color-kritikus-soft: #fbe9e7;
+  --color-rendben: #0f7a56;
+  --color-rendben-soft: #e1f5ee;
+  --color-figyelem: #9a6207;
+  --color-figyelem-soft: #fdf0dc;
+  --shadow-kartya: 0 1px 3px rgba(22, 23, 28, 0.07), 0 2px 10px rgba(22, 23, 28, 0.08);
+  --shadow-kartya-hover: 0 3px 6px rgba(22, 23, 28, 0.09), 0 10px 24px rgba(22, 23, 28, 0.12);
+}
+
+/* Rendszerszintű sötét mód — csak akkor, ha a felhasználó nem kapcsolt
+   kézzel napfény módra (az mindig világos marad, hiszen pont ellenkező
+   irányba optimalizál: erős napfényben a sötét felület olvashatatlan). */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-napfeny="true"]) {
+    --background: #101014;
+    --foreground: #f1f1f4;
+    --color-brand: #17181d;
+    --color-brand-ink: #f1f1f4;
+    --color-cta: #8b87f0;
+    --color-cta-ink: #17153a;
+    --color-surface: #1a1b21;
+    --color-line: #2d2f38;
+    --color-muted: #9a9ea8;
+    --color-kritikus: #f2867a;
+    --color-kritikus-soft: #3a1e1c;
+    --color-rendben: #4ad9a8;
+    --color-rendben-soft: #113329;
+    --color-figyelem: #f0b849;
+    --color-figyelem-soft: #3a2b0d;
+    --shadow-kartya: 0 1px 2px rgba(0, 0, 0, 0.3), 0 1px 8px rgba(0, 0, 0, 0.35);
+    --shadow-kartya-hover: 0 2px 4px rgba(0, 0, 0, 0.35), 0 8px 20px rgba(0, 0, 0, 0.4);
+  }
+}
+
+/* Napfény mód — kézi kapcsoló (lásd TemaValto.tsx), erős fényben kültéri
+   használatra. Az első két nekifutás (világos alapon egyre erősebb
+   szürke) tévesen abból indult ki, hogy erős napfényben egy sötét
+   felület rosszabbul olvasható — az ipari/kültéri UX-szakirodalom
+   szerint ez FORDÍTVA van: fiziológiailag hatékonyabb egy fényes elem
+   sötét alapon, mint egy sötét elem fényes alapon, és a sárga/borostyán
+   adja a legjobb kontrasztot sötét háttéren (ugyanez a logika áll a
+   jelzőmellény/útjelzés "high-vis" sárga-fekete kombója mögött is — ami
+   egy térkövező/építőipari vállalkozás felhasználójának amúgy is ismerős
+   vizuális nyelv). Ez a mód ezért SZÁNDÉKOSAN nem "ugyanaz, mint a
+   világos mód, csak vastagabb szegéllyel" — önálló, sötét alapú, erős
+   borostyánsárga akcenttel, ami egyben vizuálisan is egyértelműen jelzi,
+   hogy más módban vagy, nem csak egy árnyalatnyit sötétebb világos módban. */
+:root[data-napfeny="true"] {
+  --background: #17181a;
+  --foreground: #fafaf6;
+  --color-brand: #000000;
+  --color-brand-ink: #ffd60a;
+  --color-cta: #ffc300;
+  --color-cta-ink: #17181a;
+  --color-surface: #232420;
+  --color-line: #5c5636;
+  --color-muted: #c7c7bd;
+  --color-kritikus: #ff6b5c;
+  --color-kritikus-soft: #3d1a15;
+  --color-rendben: #5ce08a;
+  --color-rendben-soft: #123d24;
+  --color-figyelem: #ffc300;
+  --color-figyelem-soft: #3d3115;
+  --shadow-kartya: none;
+  --shadow-kartya-hover: none;
 }
 
 @theme inline {
@@ -30,6 +104,8 @@
   --color-kritikus-soft: var(--color-kritikus-soft);
   --color-rendben: var(--color-rendben);
   --color-rendben-soft: var(--color-rendben-soft);
+  --color-figyelem: var(--color-figyelem);
+  --color-figyelem-soft: var(--color-figyelem-soft);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -49,6 +125,7 @@ textarea {
   font-size: 0.95rem;
   color: var(--foreground);
   width: 100%;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 input:focus,
@@ -64,6 +141,33 @@ label {
   gap: 0.3rem;
   font-size: 0.85rem;
   color: var(--color-muted);
+}
+
+/* Finom, egységes átmenet minden kattintható/kártyaszerű elemen — ez adja
+   a "gondosan csiszolt" érzést gyors villanások helyett. Csak a vizuális
+   tulajdonságokra szűkítve, hogy elrendezés-váltásnál (pl. szélesség)
+   sose animáljon véletlenül. */
+button,
+a {
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+    color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+}
+
+button:active {
+  transform: translateY(1px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    transition: none;
+  }
+  button:active {
+    transform: none;
+  }
 }
 
 /* Nyomtatáskor csak az ügyfélnek szóló dokumentum mehet papírra — ez
