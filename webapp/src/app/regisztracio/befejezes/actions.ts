@@ -25,7 +25,7 @@ export async function ceglétrehozasBefejezese(
       hiba:
         error.code === "23505"
           ? "Ehhez a fiókhoz már tartozik cég — próbálj bejelentkezni."
-          : error.message,
+          : "A cég létrehozása sikertelen. Próbáld újra, és ha ismétlődik, jelezd nekünk.",
     };
   }
 

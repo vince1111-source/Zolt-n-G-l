@@ -53,6 +53,15 @@ export function PartnerForm({
         <input name="telefon" defaultValue={partner?.telefon ?? ""} />
       </label>
       <label>
+        Weboldal (opcionális)
+        <input
+          name="weboldal"
+          type="url"
+          placeholder="https://…"
+          defaultValue={partner?.weboldal ?? ""}
+        />
+      </label>
+      <label>
         Fizetési határidő (nap)
         <input
           name="fizetesi_hatarido_nap"

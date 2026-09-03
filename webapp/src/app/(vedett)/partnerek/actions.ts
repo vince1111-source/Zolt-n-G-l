@@ -18,6 +18,7 @@ function partnerAdatokFormbol(adat: FormData) {
     kedvezmeny_szazalek: Number(adat.get("kedvezmeny_szazalek") ?? 0) || 0,
     szallito: adat.get("szallito") === "on",
     megjegyzes: String(adat.get("megjegyzes") ?? "").trim() || null,
+    weboldal: String(adat.get("weboldal") ?? "").trim() || null,
   };
 }
 

@@ -86,6 +86,17 @@ export function ArlistaForm({
           defaultValue={termek?.afa_kulcs ?? 27}
         />
       </label>
+      <label>
+        Normaidő (perc / 1 {termek?.mertekegyseg || "mértékegység"}, egy menetben)
+        <input
+          name="normaido_perc_egyseg"
+          type="number"
+          min={0}
+          step="0.1"
+          placeholder="pl. ha 10 m² festés 30 perc egy rétegben, ide 3-at írj"
+          defaultValue={termek?.normaido_perc_egyseg ?? ""}
+        />
+      </label>
 
       {allapot.hiba && <p className="text-kritikus text-sm">{allapot.hiba}</p>}
 

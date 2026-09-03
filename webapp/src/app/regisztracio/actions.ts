@@ -49,7 +49,9 @@ export async function regisztracio(
       hiba:
         error.code === "user_already_exists"
           ? "Ezzel az e-mail címmel már van fiók — jelentkezz be."
-          : error.message,
+          : error.code === "over_email_send_rate_limit"
+            ? "Túl sok megerősítő e-mail ment ki rövid idő alatt — várj néhány percet, és próbáld újra."
+            : "A regisztráció sikertelen. Próbáld újra, és ha ismétlődik, jelezd nekünk.",
     };
   }
 

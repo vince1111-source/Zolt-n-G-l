@@ -4,28 +4,9 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { szerverKliens } from "@/lib/supabase/server";
 import { sajatCegVagyIranyitas } from "@/lib/sajat-ceg";
+import { ajanlatSzamitas, ajanlatMentese } from "@/lib/ajanlat-szamitas";
 
 export type AjanlatAllapot = { hiba?: string };
-
-const forintra = (n: number) => Math.round(n);
-
-/**
- * Egy ajánlat sorszáma a cégen belül folyamatos: AJ-{év}-{sorszám}.
- * A `unique (ceg_id, sorszam)` megkötést az adatbázis őrzi — ha két
- * kérés véletlenül ugyanazt a számot generálná, a beszúrás elutasítja,
- * nem csendben felülírja.
- */
-async function kovetkezoSorszam(
-  supabase: Awaited<ReturnType<typeof szerverKliens>>,
-  cegId: string,
-) {
-  const ev = new Date().getFullYear();
-  const { count } = await supabase
-    .from("ajanlatok")
-    .select("*", { count: "exact", head: true })
-    .eq("ceg_id", cegId);
-  return `AJ-${ev}-${String((count ?? 0) + 1).padStart(3, "0")}`;
-}
 
 export async function ajanlatLetrehozasa(
   _elozo: AjanlatAllapot,
@@ -36,102 +17,25 @@ export async function ajanlatLetrehozasa(
 
   const termekIdk = adat.getAll("tetel_termek").map(String);
   const mennyisegek = adat.getAll("tetel_mennyiseg").map(Number);
+  const szorzok = adat.getAll("tetel_szorzo").map(Number);
 
-  const sorok = termekIdk
-    .map((id, i) => ({ termekId: id, mennyiseg: mennyisegek[i] }))
+  const tetelBemenetek = termekIdk
+    .map((id, i) => ({
+      termekId: id,
+      mennyiseg: mennyisegek[i],
+      munkaidoSzorzo: szorzok[i] > 0 ? szorzok[i] : 1,
+    }))
     .filter((s) => s.termekId && s.mennyiseg > 0);
-
-  if (!sorok.length) {
-    return { hiba: "Legalább egy tételt adj meg mennyiséggel." };
-  }
 
   const { ceg } = await sajatCegVagyIranyitas();
   if (!ceg) return { hiba: "Nem található a céged." };
 
   const supabase = await szerverKliens();
+  const szamitas = await ajanlatSzamitas(supabase, partnerId, tetelBemenetek);
+  if ("hiba" in szamitas) return { hiba: szamitas.hiba };
 
-  // A kedvezmény a partner adatlapjából jön, nem a beküldött űrlapból —
-  // ezt az ügyfél oldali kód nem írhatja felül.
-  const { data: partner } = await supabase
-    .from("partnerek")
-    .select("kedvezmeny_szazalek")
-    .eq("id", partnerId)
-    .single();
-  if (!partner) return { hiba: "A partner nem található." };
-
-  // Az egységár a KANONIKUS árlistából jön, sosem a kliens beküldött
-  // adatából — a modell/böngésző nem számol, a szerver a saját
-  // árlistából olvas. Ez ugyanaz az elv, mint a mag/arkalkulacio.mjs-ben.
-  const { data: termekek } = await supabase
-    .from("termekek")
-    .select("id, nev, mertekegyseg, eladasi_ar, afa_kulcs")
-    .in(
-      "id",
-      sorok.map((s) => s.termekId),
-    );
-  if (!termekek || termekek.length !== sorok.length) {
-    return { hiba: "Egy vagy több tétel már nem elérhető az árlistában." };
-  }
-
-  const tetelek = sorok.map((s, i) => {
-    const t = termekek.find((x) => x.id === s.termekId)!;
-    return {
-      termek_id: t.id,
-      megnevezes: t.nev,
-      mennyiseg: s.mennyiseg,
-      mertekegyseg: t.mertekegyseg,
-      egysegar: t.eladasi_ar,
-      netto: forintra(s.mennyiseg * t.eladasi_ar),
-      sorrend: i,
-      afa_kulcs: t.afa_kulcs,
-    };
-  });
-
-  const listaar = tetelek.reduce((s, t) => s + t.netto, 0);
-  const netto = forintra(listaar * (1 - partner.kedvezmeny_szazalek / 100));
-  // Az áfakulcs tételenként eltérhetne, de az ajánlat fejlécén egy
-  // összesített kulcs van — a legelső tétel kulcsát használjuk (a
-  // gyakorlatban egy ajánlaton belül egységes szokott lenni).
-  const afaKulcs = tetelek[0]?.afa_kulcs ?? 27;
-  const afa = forintra(netto * (afaKulcs / 100));
-  const brutto = forintra(netto * (1 + afaKulcs / 100));
-
-  const sorszam = await kovetkezoSorszam(supabase, ceg.id);
-
-  const { data: ujAjanlat, error: ajanlatHiba } = await supabase
-    .from("ajanlatok")
-    .insert({
-      partner_id: partnerId,
-      sorszam,
-      netto,
-      afa,
-      brutto,
-      kedvezmeny_szazalek: partner.kedvezmeny_szazalek,
-      // Az ajánlat 30 napig érvényes, ha másképp nem szóltunk — ez kerül
-      // rá az ügyfélnek szóló dokumentumra is.
-      ervenyes_ig: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .slice(0, 10),
-    })
-    .select("id")
-    .single();
-
-  if (ajanlatHiba || !ujAjanlat) {
-    return { hiba: ajanlatHiba?.message ?? "Az ajánlat létrehozása sikertelen." };
-  }
-
-  const { error: tetelHiba } = await supabase.from("ajanlat_tetelek").insert(
-    tetelek.map(({ afa_kulcs: _afa_kulcs, ...tetel }) => ({
-      ...tetel,
-      ajanlat_id: ujAjanlat.id,
-    })),
-  );
-
-  if (tetelHiba) {
-    // A fej már létrejött tétel nélkül — inkább ezt jelezzük, mint hogy
-    // csendben félkész ajánlatot hagyjunk.
-    return { hiba: `A tételek mentése sikertelen: ${tetelHiba.message}` };
-  }
+  const ujAjanlat = await ajanlatMentese(supabase, ceg.id, partnerId, szamitas);
+  if ("hiba" in ujAjanlat) return { hiba: ujAjanlat.hiba };
 
   revalidatePath("/ajanlatok");
   redirect(`/ajanlatok/${ujAjanlat.id}`);
@@ -146,8 +50,34 @@ export async function ajanlatLetrehozasa(
 export async function ajanlatAllapotValtas(id: string, ujAllapot: "elfogadva" | "elutasitva") {
   const supabase = await szerverKliens();
   await supabase.from("ajanlatok").update({ allapot: ujAllapot }).eq("id", id);
+
+  // Elfogadott ajánlatból automatikusan munka lesz — lásd
+  // docs/termekvizio-2026-08-31.md "Wow #7". A cím/határidő szándékosan
+  // üresen marad: nincs valós adat, amire alapozni lehetne, a
+  // felhasználó tölti ki. A `munkak.ajanlat_id` unique megkötése adja az
+  // idempotenciát, ha ez a hívás valamiért kétszer futna le.
+  if (ujAllapot === "elfogadva") {
+    const { data: ajanlat } = await supabase
+      .from("ajanlatok")
+      .select("sorszam, partner_id")
+      .eq("id", id)
+      .single();
+    if (ajanlat) {
+      const { error } = await supabase.from("munkak").insert({
+        ajanlat_id: id,
+        partner_id: ajanlat.partner_id,
+        leiras: `Automatikusan létrehozva a ${ajanlat.sorszam} ajánlat elfogadásakor.`,
+      });
+      if (error && error.code !== "23505") {
+        console.error("Munka létrehozása sikertelen:", error.message);
+      }
+    }
+    revalidatePath("/munkak");
+  }
+
   revalidatePath(`/ajanlatok/${id}`);
   revalidatePath("/ajanlatok");
+  revalidatePath("/");
 }
 
 /**
@@ -207,4 +137,95 @@ export async function ajanlatKikuldese(id: string) {
 
   revalidatePath(`/ajanlatok/${id}`);
   revalidatePath("/ajanlatok");
+}
+
+async function kovetkezoSzamlaSorszam(
+  supabase: Awaited<ReturnType<typeof szerverKliens>>,
+) {
+  const ev = new Date().getFullYear();
+  const { count } = await supabase
+    .from("szamlak")
+    .select("*", { count: "exact", head: true })
+    .eq("irany", "kimeno");
+  return `SZ-${ev}-${String((count ?? 0) + 1).padStart(3, "0")}`;
+}
+
+/**
+ * Számla kiállítása egy elfogadott ajánlatból — a vízió-dokumentum
+ * "elfogadott ajánlat → pénzügyi lánc" fonala. Ugyanaz a minta, mint az
+ * `ajanlatKikuldese`-nél: a "Számla kiállítása" gombra kattintás MAGA a
+ * jóváhagyás (nincs közbülső AI-javaslat), de a `javasolt_muveletek` sor
+ * ugyanúgy javasolt → jóváhagyott → végrehajtott állapotokon megy át.
+ *
+ * ⚠ SZIMULÁLT: amíg nincs választott számlázó szolgáltató (Számlázz.hu
+ * vagy Billingo) és valós API-kulcs, itt nem történik tényleges
+ * számlakiállítás — csak egy `szamlak` sor jön létre `forras='szimulalt'`
+ * jelöléssel (lásd db/migraciok/0017_szamla_lanc_enumok.sql). Ez a felület
+ * felé is látszik, nem csak az adatban — lásd `ajanlatok/[id]/page.tsx`.
+ */
+export async function szamlaKiallitasa(id: string) {
+  const { felhasznalo } = await sajatCegVagyIranyitas();
+  const supabase = await szerverKliens();
+
+  const { data: ajanlat } = await supabase
+    .from("ajanlatok")
+    .select("sorszam, netto, afa, brutto, partner_id, partnerek(nev, fizetesi_hatarido_nap)")
+    .eq("id", id)
+    .maybeSingle();
+  if (!ajanlat) return;
+
+  const { data: javaslat, error: javaslatHiba } = await supabase
+    .from("javasolt_muveletek")
+    .insert({
+      tipus: "szamla_kiallitas",
+      hivatkozott_tabla: "ajanlatok",
+      hivatkozott_id: id,
+      javaslat: {
+        sorszam: ajanlat.sorszam,
+        brutto: ajanlat.brutto,
+        partner: ajanlat.partnerek?.nev ?? null,
+      },
+    })
+    .select("id")
+    .single();
+  if (javaslatHiba || !javaslat) return;
+
+  const most = new Date().toISOString();
+  await supabase
+    .from("javasolt_muveletek")
+    .update({ allapot: "jovahagyott", jovahagyta_id: felhasznalo.id, jovahagyva: most })
+    .eq("id", javaslat.id);
+
+  await supabase
+    .from("javasolt_muveletek")
+    .update({ allapot: "vegrehajtott", vegrehajtva: most })
+    .eq("id", javaslat.id);
+
+  const ma = new Date().toISOString().slice(0, 10);
+  const hataridoNap = ajanlat.partnerek?.fizetesi_hatarido_nap ?? 15;
+  const hatarido = new Date(Date.now() + hataridoNap * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+
+  const sorszam = await kovetkezoSzamlaSorszam(supabase);
+  const { error: szamlaHiba } = await supabase.from("szamlak").insert({
+    irany: "kimeno",
+    forras: "szimulalt",
+    sorszam,
+    ajanlat_id: id,
+    partner_id: ajanlat.partner_id,
+    kelt: ma,
+    teljesites: ma,
+    fizetesi_hatarido: hatarido,
+    netto: ajanlat.netto,
+    afa: ajanlat.afa,
+    brutto: ajanlat.brutto,
+  });
+  // 23505 = már van számla ehhez az ajánlathoz — ez az idempotencia, nem hiba.
+  if (szamlaHiba && szamlaHiba.code !== "23505") {
+    console.error("Számla létrehozása sikertelen:", szamlaHiba.message);
+  }
+
+  revalidatePath(`/ajanlatok/${id}`);
+  revalidatePath("/");
 }

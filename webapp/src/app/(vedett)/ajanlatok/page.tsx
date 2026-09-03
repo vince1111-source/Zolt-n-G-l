@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { szerverKliens } from "@/lib/supabase/server";
 import { Ft } from "@/lib/format";
+import { Badge } from "@/components/ui/Badge";
+import { gombElsodleges, kartya } from "@/components/ui/classes";
+import { EmptyState } from "@/components/ui/EmptyState";
 import type { Enums } from "@/lib/supabase/types";
 
 const ALLAPOT_CIMKE: Record<Enums<"ajanlat_allapot">, string> = {
@@ -11,12 +14,12 @@ const ALLAPOT_CIMKE: Record<Enums<"ajanlat_allapot">, string> = {
   lejart: "lejárt",
 };
 
-const ALLAPOT_SZIN: Record<Enums<"ajanlat_allapot">, string> = {
-  piszkozat: "bg-line/40 text-muted",
-  kikuldve: "bg-amber-50 text-amber-700",
-  elfogadva: "bg-rendben-soft text-rendben",
-  elutasitva: "bg-kritikus-soft text-kritikus",
-  lejart: "bg-kritikus-soft text-kritikus",
+const ALLAPOT_SZIN: Record<Enums<"ajanlat_allapot">, "muted" | "figyelem" | "rendben" | "kritikus"> = {
+  piszkozat: "muted",
+  kikuldve: "figyelem",
+  elfogadva: "rendben",
+  elutasitva: "kritikus",
+  lejart: "kritikus",
 };
 
 export default async function Ajanlatok() {
@@ -33,17 +36,14 @@ export default async function Ajanlatok() {
           <h1 className="text-2xl font-extrabold tracking-tight">Ajánlatok</h1>
           <p className="text-muted mt-1">{ajanlatok?.length ?? 0} ajánlat</p>
         </div>
-        <Link
-          href="/ajanlatok/uj"
-          className="bg-cta text-cta-ink font-bold rounded-full px-5 py-3 whitespace-nowrap"
-        >
+        <Link href="/ajanlatok/uj" className={gombElsodleges}>
           + Új ajánlat
         </Link>
       </div>
 
-      <div className="bg-surface border border-line rounded-xl divide-y divide-line">
+      <div className={`${kartya} divide-y divide-line`}>
         {!ajanlatok?.length && (
-          <p className="p-5 text-muted text-sm">Még nincs kiadott ajánlat.</p>
+          <EmptyState>Még nincs kiadott ajánlat.</EmptyState>
         )}
         {ajanlatok?.map((a) => (
           <Link
@@ -59,10 +59,8 @@ export default async function Ajanlatok() {
             </div>
             <div className="text-right whitespace-nowrap">
               <div className="font-semibold tabular-nums">{Ft(a.brutto)}</div>
-              <div
-                className={`text-xs font-mono rounded-full px-2 py-0.5 inline-block mt-1 ${ALLAPOT_SZIN[a.allapot]}`}
-              >
-                {ALLAPOT_CIMKE[a.allapot]}
+              <div className="mt-1">
+                <Badge szin={ALLAPOT_SZIN[a.allapot]}>{ALLAPOT_CIMKE[a.allapot]}</Badge>
               </div>
             </div>
           </Link>

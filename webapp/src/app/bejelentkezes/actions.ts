@@ -29,7 +29,9 @@ export async function bejelentkezes(
           ? "Hibás e-mail cím vagy jelszó."
           : error.code === "email_not_confirmed"
             ? "Az e-mail címed még nincs megerősítve — nézd meg a postaládád."
-            : error.message,
+            : error.code === "over_request_rate_limit"
+              ? "Túl sok próbálkozás történt — várj egy percet, és próbáld újra."
+              : "A bejelentkezés sikertelen. Próbáld újra, és ha ismétlődik, jelezd nekünk.",
     };
   }
 

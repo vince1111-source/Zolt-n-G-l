@@ -48,14 +48,20 @@ export default async function AjanlatDokumentum({
 
       <div className="nyomtathato-dokumentum bg-white text-[#14161a] border border-line rounded-xl p-8 max-w-2xl mx-auto w-full print:border-none print:rounded-none print:p-0 print:max-w-none">
         <div className="flex justify-between gap-6 border-b-2 border-[#14161a] pb-4">
-          <div>
-            <div className="font-extrabold text-lg">{ceg.nev}</div>
-            <div className="text-xs text-[#5b6270] mt-1 leading-relaxed">
-              {ceg.cim}
-              {ceg.cim && <br />}
-              {ceg.adoszam && <>Adószám: {ceg.adoszam}</>}
-              {ceg.adoszam && <br />}
-              {ceg.email}
+          <div className="flex items-start gap-3">
+            {ceg.logo_url && (
+              // eslint-disable-next-line @next/next/no-img-element -- külső Storage URL, nyomtatott dokumentumban
+              <img src={ceg.logo_url} alt="" className="h-12 w-12 object-contain flex-shrink-0" />
+            )}
+            <div>
+              <div className="font-extrabold text-lg">{ceg.nev}</div>
+              <div className="text-xs text-[#5b6270] mt-1 leading-relaxed">
+                {ceg.cim}
+                {ceg.cim && <br />}
+                {ceg.adoszam && <>Adószám: {ceg.adoszam}</>}
+                {ceg.adoszam && <br />}
+                {ceg.email}
+              </div>
             </div>
           </div>
           <div className="text-right flex-shrink-0">

@@ -31,10 +31,20 @@ export async function sajatCegVagyIranyitas() {
     redirect("/regisztracio/befejezes");
   }
 
+  // A könyvelőnek nincs "saját cége" (lásd sajat-konyvelo.ts) — ha ide
+  // téved, a saját felületére irányítjuk, nem próbálunk (sikertelenül)
+  // egy nemlétező céget betölteni neki. Ez után a `ceg_id` garantáltan
+  // nem NULL (a `felhasznalok_konyvelo_ceg_nelkul` DB-kényszer szerint
+  // kizárólag 'konyvelo' szerepnél lehet az) — a generált típus ezt nem
+  // tudja kifejezni, innen a `!`.
+  if (felhasznalo.szerep === "konyvelo") {
+    redirect("/konyvelo");
+  }
+
   const { data: ceg } = await supabase
     .from("cegek")
     .select("*")
-    .eq("id", felhasznalo.ceg_id)
+    .eq("id", felhasznalo.ceg_id!)
     .single();
 
   return { user, felhasznalo, ceg };

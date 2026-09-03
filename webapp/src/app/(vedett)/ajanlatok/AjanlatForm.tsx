@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 import { ajanlatLetrehozasa, type AjanlatAllapot } from "./actions";
 import type { Tables } from "@/lib/supabase/types";
 import { Ft } from "@/lib/format";
+import { gombElsodleges } from "@/components/ui/classes";
 
 const kezdoAllapot: AjanlatAllapot = {};
 
@@ -61,11 +62,7 @@ export function AjanlatForm({
 
       {allapot.hiba && <p className="text-kritikus text-sm">{allapot.hiba}</p>}
 
-      <button
-        type="submit"
-        disabled={folyamatban}
-        className="bg-cta text-cta-ink font-bold rounded-full px-5 py-3 disabled:opacity-60"
-      >
+      <button type="submit" disabled={folyamatban} className={gombElsodleges}>
         {folyamatban ? "Mentés…" : "Ajánlat elkészítése"}
       </button>
 
@@ -86,11 +83,19 @@ function TetelSor({
   termekek: Tables<"termekek">[];
   onTorles?: () => void;
 }) {
+  const [valasztottId, setValasztottId] = useState("");
+  const valasztott = termekek.find((t) => t.id === valasztottId);
+
   return (
-    <div className="flex gap-2 items-end">
+    <div className="flex flex-col sm:flex-row gap-2 sm:items-end border border-line rounded-lg p-3 sm:border-0 sm:p-0">
       <label className="flex-1">
         Tétel
-        <select name="tetel_termek" required defaultValue="">
+        <select
+          name="tetel_termek"
+          required
+          defaultValue=""
+          onChange={(e) => setValasztottId(e.target.value)}
+        >
           <option value="" disabled>
             Válassz…
           </option>
@@ -101,25 +106,38 @@ function TetelSor({
           ))}
         </select>
       </label>
-      <label className="w-28">
-        Mennyiség
-        <input
-          name="tetel_mennyiseg"
-          type="number"
-          min={0}
-          step="0.01"
-          required
-        />
-      </label>
-      {onTorles && (
-        <button
-          type="button"
-          onClick={onTorles}
-          className="text-kritikus text-sm px-2 py-2 mb-[1px]"
-          aria-label="Tétel törlése"
-        >
-          ✕
-        </button>
+      <div className="flex gap-2 items-end">
+        <label className="flex-1 sm:w-28 sm:flex-none">
+          Mennyiség
+          <input
+            name="tetel_mennyiseg"
+            type="number"
+            min={0}
+            step="0.01"
+            required
+          />
+        </label>
+        {onTorles && (
+          <button
+            type="button"
+            onClick={onTorles}
+            className="text-kritikus text-sm px-3 py-2 mb-[1px] border border-line rounded-lg sm:border-0"
+            aria-label="Tétel törlése"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+      {valasztott?.normaido_perc_egyseg != null ? (
+        <label className="sm:w-40 sm:flex-none">
+          Szorzó (pl. rétegek száma)
+          <input name="tetel_szorzo" type="number" min={0.5} step="0.5" defaultValue={1} />
+        </label>
+      ) : (
+        // Mindig renderelve kell lennie (csak rejtve), különben a
+        // getAll("tetel_szorzo") kevesebb elemet adna vissza, mint ahány
+        // sor van, és az actions.ts indexes párosítása félrecsúszna.
+        <input type="hidden" name="tetel_szorzo" value={1} readOnly />
       )}
     </div>
   );

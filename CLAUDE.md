@@ -1,6 +1,6 @@
 # CÉGEM.AI — projektutasítások Claude Code-nak
 
-Ez a fájl minden munkamenet elején betöltődik. A teljes háttér a `HANDOVER.md`-ben van — **olvasd el, mielőtt bármit építesz.**
+Ez a fájl minden munkamenet elején betöltődik. A teljes háttér a `HANDOVER.md`-ben van — **olvasd el, mielőtt bármit építesz.** A hosszú távú termékvízió (2026-08-31) a `docs/termekvizio-2026-08-31.md`-ben van — ez bővíti a roadmapot (naptár, munkacsomagok, nagyker-katalógus, könyvelői szerepkör most már tervezett irány, nem tiltott terület), de a lenti spike-függő korlátokat és tiltásokat NEM írja felül.
 
 ## Mi ez
 
@@ -33,6 +33,7 @@ Kész és **bizonyítottan működik** (mindegyik futtatható, lásd a HANDOVER 
 | Adatbázis-séma RLS-sel és a jóváhagyási kapuval | `db/` | `./db/futtat.sh` → 22 állítás |
 | Mag — árkalkuláció, fizetési határidő, kintlévőség, AI-eszközkészlet | `mag/` | `node --test mag/*.teszt.mjs` → 43 teszt |
 | Telefon-első prototípus | `prototype/CEGEM-AI-telefon.html` | `node prototype/fustproba.mjs` → 129 ellenőrzés |
+| Valódi backend „Ma" képernyője + szöveges AI-doboz (a mag most bekötve) | `webapp/` | `npm run build --prefix webapp` |
 | Fejlesztői specifikáció | `docs/fejlesztoi-specifikacio.md` | Word és PDF a `docs/kiadas/` mappában |
 
 **Az eredeti „semmit ne építs a mérések előtt" szabály árnyalódott:** a mag séma és
@@ -110,6 +111,7 @@ zöld; különben V1). A mag a 13+14 (ajánlatkészítés + árlista). A 10. (e-
 ```
 HANDOVER.md                       teljes projektátadás — olvasd el elsőként
 CLAUDE.md                         ez a fájl
+docs/termekvizio-2026-08-31.md    a hosszú távú termékvízió (naptár, könyvelő, nagyker, munkacsomagok)
 docs/megvalosithatosagi-terv.html megnyitható felmérés (nap- és költségbecslések)
 docs/screenshots/                 a prototípus képernyőképei
 docs/parancsok.md                 a prototípus felismert parancsai
@@ -129,7 +131,12 @@ db/                               adatbázis: séma, RLS, állapotgép + bizony�
   futtat.sh                       egy parancs: séma + tesztek
 webapp/                          a valódi backend: Next.js + Supabase Auth + CRUD, éles adatbázissal
   .env.local.example              a kapcsolódási adatok mintája
-  src/app/(vedett)/               bejelentkezés mögötti oldalak: ajánlat, partner, árlista, teendő, cégprofil
+  next.config.ts                  turbopack.root a repó gyökeréig megy (a mag/ import miatt)
+  src/lib/mag.ts                  az egyetlen hely, ami a mag/-ra relatív úttal hivatkozik
+  src/lib/ajanlat-szamitas.ts     kézi űrlap + AI-doboz közös árkalkulációja
+  src/lib/szandek.ts              szándékfelismerés (0. réteg, regex)
+  src/components/AiBox.tsx, JovahagyoLap.tsx  a szöveges AI-doboz és jóváhagyó lapja
+  src/app/(vedett)/               bejelentkezés mögötti oldalak: „Ma", ajánlat, munka, partner, árlista, teendő, cégprofil
 spike/                            0. fázis mérőeszközei — lásd spike/README.md
   nav/                            NAV bejövő számla lekérdezés (1. kérdés)
   szamlaolvasas/                  kiolvasási pontosság mérése (2. kérdés)

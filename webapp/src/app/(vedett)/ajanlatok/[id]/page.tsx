@@ -2,7 +2,8 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { szerverKliens } from "@/lib/supabase/server";
 import { Ft } from "@/lib/format";
-import { ajanlatAllapotValtas, ajanlatKikuldese } from "../actions";
+import { osszesitettMunkaido, percOraSzoveg } from "@/lib/mag";
+import { ajanlatAllapotValtas, ajanlatKikuldese, szamlaKiallitasa } from "../actions";
 
 export default async function AjanlatReszletei({
   params,
@@ -34,6 +35,19 @@ export default async function AjanlatReszletei({
     .eq("hivatkozott_id", id)
     .order("javasolva", { ascending: false });
 
+  const { data: szamla } = await supabase
+    .from("szamlak")
+    .select("sorszam, brutto, kelt, fizetesi_hatarido, forras")
+    .eq("ajanlat_id", id)
+    .maybeSingle();
+
+  // Csak akkor mutatjuk a becslést, ha legalább egy tételnél ténylegesen
+  // meg van adva normaidő — máskülönben ez egy üres, felesleges doboz volna.
+  const munkaido = osszesitettMunkaido(
+    (tetelek ?? []).map((t) => ({ munkaidoPerc: t.munkaido_perc })),
+  );
+  const vanNormaido = (tetelek ?? []).some((t) => t.munkaido_perc !== null);
+
   const visszajelzesGombok: Record<string, ["elfogadva" | "elutasitva", string][]> = {
     kikuldve: [
       ["elfogadva", "Elfogadták"],
@@ -60,6 +74,7 @@ export default async function AjanlatReszletei({
                 <div className="font-medium">{t.megnevezes}</div>
                 <div className="text-sm text-muted tabular-nums">
                   {t.mennyiseg} {t.mertekegyseg} × {Ft(t.egysegar)}
+                  {t.munkaido_perc !== null && ` · becsült idő: ${percOraSzoveg(t.munkaido_perc)}`}
                 </div>
               </div>
               <div className="font-semibold tabular-nums">{Ft(t.netto)}</div>
@@ -88,6 +103,21 @@ export default async function AjanlatReszletei({
         </div>
       </div>
 
+      {vanNormaido && (
+        <div className="bg-surface border border-line rounded-xl p-4 flex items-center justify-between gap-4 text-sm">
+          <span className="font-semibold">Becsült munkaidő összesen</span>
+          <span className="tabular-nums">
+            {percOraSzoveg(munkaido.osszesPerc)}
+            {munkaido.hianyzoTetelSzam > 0 && (
+              <span className="text-muted">
+                {" "}
+                ({munkaido.hianyzoTetelSzam} tételnél nincs megadva normaidő)
+              </span>
+            )}
+          </span>
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-2">
         {ajanlat.allapot === "piszkozat" && (
           <form action={ajanlatKikuldese.bind(null, id)}>
@@ -109,6 +139,16 @@ export default async function AjanlatReszletei({
             </button>
           </form>
         ))}
+        {ajanlat.allapot === "elfogadva" && !szamla && (
+          <form action={szamlaKiallitasa.bind(null, id)}>
+            <button
+              type="submit"
+              className="bg-cta text-cta-ink font-bold rounded-full px-5 py-3"
+            >
+              Számla kiállítása
+            </button>
+          </form>
+        )}
         <Link
           href={`/ajanlatok/${id}/dokumentum`}
           className="px-5 py-3 rounded-full border border-line hover:border-cta font-semibold"
@@ -117,19 +157,44 @@ export default async function AjanlatReszletei({
         </Link>
       </div>
 
+      {szamla && (
+        <div className="bg-surface border border-line rounded-xl p-4 flex items-center justify-between gap-4">
+          <div>
+            <div className="font-semibold flex items-center gap-2">
+              {szamla.sorszam}
+              {szamla.forras === "szimulalt" && (
+                <span className="text-xs font-mono uppercase tracking-wider bg-figyelem-soft text-figyelem rounded-full px-2 py-0.5">
+                  szimulált
+                </span>
+              )}
+            </div>
+            <div className="text-sm text-muted">
+              Kiállítva: {szamla.kelt && new Date(szamla.kelt).toLocaleDateString("hu-HU")}
+              {szamla.fizetesi_hatarido &&
+                ` · Fizetési határidő: ${new Date(szamla.fizetesi_hatarido).toLocaleDateString("hu-HU")}`}
+            </div>
+          </div>
+          <div className="font-bold tabular-nums">{Ft(szamla.brutto)}</div>
+        </div>
+      )}
+
       {!!jovahagyasok?.length && (
         <div className="text-sm">
           <div className="text-xs uppercase tracking-wider text-muted font-mono mb-2">
             Jóváhagyási napló
           </div>
           <div className="flex flex-col gap-1">
-            {jovahagyasok.map((j) => (
-              <div key={j.id} className="text-muted">
-                {j.vegrehajtva
-                  ? `Kiküldve · ${j.felhasznalok?.nev ?? "?"} hagyta jóvá, ${new Date(j.vegrehajtva).toLocaleString("hu-HU")}`
-                  : `${j.allapot} · ${new Date(j.javasolva).toLocaleString("hu-HU")}`}
-              </div>
-            ))}
+            {jovahagyasok.map((j) => {
+              const muveletCimke =
+                j.tipus === "szamla_kiallitas" ? "Számla kiállítva" : "Kiküldve";
+              return (
+                <div key={j.id} className="text-muted">
+                  {j.vegrehajtva
+                    ? `${muveletCimke} · ${j.felhasznalok?.nev ?? "?"} hagyta jóvá, ${new Date(j.vegrehajtva).toLocaleString("hu-HU")}`
+                    : `${j.allapot} · ${new Date(j.javasolva).toLocaleString("hu-HU")}`}
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

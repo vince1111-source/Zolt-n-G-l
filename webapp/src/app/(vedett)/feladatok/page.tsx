@@ -1,6 +1,9 @@
 import { szerverKliens } from "@/lib/supabase/server";
 import { UjFeladatForm } from "./UjFeladatForm";
 import { feladatKeszre, feladatTorlese } from "./actions";
+import { Badge } from "@/components/ui/Badge";
+import { gombVeszelyes, kartya } from "@/components/ui/classes";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 export default async function Feladatok() {
   const supabase = await szerverKliens();
@@ -25,10 +28,8 @@ export default async function Feladatok() {
 
       <UjFeladatForm partnerek={partnerek ?? []} />
 
-      <div className="bg-surface border border-line rounded-xl divide-y divide-line">
-        {!feladatok?.length && (
-          <p className="p-5 text-muted text-sm">Nincs nyitott teendőd. 🎉</p>
-        )}
+      <div className={`${kartya} divide-y divide-line`}>
+        {!feladatok?.length && <EmptyState>Nincs nyitott teendőd.</EmptyState>}
         {feladatok?.map((f) => {
           const lejart = f.hatarido && f.hatarido < ma;
           return (
@@ -36,11 +37,7 @@ export default async function Feladatok() {
               <div className="flex-1 min-w-0">
                 <div className="font-medium flex items-center gap-2">
                   {f.cim}
-                  {f.surgos && (
-                    <span className="text-xs font-mono uppercase tracking-wider text-kritikus border border-kritikus rounded-full px-2 py-0.5">
-                      sürgős
-                    </span>
-                  )}
+                  {f.surgos && <Badge szin="kritikus">sürgős</Badge>}
                 </div>
                 <div className="text-sm text-muted">
                   {f.partnerek?.nev}
@@ -62,10 +59,7 @@ export default async function Feladatok() {
                 </button>
               </form>
               <form action={feladatTorlese.bind(null, f.id)}>
-                <button
-                  type="submit"
-                  className="text-sm px-3 py-2 rounded-lg text-kritikus hover:bg-kritikus-soft"
-                >
+                <button type="submit" className={gombVeszelyes}>
                   Törlöm
                 </button>
               </form>

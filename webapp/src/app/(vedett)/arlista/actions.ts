@@ -16,6 +16,12 @@ function termekAdatokFormbol(adat: FormData) {
     eladasi_ar: Number(adat.get("eladasi_ar") ?? 0) || 0,
     afa_kulcs: Number(adat.get("afa_kulcs") ?? 27) || 27,
     kategoria: String(adat.get("kategoria") ?? "anyag") as Enums<"termek_kategoria">,
+    // Üres string esetén NULL, nem 0 — a kettő más jelentésű: a 0 azt
+    // mondaná, hogy "azonnal kész", a NULL azt, hogy "nincs megadva".
+    normaido_perc_egyseg: (() => {
+      const nyers = String(adat.get("normaido_perc_egyseg") ?? "").trim();
+      return nyers ? Number(nyers) : null;
+    })(),
   };
 }
 

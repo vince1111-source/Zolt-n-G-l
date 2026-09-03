@@ -2,6 +2,9 @@ import Link from "next/link";
 import { szerverKliens } from "@/lib/supabase/server";
 import { termekInaktivalasa } from "./actions";
 import { Ft } from "@/lib/format";
+import { Badge } from "@/components/ui/Badge";
+import { gombElsodleges, gombMasodlagos, gombVeszelyes, kartya } from "@/components/ui/classes";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 function arres(termek: { beszerzesi_ar: number; eladasi_ar: number }) {
   if (!(termek.eladasi_ar > 0)) return null;
@@ -25,18 +28,13 @@ export default async function Arlista() {
           <h1 className="text-2xl font-extrabold tracking-tight">Árlista</h1>
           <p className="text-muted mt-1">{termekek?.length ?? 0} tétel</p>
         </div>
-        <Link
-          href="/arlista/uj"
-          className="bg-cta text-cta-ink font-bold rounded-full px-5 py-3 whitespace-nowrap"
-        >
+        <Link href="/arlista/uj" className={gombElsodleges}>
           + Új tétel
         </Link>
       </div>
 
-      <div className="bg-surface border border-line rounded-xl divide-y divide-line">
-        {!termekek?.length && (
-          <p className="p-5 text-muted text-sm">Még nincs felvett tétel.</p>
-        )}
+      <div className={`${kartya} divide-y divide-line`}>
+        {!termekek?.length && <EmptyState>Még nincs felvett tétel.</EmptyState>}
         {termekek?.map((t) => {
           const r = arres(t);
           return (
@@ -54,31 +52,19 @@ export default async function Arlista() {
                   {Ft(t.eladasi_ar)}
                 </div>
                 {r !== null && t.beszerzesi_ar > 0 && (
-                  <div
-                    className={`text-xs font-mono rounded-full px-2 py-0.5 inline-block mt-1 ${
-                      r < 0
-                        ? "bg-kritikus-soft text-kritikus"
-                        : r < 15
-                          ? "bg-amber-50 text-amber-700"
-                          : "bg-rendben-soft text-rendben"
-                    }`}
-                  >
-                    {r}% árrés
+                  <div className="mt-1">
+                    <Badge szin={r < 0 ? "kritikus" : r < 15 ? "figyelem" : "rendben"}>
+                      {r}% árrés
+                    </Badge>
                   </div>
                 )}
               </div>
-              <Link
-                href={`/arlista/${t.id}`}
-                className="text-sm px-3 py-2 rounded-lg border border-line hover:border-cta"
-              >
+              <Link href={`/arlista/${t.id}`} className={gombMasodlagos}>
                 Szerkesztés
               </Link>
               <form action={termekInaktivalasa.bind(null, t.id)}>
-                <button
-                  type="submit"
-                  className="text-sm px-3 py-2 rounded-lg text-kritikus hover:bg-kritikus-soft"
-                >
-                  Törlöm
+                <button type="submit" className={gombVeszelyes}>
+                  Inaktiválom
                 </button>
               </form>
             </div>
