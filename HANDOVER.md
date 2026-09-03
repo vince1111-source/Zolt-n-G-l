@@ -97,7 +97,11 @@ mérésektől függ, az a 6. modul mérete és a hang szerepe — az még nyitot
 | **Munkák + fotódokumentáció** | ugyanott | a füstpróba külön szakasza |
 | **Ajánlat → díjbekérő → számla lánc** (Billingo, szimulálva) | ugyanott | a füstpróba külön szakasza |
 | **Valódi backend** (Next.js + Supabase, hitelesítéssel, éles adatbázissal) | `webapp/` | `npm run build --prefix webapp` zöld; lásd lentebb |
+| **„Ma" kezdőképernyő + szöveges AI-doboz** (valós DB-írással, 0. réteg) | `webapp/` | lásd 2.1. fejezet |
+| **Munkák** — elfogadott ajánlatból automatikusan, DB-szintű idempotenciával | `webapp/`, `db/migraciok/0004_munkak.sql` | lásd 2.2. fejezet |
+| **Munkaidő-kalkuláció, Naptár, Nagyker, Könyvelői szerepkör** | `webapp/`, `db/migraciok/0005-0011` | lásd 2.4. fejezet — a könyvelői résznél komoly biztonsági tanulsággal |
 | **Fejlesztői specifikáció** | `docs/fejlesztoi-specifikacio.md` + Word/PDF | — |
+| **Új termékvízió** (2026-08-31, mobil-első napi asszisztens) | `docs/termekvizio-2026-08-31.md` | lásd 2.1. fejezet |
 | Spike mérőeszközök (4 db) | `spike/` | a 4. spike 0. rétege mérve |
 | Demó forgatókönyv | `docs/demo-forgatokonyv.md` | — |
 
@@ -157,6 +161,8 @@ szerint tiszta. A `webapp/` mappában van, indítás: `npm run dev --prefix weba
 | **Ügyfél-dokumentum** | Nyomtatható, cégfejléces előnézet, whitelist-alapú `@media print` szabállyal (csak a dokumentum mehet papírra). |
 | **Teendők** | Felvétel, sürgősség, határidő, partnerhez köthető, kész/törölve. |
 | **Sorszintű izoláció** | Minden lekérdezés a bejelentkezett felhasználó jogán fut (RLS) — nem alkalmazáslogikai szűréssel. |
+| **„Ma" kezdőképernyő** | Köszöntés, függő ajánlat/nyitott teendő számláló, sürgős teendők, kintlévőség-doboz (`mag/kintlevoseg.mjs`-ből — lásd 2.1). |
+| **Szöveges AI-doboz** | „Készíts ajánlatot X-nek Y m²-re" — 0. réteg regex-felismerés, valós partner/árlista-egyeztetés, „amit feltételeztem" jóváhagyó lap, jóváhagyás után **valódi** ajánlat jön létre. Lásd 2.1. |
 
 Amit még nem tud: a terepi funkciók (számlafotó, munkák + fotódokumentáció,
 nagyker árfrissítés, offline sor, hang) — ezek egyelőre csak a telefonos
@@ -167,6 +173,614 @@ kört helyben nem tudtuk automatikusan végigmérni, mert a Supabase próba-
 projekt beépített levélküldője szigorúan korlátozott (`email rate limit
 exceeded`). Ez külső, ideiglenes korlát, nem hiba — egy valódi e-mail-címmel
 végzett regisztráció végig fog menni.
+
+### 2.1 2026-08-31 — új termékvízió, és az első valódi szelet belőle
+
+Vince egy új, 60 szakaszos termékvíziós dokumentumot hozott
+(`docs/termekvizio-2026-08-31.md`) — mobil-első napi asszisztens, „Ma"
+kezdőképernyő, munkacsomagok, nagyker-katalógus, naptár-optimalizálás,
+könyvelői szerepkör, teljes workflow ajánlattól a könyvelőig. Ez jóval
+túlmutat a jelenlegi MVP-körön, és néhány ponton finomítja is a korábbi
+irányt (pl. a naptár korábban „csak bekötjük" volt, itt egy komplex
+optimalizáló motor szerepel — ez most **tervezett, ütemezett** irány, a
+mérésfüggő pontok (hang, 6. modul) viszont változatlanul nyitva maradnak).
+
+Közvetlen előzmény: Vince azt mondta a webappra „nem érzem a
+kreativitást... nem hasznos jelen állapotában" — jogosan, mert a webapp
+pontosan az „egyszerű CRM-érzetet" adta, amit mind a sarkalatos szabályok,
+mind az új dokumentum tilt. Egy teljes audit (lásd a munkamenet-jegyzetet)
+megerősítette: a `mag/`-ban már kész, tesztelt logika (`arkalkulacio.mjs`,
+`anyagszukseglet.mjs`, `kintlevoseg.mjs`, `eszkozok.mjs`) **egyáltalán nem
+volt bekötve** a webappba.
+
+**Az első szelet, ami emiatt elkészült:**
+
+- **Vizuális irány**: a zöld-domináns felület helyett világos, magas
+  kontrasztú alap, egyetlen modern (kék) accent — `webapp/src/app/globals.css`.
+  Megosztott UI-komponensek: `webapp/src/components/ui/` (Button, Card,
+  Badge, EmptyState, SubmitButton) — eddig csak az új felületek és a két
+  javított jelvény-inkonzisztencia használja, a többi oldal érintetlen.
+- **„Ma" kezdőképernyő** (`webapp/src/app/(vedett)/page.tsx`): valós
+  adatokra épül, és most **először köti be ténylegesen** a `mag/`-ot a
+  webappba — a kintlévőség-dobozt `mag/kintlevoseg.mjs` számolja. A
+  `szamlak` táblának ma nincs írója, ezért ez a doboz most üres/0 Ft-ot
+  mutat — ez helyes, nem hiba, és pontosan jelzi a következő hiányzó
+  láncszemet (számlázás bekötése).
+- **Szöveges AI-doboz** (`webapp/src/components/AiBox.tsx` +
+  `webapp/src/lib/szandek.ts`): a `prototype/CEGEM-AI-telefon.html`
+  `SZANDEKOK`/`kezel()` mintájának TypeScript-portja, egyetlen végigvitt
+  szándékkal — „Készíts ajánlatot [partnernek] [X] m²-re". Valós
+  partner-egyeztetés, valós árlista-alapú számítás (`webapp/src/lib/
+  ajanlat-szamitas.ts` — ez a kézi ajánlatűrlap ÉS az AI-doboz közös,
+  kanonikus számítási pontja, itt kötöttük be a `mag/arkalkulacio.mjs`
+  `osszesites`/`forintra` függvényeit is), „amit feltételeztem" jóváhagyó
+  lap (`JovahagyoLap.tsx`, a prototípus `lap` mintájának portja), és csak
+  jóváhagyás után jön létre a valódi ajánlat. Fel nem ismert mondatra
+  őszinte választ ad („ezt helyben nem ismerem fel"), nem hív modellt —
+  ez még mindig a 0. réteg, a CLAUDE.md lépcsős AI-elvének megfelelően.
+
+**Amit ez a szelet tudatosan NEM tartalmaz** (a dokumentum P1/P2 pontjai,
+mind vadonatúj adatmodellt igényelnek — az audit szerint egyikből sincs
+még semmi): naptár/naptár-optimalizálás, munkacsomagok/assemblies,
+nagyker-katalógus böngészés, könyvelői szerepkör, dokumentum-OCR, valódi
+e-mail küldés, hangvezérlés, valódi LLM- (1./2. réteg) hívás.
+
+⚠ **Egy dolgot NEM sikerült élesben, bejelentkezett munkamenettel
+végigtesztelni**: a szándékfelismerő regex-logikáját külön Node-szkripttel
+igen (helyesen ismeri fel a példamondatokat, és helyesen utasítja el az
+irrelevánsakat), és a `npm run build --prefix webapp` is tiszta — de a
+teljes böngészős kattintás-végigfuttatást (AI-doboz → jóváhagyó lap →
+valódi DB-írás) nem lehetett elvégezni, mert a korábbi élő munkamenet
+kijelentkezett, Vince jelszavát nem ismerjük, egy új teszt-regisztráció
+pedig e-mail-megerősítést igényel, amihez nincs postafiók-hozzáférésünk.
+**Ezt Vincének kell kipróbálnia elsőként.**
+
+### 2.2 Ugyanaznap — 2. szelet: Munkák (elfogadott ajánlatból automatikusan)
+
+A vízió-dokumentum „Wow #7"-e: *„Elfogadott ajánlat → projekt + naptár +
+anyaglista automatikusan."* Ebből a szeletből a **munka** entitás készült
+el — a naptár és az automatikus anyaglista-generálás külön, később
+jóváhagyandó szelet marad.
+
+- Új tábla és migráció: `db/migraciok/0004_munkak.sql` — `munkak` tábla
+  (`allapot`: előkészítés/folyamatban/befejezve, szabadon oda-vissza
+  váltható, **nem** megy a jóváhagyási kapun, mert belső nyilvántartás,
+  nem külső hatású művelet), ugyanazzal az RLS-mintával, mint a többi
+  tábla. Élesben alkalmazva, `get_advisors` tiszta, `types.ts` regenerálva.
+- **`cim` és `hatarido` szándékosan NULLABLE**, és auto-létrehozáskor
+  üresen maradnak — a munka helyszíne gyakran más, mint a partner
+  számlázási címe, és nincs valós adat a határidőre. Egy tervező-agent
+  kifejezetten erre a döntésre hívta fel a figyelmet: a hamisan
+  kitöltöttnek tűnő mező rosszabb, mint egy látható üres mező.
+- **Idempotencia DB-szinten, nem alkalmazáskódban**: `unique (ajanlat_id)`
+  a `munkak` táblán — ha `ajanlatAllapotValtas` valamiért kétszer futna le
+  ugyanarra az elfogadásra, a második `insert` `23505`-tel elbukik, amit
+  az alkalmazás kód szándékosan idempotenciaként kezel, nem hibaként.
+  **Élesben leteszteltem**: második insert ugyanarra az `ajanlat_id`-ra
+  valóban `23505`-öt ad, két `null ajanlat_id`-jú kézi munka pedig
+  egymás mellett is elfér (a Postgres a NULL-okat nem ütközteti).
+- `webapp/src/app/(vedett)/ajanlatok/actions.ts` `ajanlatAllapotValtas`-a
+  most, elfogadáskor, ezt a beszúrást is elvégzi — a partnert és a
+  sorszámot mindig a frissen lekérdezett DB-sorból veszi, sosem a
+  kliensből (ugyanaz az elv, mint az `ajanlatKikuldese` naplózásánál).
+- Navigáció a vízió-dokumentum célszerkezete szerint igazítva („Ma |
+  Munkák | Ajánlatok | Teendők | Több" — Árlista a Többe költözött, a
+  Naptár egyelőre nincs, mert a tábla sem létezik még).
+- ⚠ Ugyanaz a korlát áll fenn, mint a 2.1-ben: élő, bejelentkezett
+  böngészős végigfuttatás (kézi munka létrehozása, állapotváltás, ajánlat
+  elfogadása a felületen) nem történt meg — a DB-szintű viselkedést
+  (beszúrás, idempotencia) közvetlen SQL-lel igen.
+
+### 2.3 Ugyanaznap — 3. szelet: Utánkövetés (Wow #6, nincs új tábla)
+
+A vízió-dokumentum "Wow #6"-a: *"Ezt az ajánlatot 4 napja nem válaszolták
+meg → follow-up draft."* Ehhez **nem kellett új tábla** — csak két már
+meglévő, eddig kihasználatlan darabot kellett összekötni:
+`mag/fizetesi_hatarido.mjs` `napokEltelte()`-je (eddig sehol nem hívta
+semmi a webappban) és a `javasolt_muveletek` napló, amiben az ajánlat
+tényleges kiküldési időpontja (`vegrehajtva`) már ott van.
+
+- `webapp/src/lib/kovetes.ts` — tiszta szövegsablon-függvény (nincs
+  DB-hozzáférése, könnyen tesztelhető), `webapp/src/components/
+  KovetesLista.tsx` — a "Ma" képernyőn megjelenő lista, soronként
+  kibontható javasolt szöveggel és "Másolom" gombbal (vágólap API).
+- **Fontos, hogy honnan számol**: a napok száma a `javasolt_muveletek`
+  `vegrehajtva` mezőjéből jön (a tényleges kiküldés pillanata), NEM az
+  ajánlat `letrehozva` dátumából — egy ajánlat gyakran piszkozatként áll
+  egy ideig, mielőtt kimegy, ez a kettő nem ugyanaz.
+- Küszöb: 3+ nap válasz nélkül (`UTANKOVETES_KUSZOB_NAP` a
+  `webapp/src/app/(vedett)/page.tsx`-ben) — ez egy ésszerű alapértelmezés,
+  nem Zolitól kapott konkrét szám, később állíthatóvá tehető.
+- Nem küld semmit — csak szöveget javasol másolásra. Nincs
+  e-mail-integráció (lásd `CLAUDE.md` "amit ne csinálj").
+- **Élesben leellenőrizve** `execute_sql`-lel és egy külön `node -e`
+  hívással: a `mag/fizetesi_hatarido.mjs` `napokEltelte()`-je pontosan
+  ugyanazt az 5 napot adja, mint a Postgres saját dátum-kivonása
+  ugyanarra a valós, korábban felvitt AJ-2026-002 ajánlatra.
+
+### 2.4 Ugyanaznap — a maradék négy pillér egy menetben
+
+Vince kérése: „mindet csináld meg" — a vízió-dokumentum összes megmaradt
+nagy pillére. Ez valójában a dokumentum saját becslése szerint is
+heteknyi munka; a folyamat: egy workflow **párhuzamosan** kidolgozta mind
+a négy pillér részletes tervét (migráció, fájllista, kockázatok), majd
+sorrendben, a kockázat növekvő sorrendjében épült meg mindegyik —
+munkaidő-kalkuláció → naptár → nagyker → **legvégül** könyvelői
+szerepkör, mert az utóbbi adatszivárgási kockázatot hordoz.
+
+**Munkaidő-kalkuláció** (`db/migraciok/0005_munkaido.sql`,
+`mag/munkaido.mjs` + 10 teszt): a vállalkozó megadhat egy normaidőt egy
+árlistatételhez (perc / 1 mértékegység, egy menetben) — **soha nincs
+alapértelmezett, kitalált szakmai norma beégetve**, ez mindig üres, amíg
+a felhasználó ki nem tölti. Az ajánlat tételén egy „szorzó" mező (pl.
+rétegek száma) csak a becsült időt szorozza, az anyagmennyiséget és az
+árat nem. Az ajánlat nézeten megjelenik a becsült munkaidő összesen, és
+jelzi, ha egy tételnél hiányzik a normaidő — nem hallgatja el.
+
+**Naptár** (`db/migraciok/0006_naptar.sql`, `webapp/src/lib/het.ts`):
+egyszerű, lista-alapú hét-nézet + „Naptárba teszem" gomb a munka
+nézetén. **Fontos, élesben tesztelt részlet**: a szerver nem feltétlenül
+Budapest időzónában fut, ezért egy saját, könyvtár nélküli
+időzóna-konverziós függvény (`budapestIdopontIso`) gondoskodik róla,
+hogy „2026-09-03 08:00" mindig ugyanazt az UTC-pillanatot jelentse,
+nyári/téli időszámítástól függetlenül — ezt közvetlenül a Postgres saját
+`at time zone` számításával vetettem össze, egyezik. Az esemény vége
+(`veg`) szándékosan NULLABLE — nincs valós adat, amiből ki lehetne
+találni. Az „intelligens" (útvonal-optimalizáló) naptár tudatosan kimaradt:
+ahhoz valós térkép/útvonaltervező API kellene.
+
+**Nagyker / anyag-katalógus** (`db/migraciok/0007_nagyker.sql`, `nagyker/`
+modul): ez az ELSŐ webapp-funkció, ami a `javasolt_muveletek` kaput az
+`ajanlat_kikuldes`-en kívül használja — egy beszállítói árváltozás
+javaslatot hoz létre (`muvelet_tipus` bővítve `'arfrissites'`-szel), és
+csak jóváhagyás után írja át a tényleges árakat, két mód közül
+választva (teljes árrés-tartás vagy csak a beszerzési ár). Az árrés
+arányát megtartó számítás **élesben, a jóváhagyási kapun ténylegesen
+átvezetve leellenőrizve**: 3200→3600 Ft beszerzés esetén a 23,8%-os
+árrés pontosan megmaradt (4200→4725 Ft eladási ár). Munkacsomagok
+(assemblies) tudatosan kimaradtak — önálló adatmodellt igényelnének.
+
+**Könyvelői szerepkör** (`db/migraciok/0010_konyvelo_szerep.sql`,
+`0011_konyvelo_hozzaferes.sql`, `konyvelo/` + `cegprofil/konyvelok/` +
+`dokumentumok/` modulok) — ⚠ **ez a pillér egy valódi, komoly biztonsági
+tanulságot hozott, olvasd el figyelmesen**:
+
+Mielőtt a tervezett SQL élesedett volna, egy ellenséges biztonsági
+felülvizsgálatot futtattam rá (5 független „támadó" nézőpont). Ez **két
+valós, megerősített rést talált**:
+
+1. **Jogosultság-eszkaláció — és ez FÜGGETLEN volt a könyvelői
+   funkciótól, már korábban is fennállt**: a `felhasznalok` táblán a
+   meglévő tenant-policy (`ceg_id = aktualis_ceg()`) csak azt ellenőrizte,
+   MELYIK cég sorát látod — a `szerep` OSZLOPOT semmi nem védte. Egy sima
+   `munkatars` egyetlen `PATCH /felhasznalok?id=eq.<sajat_id>
+   {szerep:"tulajdonos"}` hívással saját magát tulajdonossá tudta volna
+   léptetni. **Javítva, azonnal, a könyvelői migrációtól függetlenül**:
+   `db/migraciok/0009_felhasznalo_update_szigoritas.sql` teljesen megvonja
+   az UPDATE jogot a `felhasznalok` táblán `authenticated`/`cegem_app`-tól
+   — minden jövőbeli szerepkör-váltás kizárólag SECURITY DEFINER RPC-n
+   mehet. **Tanulság**: a `0008_felhasznalo_szerep_vedelem.sql` első
+   próbálkozásom (oszlop-szintű `revoke update (szerep, ceg_id) ...`)
+   NEM ért semmit, mert Postgres-ben egy oszlop-szintű REVOKE nem szűkíti
+   egy már meglévő, szélesebb TÁBLA-szintű GRANT-ot — ezt
+   `information_schema.column_privileges`-szel közvetlenül ellenőriztem
+   is, csak a 0009-es (teljes tábla-szintű revoke) után tűnt el ténylegesen
+   a jog. Ha valaha oszloponkénti jogosultságot akarsz, a helyes minta:
+   vond meg a tábla-szintű jogot, és add vissza oszloponként, amit tényleg
+   engedni akarsz — nem fordítva.
+2. **Idegen cégre szerezhető könyvelői hozzáférés**: a
+   `konyvelo_meghivas_veglegesitese` eredeti terve sosem ellenőrizte, hogy
+   a paraméterként kapott Auth-fiók valóban a megadott e-mailhez
+   tartozik-e — egy tulajdonos ezzel egy MÁSIK saját fiókját állíthatta
+   volna be egy célzott, valódi könyvelő e-mail-címe mögé, majd (a nem
+   egyedi `email` oszlop miatt) amikor az áldozat cég valódi tulajdonosa
+   ugyanazt az e-mailt hívta volna meg, a támadó hamis sorát találhatta
+   volna — idegen cégre szerezve hozzáférést. **Javítva**: a végleges
+   `0011`-es migráció a `sajat_ceg_letrehozasa` már bevált mintáját
+   követi (`select email from auth.users where id = ...`, összevetve a
+   kapott e-maillel, eltérésnél elutasítva), plusz egy parciális egyedi
+   indexet ad `felhasznalok (lower(email)) where szerep='konyvelo'`-ra.
+
+A tényleges adatmodell (`konyvelo_hozzaferes` kapcsolótábla, a
+`felhasznalok.ceg_id` NULL-lá válása KIZÁRÓLAG könyvelőnél, két
+SECURITY DEFINER RPC a meghíváshoz) a `db/migraciok/0011_konyvelo_hozzaferes.sql`
+fájl fejlécében részletesen dokumentálva van. A könyvelő a
+`(vedett)`-en KÍVÜLI, saját `/konyvelo` felületet kap (saját layout,
+`webapp/src/lib/sajat-konyvelo.ts` őrzi), mert a meglévő
+`sajatCegVagyIranyitas()` egyetlen cégre épít.
+
+⚠ **Amit nem lehetett élesben tesztelni**: a teljes meghívási folyamat
+(Supabase Auth Admin `inviteUserByEmail` → e-mail → jelszóbeállítás →
+dokumentum-lista) valódi bejelentkezést és a `SUPABASE_SERVICE_ROLE_KEY`
+környezeti változót igényli, ami ebben a környezetben nincs beállítva
+(lásd `webapp/.env.local.example`) — **ezt Vincének kell pótolnia** a
+Supabase projekt Settings → API oldaláról, mielőtt a meghívás ténylegesen
+kipróbálható. A biztonsági javításokat viszont közvetlen SQL-lel
+leellenőriztem (CHECK constraint, parciális egyedi index, a
+`information_schema`-alapú jog-ellenőrzés).
+
+Amit ez a pillér tudatosan kihagyott: külön könyvelői UI/workspace helyett
+a meglévő UI-ra épülő szerepkör-nézet (a vízió-dokumentum saját V1-
+javaslata); dokumentumtípus-alapú finomhangolt jogosultság (mindent lát,
+amit a cég feltöltött); „hiányzó dokumentum" számláló (ehhez ki kellene
+találni, milyen dokumentum „várható" — pont a „ne találgass" elv ellen
+menne); valódi fájltárolás (a `dokumentumok.fajl_url` egyelőre egy már
+meglévő linket vár, pl. Google Drive).
+
+### 2.5 Ugyanaznap — élő visszajelzés után: nav-hiba, kattintható naptár, nagyker-link
+
+Vince élesben kipróbálta a fentieket. Három konkrét visszajelzés jött, plusz
+két kérés, amit tudatosan NEM építettem meg — lásd alább, miért.
+
+**„A több menüpont nem működik" (hibajavítás).** A `Nav.tsx`-ben az
+`overflow-x: auto` a fő linksoron a CSS-specifikáció szerint automatikusan
+`overflow-y: auto`-t is beállít (nem lehet csak az egyik tengelyt
+`auto`-ra tenni, a másikat `visible`-ön hagyni) — ez levágta a „Több"
+lenyíló menüjét, mert az a saját dobozán túlnyúlt. Javítás: a
+vízszintesen görgetendő linksor egy belső `<div>`-be került, a „Több"
+gomb és a lenyíló menü kikerült ebből a görgetési/vágási kontextusból.
+
+**„A naptár rész jó lenne, ha kattintható lenne" (megépítve).** Eddig a
+hét-nézet csak listázott és törölt — sem a napra, sem egy eseményre nem
+lehetett kattintani. Most:
+- egy nap fejlécén „+ esemény" link → `/naptar/uj?datum=YYYY-MM-DD`
+  (előre kitöltött dátummal),
+- egy esemény sorára kattintva → új `/naptar/[id]` szerkesztő oldal
+  (`NaptarEsemenyForm` most `esemeny` propot is elfogad, előtölti az
+  összes mezőt, `budapestIdoString()` az új segédfüggvény az óra:perc
+  kiolvasásához),
+- a szerkesztőn törlés gomb is van, ami — eltérően a munka-oldali
+  törlésgombtól, ami helyben marad — a `/naptar`-ra navigál vissza (egy
+  helyi, `"use server"` inline wrapper-függvénnyel, hogy az általános
+  `esemenyTorlese`-t ne kelljen mindenhol átirányításra kényszeríteni).
+- A `NaptarEsemenyForm` `action` propja emiatt kötelezővé vált — minden
+  hívási helyet (a `naptar/uj`, `naptar/[id]`, `munkak/[id]`) frissíteni
+  kellett.
+
+**„Nem lehetne a nagykeresnél beágyazni egy oldalt, amiből böngészve
+lehet keresni?" — tudatosan NEM építve meg.** Egy beszállító weboldalának
+tényleges beágyazása/scrapelése komoly jogi (ToS-sértés, a legtöbb
+webshop kifejezetten tiltja az automatizált böngészést/scrapelést) és
+technikai (a legtöbb oldal `X-Frame-Options`/CSP-vel eleve tiltja az
+`iframe`-es beágyazást, és bármelyik réteg-átalakítás törékeny, karbantartás-
+igényes) kockázatot hordoz — pontosan az az irány, amit a vízió-dokumentum
+saját V1-scope-ja is kizár. Helyette: `partnerek.weboldal` új, opcionális
+mező (`db/migraciok/0012_partner_weboldal.sql`), ami egy kényelmi linket
+ad a beszállító saját katalógusához/weboldalához (új fülön nyílik a
+`nagyker/[szallitoId]` oldalon) — egy kattintás, nulla törékenység.
+
+**„Nem gondolt-e arra, hogy a bejövő e-maileket naponta kétszer átnézi és
+megválaszolja draftban, ill. a rendszerből induló e-mailek (pl. lejárt
+számla) is menjenek?" — mindkettő tudatosan NEM épült meg, két különböző
+okból**:
+- A bejövő Gmail-fiók automatikus átnézése/draftolása **Gmail-integrációt**
+  jelentene — ez a `CLAUDE.md` sarkalatos szabálya szerint kifejezetten
+  V2-re halasztott terület (a Google CASA biztonsági felülvizsgálata
+  hónapokig tart), NEM ez a session dönt máshogy.
+- A saját rendszerből induló, valódi e-mail-KÜLDÉS (pl. automatikus
+  fizetési emlékeztető) technikailag más tészta — ehhez NEM kell a
+  felhasználó Gmail-fiókjához hozzáférni, egy tranzakciós e-mail-szolgáltató
+  (pl. Resend) is elég lenne, tehát nem esik a CASA-tiltás alá. Vince
+  explicit döntése viszont: **„Egyelőre csak piszkozat, ne küldjön."** —
+  tehát a meglévő, már kész `Utánkövetés`/`KovetesLista` piszkozat-
+  másolás-vágólapra minta marad az egyetlen e-mail-kapcsolódási pont,
+  amíg más utasítás nem jön. Valódi kimenő e-mail-küldő infrastruktúrát
+  ez a session NEM épített.
+
+Érintett fájlok: `webapp/src/app/(vedett)/Nav.tsx` (görgetési vágás
+javítva), `webapp/src/lib/het.ts` (`budapestIdoString` új függvény),
+`webapp/src/components/NaptarEsemenyForm.tsx` (általánosítva
+szerkesztéshez), `webapp/src/app/(vedett)/naptar/{actions.ts,uj/page.tsx,
+page.tsx,[id]/page.tsx}`, `webapp/src/app/(vedett)/munkak/[id]/page.tsx`,
+`db/migraciok/0012_partner_weboldal.sql`,
+`webapp/src/app/(vedett)/partnerek/{PartnerForm.tsx,actions.ts}`,
+`webapp/src/app/(vedett)/nagyker/[szallitoId]/page.tsx`.
+
+Ellenőrzés: `npm run build --prefix webapp` tiszta, minden route
+(beleértve az új `/naptar/[id]`-t) legenerálva. Élő böngészős tesztre
+(bejelentkezéssel) még nem került sor ebben a lépésben.
+
+### 2.6 Ugyanaznap — naptár .ics szinkron (Vince kérése: „legalább napi szinkron")
+
+Vince a kattintható naptár után azt kérte, hogy legalább napi szinten
+szinkronizálódjon a saját (telefonos) naptárával. A választott megoldás
+**egy szabványos iCalendar (.ics) feed URL cégenként**, amit egyszer
+feliratkoztat a saját Google/Apple/Outlook naptárába — ezek az appok a
+feliratkozott naptárakat alapból kb. naponta frissítik, ami pontosan ezt
+adja, egy teljes Google Calendar API OAuth-integráció (jóváhagyási
+folyamat, tokentárolás) nélkül. **Ez EGYIRÁNYÚ** (a mi naptárunkból
+kifelé) — pont úgy, ahogy Google Calendar saját "titkos iCal cím"
+funkciója is működik. Ezt Vince kifejezetten jóváhagyta ("ez a terv,
+tetszik") egy rövid tervismertetés után.
+
+**Adatmodell** (`db/migraciok/0013_naptar_feed_szinkron.sql`): a
+`cegek` tábla kapott egy `naptar_feed_token uuid` oszlopot (külön a cég
+`id`-jétől, hogy szivárgás esetén önállóan újragenerálható legyen, a cég
+többi adatának érintése nélkül), egyedi indexszel. Két új, **SECURITY
+DEFINER** SQL-függvény szolgálja ki a feedet: `naptar_feed_ceg_neve` és
+`naptar_feed_esemenyei`, mindkettő kizárólag a kapott tokenre szűr.
+
+⚠ **Ez az ELSŐ hely a projektben, ahol egy SECURITY DEFINER függvényt az
+`anon` (be nem jelentkezett) Postgres-szerepnek is futtatnia kell
+tudnia** — a naptáralkalmazás, ami a feed URL-t lekéri, nyilvánvalóan
+nem hordoz Supabase-munkamenetet. Emiatt, a könyvelői szerepkörnél már
+bevált gyakorlat szerint, **ez a pillér is kapott egy ellenséges
+biztonsági felülvizsgálatot** (5 független támadó-nézőpont: tenant-
+izoláció/IDOR, SECURITY DEFINER search_path-eltérítés, .ics-injektálás
+a felhasználó által beírt esemény/munka/partner szövegeken keresztül,
+token-életciklus, és rendelkezésre állás/DoS) — **mielőtt** a
+funkciót Vince ténylegesen használatba vette volna. A felülvizsgálat 12
+találatot hozott (mindegyiket egy második, független ellenőrző menet is
+megerősítette a valódi kódon, 0 elutasított/bizonytalan), ebből kettő
+komoly volt — **mindkettőt még ugyanebben a lépésben javítottam**,
+`db/migraciok/0014_naptar_feed_biztonsagi_javitasok.sql`-ben:
+
+1. **MAGAS — a könyvelő ki tudta volna olvasni egy ügyfélcég feed-
+   tokenjét.** A `cegek` tábla `authenticated`-nek adott SELECT joga
+   oszlopmegkötés nélküli, a könyvelői sor-szintű policy (`cegek_konyvelo`,
+   0011) pedig a teljes sort láthatóvá teszi — a felület sosem kérdezi le
+   ezt az oszlopot, de ez nem adatbázis-szintű garancia, egy közvetlen
+   PostgREST-hívással a könyvelő saját munkamenete kiolvashatta volna. A
+   token emellett a könyvelői hozzáférés visszavonása UTÁN is örökre
+   érvényes maradt volna, mert a feed-függvények sosem néztek a
+   `konyvelo_hozzaferes` táblába. **Javítás**: a token egy ÖNÁLLÓ táblába
+   (`naptar_feed`) került, saját, könyvelői kivétel NÉLKÜLI tenant-RLS-
+   szel — egy könyvelő `aktualis_ceg()`-je mindig NULL, tehát szerkezetileg
+   sosem fér hozzá, sem a régi (törölt) oszlophoz, sem az újhoz.
+2. **KÖZEPES — egy idegen cégre mutató `munka_id` beszivárogtathatta
+   volna egy másik cég munkacímét/ügyfélnevét a feedbe.** A
+   `naptar_feed_esemenyei` a `munkak`/`partnerek` táblákkal anélkül
+   JOIN-olt, hogy visszaellenőrizte volna a cég-egyezést — mivel SECURITY
+   DEFINER, ez megkerülte az RLS-t, ami korábban csendben védte ezt (a
+   `munka_id` idegen kulcs önmagában sosem volt cég-specifikus). **Javítás
+   két rétegben**: a join-ba visszakerült a cég-egyezés ellenőrzése
+   (olvasási oldal), ÉS egy új trigger (`naptar_esemenyek_munka_ellenorzese`)
+   már ÍRÁSKOR megakadályozza, hogy egy esemény idegen céghez tartozó
+   munkára mutasson — ugyanaz a minta, mint a 0007-es migráció
+   `nagyker_tetel_szallito_ellenoriz` triggere. **Élesben tesztelve**: egy
+   ideiglenes második céget és munkát létrehozva, a kereszt-cég beszúrás
+   ténylegesen elutasításra került (`23514` hibakóddal), a saját-cégen
+   belüli pedig sikerült — utána a teszt-adatok törölve.
+
+Ugyanebben a migrációban javítva még: a token-csere mostantól kizárólag
+egy SECURITY DEFINER RPC-n (`naptar_feed_token_ujrageneralasa`) megy,
+ami adatbázis-szinten (nem csak a felületen) ellenőrzi, hogy a hívó
+`tulajdonos`-e — korábban bármelyik `munkatárs` visszavonhatta volna az
+egész csapat megosztott linkjét; és minden SECURITY DEFINER függvény
+hivatkozása sématagolt (`public.cegek` stb.) a Postgres saját
+search_path-eltérítés elleni ajánlása szerint (ma nem kihasználható, de
+ingyenes hardening).
+
+A `webapp/src/lib/ics.ts`-ben (nem migrációs, kód-oldali) javítva
+három kisebb találat: a sortördelés mostantól Unicode-kódpont szerint
+vág (nem UTF-16-kódegység szerint), így egy szürrogát-párral kódolt
+karakter (pl. emoji) sosem törik két érvénytelen `U+FFFD`-re; az
+escape-elés kiszűri az irányjelző Unicode-vezérlőket (RLO, izolátumok,
+LRM/RLM — ezekkel egy esemény címében egy URL-t vizuálisan meg lehetne
+hamisítani), és a CRLF mellett a Unicode sor-/bekezdéselválasztókat
+(U+2028/U+2029) és a NEL-t (U+0085) is soremelésként escape-eli, mert
+egyes, az RFC 5545-nél megengedőbb szövegfeldolgozók sortörésként
+értelmeznék. Mindhárom javítást önálló szkripttel leellenőriztem.
+
+Tudatosan **elfogadott, nem javított** találatok (mind informatív/
+tervezési jellegű, dokumentálva a migráció fejlécében is): a végpontnak
+nincs saját sebességkorlátozása (ez a Supabase-projekt/infrastruktúra
+szintjén dőlne el, egy csak a Next.js route-ra épített korlátozást a
+Supabase PostgREST réteg közvetlen elérhetősége amúgy is megkerülné);
+a token nem jár le, és nyers formában szerepel az URL-ben (naplókba,
+böngészőelőzményekbe kerülhet) — ugyanaz a tervezési modell, mint
+Google Calendar saját "titkos iCal cím" funkciójáé; a feed mérete
+időablakkal (elmúlt 90 nap – jövő 365 nap) és egy 500-as felső korláttal
+védett, nem korlátlan.
+
+**Élesben, a valódi Supabase-adatbázison ellenőrizve**: egy teszteseményt
+felvéve a feed helyesen tartalmazta (UID, DTSTART/DTEND UTC-ben, SUMMARY
+ékezetes szöveggel helyesen), majd törölve eltűnt; érvénytelen/nemlétező
+token 404-et ad; a token-újragenerálás gomb a `cegprofil` oldalon
+ténylegesen lecseréli az adatbázisban tárolt tokent, és a régi URL
+utána azonnal 404-et ad — mindezt a 0014-es biztonsági javítás UTÁN,
+az új `naptar_feed` táblán keresztül újra megismételve.
+
+Amit ez a pillér tudatosan kihagyott: kétirányú szinkron (a telefonos
+naptárban tett módosítás NEM jön vissza) — ha valaki a saját natív
+naptárában szerkeszt egy eseményt, az csak ott változik; push-alapú
+azonnali frissítés (a szinkron sebessége a naptáralkalmazás saját
+feliratkozás-frissítési ütemétől függ, jellemzően ~napi); és bármilyen
+Google/Apple/Outlook API-integráció — szándékosan, mert azok OAuth-
+jóváhagyást, tokentárolást és (Gmailhez hasonlóan, bár enyhébb szinten)
+platform-felülvizsgálati kockázatot hoznának be, amit a CLAUDE.md a
+Gmail-integrációnál kifejezetten kizár, és ami itt sem indokolt egy
+ilyen egyszerű, szabványos alternatíva mellett.
+
+Érintett fájlok: `db/migraciok/0013_naptar_feed_szinkron.sql` (új),
+`db/migraciok/0014_naptar_feed_biztonsagi_javitasok.sql` (új — a fenti
+felülvizsgálat javításai: `naptar_feed` önálló tábla, tulajdonos-
+ellenőrzött RPC, cég-egyezés a join-ban és íráskor, sématagolás),
+`webapp/src/lib/supabase/types.ts` (kétszer regenerálva, verbátim),
+`webapp/src/lib/ics.ts` (új — RFC 5545 generálás, escape-eléssel, majd
+a felülvizsgálat után kiegészítve az Unicode-vezérlőkarakter-szűréssel
+és a kódpont-alapú sortördeléssel),
+`webapp/src/app/naptar-feed/[token]/route.ts` (új — nyilvános route
+handler, SZÁNDÉKOSAN a `(vedett)` csoporton kívül),
+`webapp/src/components/NaptarSzinkron.tsx` (új, majd a felülvizsgálat
+után kiegészítve a `tulajdonos`-kapuval),
+`webapp/src/app/(vedett)/cegprofil/{page.tsx,actions.ts}` (a token
+kiolvasása/cseréje áttéve az önálló `naptar_feed` táblára/RPC-re).
+
+### 2.7 Ugyanaznap — öt darab egy menetben: Wow #2, ajánlat-logó, munka-fotó, offline sor, számla-lánc
+
+Vince kérése: „mindet csináld meg egy sessionben" — a korábban feltérképezett
+lista szinte minden tőlem függő pontja, plusz UI-modernizációs ajánlás
+(lásd külön üzenetben/PR-leírásban, nem ebben a fejezetben, mert az még
+nem implementáció). **Egy pontot tudatosan kihagytam és nem térek el ettől
+kérdés nélkül**: a számlafotó valódi AI-kiolvasása pontosan a 6. modul,
+amit a CLAUDE.md kifejezetten megtilt addig, amíg a NAV- és
+számlaolvasás-spike eredménye nincs meg (`spike/eredmenyek/EREDMENY-
+SABLON.md` még üres) — ezt nem építettem meg.
+
+**Wow #2 — naptár esemény szövegből** (`webapp/src/lib/szandek.ts`,
+`webapp/src/lib/het.ts`, `webapp/src/app/(vedett)/actions.ts`): az AI-doboz
+mostantól felismeri a "Holnap 10-kor megyek Kovácshoz" mintájú mondatokat
+is. Szándékosan **szűk, konkrét minta** (a nap-szónak a mondat elején kell
+állnia, idő nélkül nem hoz létre semmit — nem talál ki egy alapértelmezett
+órát), a 0. réteg "inkább továbbadjon, mint találgasson" elve szerint.
+Nincs külön jóváhagyó lap: a `naptar_esemenyek` maga sem megy a
+`javasolt_muveletek` kapun (0006), ezért az esemény azonnal létrejön, a
+válasz pedig megmutatja, mit értett a rendszer, szerkesztő linkkel.
+**Élesben tesztelve**: "Holnap 10-kor megyek Kovácshoz" → helyesen
+szeptember 4., péntek 10:00, Kovács Építő Kft.-hez kötve; "Kedden 9-kor
+Nagy Istvánnál felmérés" → helyesen a következő keddre (nem a mai napra,
+ha ma épp kedd lenne), 09:00, Nagy István.
+
+**Ajánlat-dokumentum logó** (`db/migraciok/0016_ceg_logo.sql`,
+`webapp/src/components/CegprofilLogo.tsx`): a `cegek.logo_url` oszlop már
+az 0001 óta megvolt, csak semmi nem töltötte fel. Egy nyilvános Storage
+bucket (`ceg-logok`) + feltöltő űrlap a cégprofilon, megjelenítve az
+ajánlat-dokumentum fejlécén. **Szándékosan NEM épült meg** a szerveroldali
+PDF-export (a "Nyomtatás/PDF" böngésző-nyomtatás marad) — ehhez egy új,
+számottevő függőség kellene (Playwright/Chromium vagy egy szerverless-re
+szabott változat, pl. `@sparticuz/chromium`), ami valós méret- és
+hidegindítás-kockázatot hordoz Vercel-szerű környezetben, és ezt a
+döntést nem hoztam meg helyette — a meglévő böngésző-nyomtatás már ma is
+tökéletesen ad PDF-et ("Mentés PDF-ként" a nyomtatási párbeszédben).
+
+**Munka-fotódokumentáció** (`db/migraciok/0015_munka_fotok.sql`,
+`webapp/src/components/MunkaFotok.tsx`): a HANDOVER 8.1-ben még
+hiányzóként jelölt terepi funkció. A `munka-fotok` bucket **privát**
+(ellentétben a logóval — egy munkahelyszín fotója valós ügyféladat),
+ezért a megjelenítés mindig 10 perces aláírt URL-en megy. Írás-időben egy
+trigger (ugyanaz a minta, mint a naptár-eseményeknél, 0014) megakadályozza,
+hogy egy fotó idegen cég munkájához kapcsolódjon. A feltöltő mező
+`capture="environment"`-tel a mobil böngészőn egyből a hátsó kamerát
+nyitja meg. ⚠ **A tényleges fájlfeltöltést böngésző-automatizálással nem
+lehetett élesben leellenőrizni** (egy `<input type="file">` értékét
+biztonsági okból nem lehet szkriptből beállítani) — az oldal hibamentesen
+betöltődik és renderel, de a feltöltés gombot Vincének érdemes egyszer
+kézzel kipróbálnia.
+
+**Offline sor** (`webapp/src/components/AiBox.tsx`): az AI-doboz
+mostantól `localStorage`-ban sorba teszi a beírt parancsot, ha nincs net
+(`navigator.onLine`), és `online`/`offline` eseményekre figyel. **Nem
+küldi el automatikusan** a várakozó parancsokat, amint visszajön a net —
+ezt tudatosan hagytam kézi ("Most elküldöm") gombra, mert egy
+"ajánlat_keszites" szándéknál a jóváhagyó lapot valakinek látnia és
+jóváhagynia kell, ezt nem lehet a felhasználó háta mögött eldönteni. Ez
+tehát egy **szűkebb, becsületesebb** funkció, mint egy teljes, néma
+háttér-szinkron — semmi nem vész el, de semmi nem történik automatikusan
+a felhasználó tudta nélkül sem. **Élesben tesztelve**: `navigator.onLine`
+szimulált false-ra állítva → a parancs sorba került, a banner és a gomb
+felirata ("Sorba teszem") megjelent, `online` esemény után a "Most
+elküldöm" gombbal a sorból ténylegesen létrejött a naptár-esemény.
+
+**Számla-lánc** (`db/migraciok/0017_szamla_lanc_enumok.sql`,
+`0018_szamla_ajanlat_kapcsolat.sql`, `ajanlatok/actions.ts`
+`szamlaKiallitasa`): egy elfogadott ajánlaton megjelenő "Számla
+kiállítása" gomb — ugyanaz a minta, mint az `ajanlatKikuldese`-nél (a
+kattintás maga a jóváhagyás, de a `javasolt_muveletek` sor ugyanúgy
+javasolt → jóváhagyott → végrehajtott állapotokon megy át). ⚠
+**SZIMULÁLT**: a `szamlak.forras = 'szimulalt'` ezt a felületen is
+kimondja (sárga jelvény a számla mellett) — amíg nincs választott
+szolgáltató (Számlázz.hu vagy Billingo, ez a döntés a saját
+`EREDMENY-SABLON.md`-ben is nyitott) és valós API-kulcs, nem történik
+tényleges számlakiállítás. A `szamlak.ajanlat_id` új oszlop (parciális
+egyedi indexszel) adja az idempotenciát. **Élesben tesztelve**: az
+AJ-2026-003 elfogadott ajánlatra kiállítva SZ-2026-001 lett, helyes
+összeggel és fizetési határidővel, és — mivel a `szamlak` már a "Ma"
+képernyő kintlévőség-dobozának is adatforrása (lásd 2.1) — a kintlévőség
+doboz **azonnal, valós adatként** mutatta az 1 885 950 Ft-ot. A jóváhagyási
+napló felirata korábban mindig "Kiküldve"-t írt volna erre is (a
+`muvelet.tipus`-t nem nézte) — ezt élő tesztelés közben vettem észre és
+javítottam (`ajanlatok/[id]/page.tsx`).
+
+Az élő teszteléshez létrehozott ideiglenes adatokat (két teszt naptár-
+esemény, egy teszt számla, egy ideiglenes teszt-felhasználó/cég a korábbi
+biztonsági teszthez) minden esetben töröltem — Vince valódi adatai a
+tesztelés előtti állapotban maradtak, a `szamlak`/`naptar_esemenyek`
+táblák tartalma nem változott tartósan.
+
+Érintett fájlok: `db/migraciok/{0015_munka_fotok,0016_ceg_logo,
+0017_szamla_lanc_enumok,0018_szamla_ajanlat_kapcsolat}.sql` (új),
+`webapp/src/lib/supabase/types.ts` (regenerálva, verbátim),
+`webapp/src/lib/szandek.ts`, `webapp/src/lib/het.ts` (`napHozzaad`,
+`napszoDatumma`), `webapp/src/app/(vedett)/actions.ts` (naptár-szándék
+ága), `webapp/src/components/{AiBox,CegprofilLogo,MunkaFotok}.tsx` (új
+vagy jelentősen bővítve), `webapp/src/app/(vedett)/cegprofil/{page.tsx,
+actions.ts}` (logó), `webapp/src/app/(vedett)/munkak/{actions.ts,
+[id]/page.tsx}` (fotó), `webapp/src/app/(vedett)/ajanlatok/{actions.ts,
+[id]/page.tsx,[id]/dokumentum/page.tsx}` (számla-lánc + logó
+megjelenítés), `webapp/src/app/(vedett)/page.tsx` (elavult komment/
+üresállapot-szöveg frissítve, mivel a `szamlak`-nak már van írója).
+
+### 2.8 Ugyanaznap — UI-modernizáció (design-token szintű, nem oldalankénti átírás)
+
+Vince saját szavaival a felület "generikus" volt: lapos fehér kártyák,
+1px szürke szegélyek, semmi mélység, a szinte minden AI-startup által
+használt indigó-kék CTA, nulla ikon, és — ami nem csak esztétika — **nulla
+sötét/napfény mód**, pedig a CLAUDE.md kifejezetten helyszíni, napfényben
+dolgozó felhasználót céloz meg. A javítás **szándékosan a megosztott
+design-tokeneken és UI-kit komponenseken** ment át (`globals.css`,
+`components/ui/classes.ts`, `Nav.tsx`), NEM oldalankénti egyedi átírással —
+mivel a ~30 oldal túlnyomó többsége ugyanazokra a tokenekre/komponensekre
+épül, ez egy központi módosítással az egész appon átüt, kockázat és
+munka nélkül minden egyes oldal külön bejárására.
+
+**Mélység**: a `kartya` (Card) osztály lapos szegély helyett finom
+árnyékot kapott (`--shadow-kartya`), ami módonként külön hangolt (sötétben
+erősebb, napfényben nulla — ott a vastag fekete szegély ad kontrasztot,
+nem az árnyék). Új `kartyaInteraktiv` variáns hover-emeléssel a
+kattintható listasoroknak.
+
+**Szín**: a lapos `#2f5aff` helyett egy markánsabb indigó (`#4338ca`
+világosban, `#8b87f0` sötétben) — még mindig egyértelműen "elsődleges
+kék", csak kevésbé sablonos.
+
+**Ikonok**: `lucide-react` új függőség (könnyű, fa-lombozó, React 19-
+kompatibilis). A fő- és "Több" navigáció minden pontja, valamint a "Ma"
+képernyő öt szekciófejléce kapott ikont — ez mutatja az irányt, a többi
+oldal a megosztott komponenseken (Card, gombok) keresztül profitál a
+mélység/szín/animáció frissítésből ikon nélkül is.
+
+**Sötét mód**: valódi `prefers-color-scheme: dark` alapú paletta —
+mindhárom szín-mód (világos, sötét, napfény) UGYANAZOKAT a CSS-token-
+neveket írja felül, sosem definiál újakat, így minden komponens
+automatikusan helyesen viselkedik mindháromban.
+
+**Napfény mód** (`webapp/src/components/TemaValto.tsx`): kézi kapcsoló a
+fejlécben (nap/felhő ikon), `data-napfeny="true"` attribútumot ír a
+`<html>`-re, `localStorage`-ban perzisztálva. Ez a CLAUDE.md saját,
+korábban csak a telefonos prototípusban létező elvárása, most a valódi
+webapp-ban is: maximális kontraszt (fekete szegélyek, tiszta fehér-fekete),
+erős kültéri fényben olvashatóság — SZÁNDÉKOSAN világos alapú, nem sötét,
+mert erős napfényben egy sötét felület rosszabbul olvasható.
+
+⚠ **Valódi hibát talált az élő tesztelés**: a napfény-mód villanásmentes
+alkalmazásához egy `<script>` a hidratáció ELŐTT írja rá a `data-napfeny`
+attribútumot a `<html>`-re (`webapp/src/app/layout.tsx`
+`NAPFENY_ELOKESZITO`) — ez React hidratáció-eltérési hibát dobott a
+konzolon, mert a szerver-renderelt HTML nem tartalmazta még ezt az
+attribútumot. Javítva `suppressHydrationWarning`-gal a `<html>`-en
+(a Next.js/next-themes saját dokumentált mintája pontosan erre az
+esetre) — **egy friss böngészőfülön leellenőrizve, hogy a hiba tényleg
+eltűnt**, nem csak a régi fül gyorsítótárazott konzol-üzeneteit néztem.
+
+**Élesben ellenőrizve**: világos, sötét (rendszer-preferencia) és
+napfény mód is helyesen jelenik meg a "Ma", "Naptár" és más oldalakon,
+a napfény-kapcsoló állapota túléli az újratöltést.
+
+Amit ez a pillér tudatosan kihagyott: oldalankénti egyedi ikon-/vizuális
+finomhangolás minden egyes modulra (csak a "Ma" képernyő kapott
+mintaként teljes ikon-készletet); animált oldalátmenetek; egy teljes
+design-rendszer dokumentáció (Storybook-szerű komponensgyűjtemény) — ezek
+külön, jóváhagyandó befektetést igényelnének.
+
+Érintett fájlok: `webapp/src/app/globals.css` (tokenek, sötét/napfény
+mód, átmenetek), `webapp/src/components/ui/classes.ts` (árnyék, hover),
+`webapp/src/components/TemaValto.tsx` (új), `webapp/src/app/layout.tsx`
+(napfény-előkészítő script + `suppressHydrationWarning`),
+`webapp/src/app/(vedett)/layout.tsx` (`TemaValto` bekötve),
+`webapp/src/app/(vedett)/Nav.tsx` (ikonok), `webapp/src/app/(vedett)/
+page.tsx` (ikonok a szekciófejléceken), `webapp/package.json`
+(`lucide-react` új függőség).
 
 ---
 
@@ -227,7 +841,22 @@ prototype/
   artifact-body.html               ugyanaz Artifact-publikáláshoz
   fustproba.mjs                    129 ellenőrzés a telefonos prototípuson
 
+webapp/                            A VALÓDI BACKEND — Next.js + Supabase, fut
+  next.config.ts                   a `turbopack.root` a repó gyökeréig megy fel,
+                                    mert a `mag/`-ból importál — lásd 9. fejezet
+  src/lib/mag.ts                   az EGYETLEN hely, ami a `mag/`-ra relatív
+                                    úttal hivatkozik, explicit típusokkal burkolva
+  src/lib/ajanlat-szamitas.ts      a kézi ajánlatűrlap ÉS az AI-doboz közös,
+                                    kanonikus tétel/összesítés-számítása
+  src/lib/szandek.ts               szándékfelismerés (0. réteg, regex, tiszta függvény)
+  src/components/AiBox.tsx         a szöveges AI-doboz (kliens)
+  src/components/JovahagyoLap.tsx  a jóváhagyó lap (a prototípus `lap` mintája)
+  src/components/ui/               megosztott gomb/kártya/jelvény-osztályok
+  src/app/(vedett)/                bejelentkezés mögötti oldalak: „Ma", ajánlat,
+                                    munka, partner, árlista, teendő, cégprofil
+
 docs/
+  termekvizio-2026-08-31.md        ÚJ TERMÉKVÍZIÓ — lásd 2.1. fejezet
   fejlesztoi-specifikacio.md       A FORRÁS — 14 fejezet, elfogadási kritériumokkal
   kiadas/                          abból generált Word + PDF, és a generátorok
   iranyvaltas.md                   a 2026-08-26-i irányváltás és indoklása
@@ -400,6 +1029,10 @@ Ezek egyike sem függ a spike-októl és a hangtól. **1., 4. és 5. pont elkés
    a méret (m²) mezőként létezik. A fedezet és az árrés-tartó
    árfrissítés még csak a telefonos prototípusban van meg, ugyanígy
    át kell majd emelni.
+   **2026-08-31-i frissítés:** a `kintlevoseg.mjs` (a „Ma" képernyő
+   kintlévőség-doboza) és az `arkalkulacio.mjs` `osszesites`/`forintra`-ja
+   (az `ajanlat-szamitas.ts` közös számításában) viszont **most már be
+   vannak kötve** — lásd 2.1. fejezet.
 2. **Ajánlat PDF-sablon.** A webapp `/ajanlatok/[id]/dokumentum` oldala
    megkapta a nyomtatható, cégfejléces előnézetet — böngésző-nyomtatással
    (`window.print()`), whitelist-alapú `@media print` szabállyal (csak a
@@ -477,6 +1110,8 @@ Ezek valódi hibák voltak, nem elméleti kockázatok. Érdemes tudni róluk.
 | **Fotó, ami újratöltés után üres csempe** | A blob-URL halott újratöltés után, a rekord viszont megmaradt: „4 fotó" állt a listában, a negyedik üres. Vagy a képet is megőrzöd, vagy a rekordot se hagyd ott. |
 | **Beégetett sorszám és dátum** | `DB-2026/0107`, `SZ-2026/0163`, „ma · 08. 25." — két művelet ugyanazt kapta. Számláló kell, és a fotónál valódi óraidő. |
 | **Egyirányú állapotgép** | A munka `befejezve` állapotából nem volt visszaút, pedig egyetlen koppintással oda lehetett jutni. |
+| **Turbopack nem old fel fájlt a projekt-root-on kívül** | A webapp `src/lib/mag.ts` a repó-gyökérbeli `mag/`-ból importál — ez a `turbopack.root`-tól függ (`next.config.ts`), és korábban `webapp/`-ra volt állítva. `Module not found` lett belőle, nem futásidejű hiba, hanem build-hiba. A root-nak a `mag/` ÉS a `webapp/` közös őséig kell felmennie. |
+| **„use server" fájlból exportált segédfüggvény típusa szétlapul** | Az `ajanlatSzamitas`/`ajanlatMentese` eredetileg egy `"use server"` fájlban élt, pedig sosem hívta őket közvetlenül űrlap vagy kliens — a Next.js Action-típusfeldolgozása emiatt a hibaágak literál `hiba` mezőjét `string \| undefined`-dá lapította máshol, ahol ez már típushibát adott. A megoldás: csak a ténylegesen közvetlenül hívott (form action-ként vagy kliensből hívott) függvények legyenek `"use server"` fájlban; a belső, csak szerver-oldalról hívott segédlogika külön, sima `.ts` modulban éljen, explicit visszatérési típussal. |
 
 ---
 
