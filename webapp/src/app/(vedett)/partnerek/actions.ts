@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { szerverKliens } from "@/lib/supabase/server";
+import { flashUzenet } from "@/lib/flash";
 
 export type PartnerAllapot = { hiba?: string };
 
@@ -33,6 +34,7 @@ export async function partnerLetrehozasa(
   const { error } = await supabase.from("partnerek").insert(mezok);
   if (error) return { hiba: error.message };
 
+  await flashUzenet("siker", `Partner felvéve: ${mezok.nev}`);
   revalidatePath("/partnerek");
   redirect("/partnerek");
 }
@@ -49,6 +51,7 @@ export async function partnerFrissitese(
   const { error } = await supabase.from("partnerek").update(mezok).eq("id", id);
   if (error) return { hiba: error.message };
 
+  await flashUzenet("siker", `Partner mentve: ${mezok.nev}`);
   revalidatePath("/partnerek");
   redirect("/partnerek");
 }

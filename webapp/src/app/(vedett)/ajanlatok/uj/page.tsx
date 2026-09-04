@@ -1,10 +1,11 @@
 import Link from "next/link";
 import { szerverKliens } from "@/lib/supabase/server";
 import { AjanlatForm } from "../AjanlatForm";
+import { ajanlatLetrehozasa } from "../actions";
 
 export default async function UjAjanlat() {
   const supabase = await szerverKliens();
-  const [{ data: partnerek }, { data: termekek }] = await Promise.all([
+  const [{ data: partnerek }, { data: termekek }, { data: csomagok }] = await Promise.all([
     supabase
       .from("partnerek")
       .select("*")
@@ -12,6 +13,11 @@ export default async function UjAjanlat() {
       .eq("szallito", false)
       .order("nev"),
     supabase.from("termekek").select("*").eq("aktiv", true).order("nev"),
+    supabase
+      .from("munkacsomagok")
+      .select("*, munkacsomag_tetelek(termek_id, mennyiseg_egysegre)")
+      .eq("aktiv", true)
+      .order("nev"),
   ]);
 
   return (
@@ -26,7 +32,12 @@ export default async function UjAjanlat() {
             </Link>
           </p>
         ) : (
-          <AjanlatForm partnerek={partnerek} termekek={termekek ?? []} />
+          <AjanlatForm
+            partnerek={partnerek}
+            termekek={termekek ?? []}
+            csomagok={csomagok ?? []}
+            action={ajanlatLetrehozasa}
+          />
         )}
       </div>
     </div>

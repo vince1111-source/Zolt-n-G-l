@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { SwRegisztracio } from "@/components/SwRegisztracio";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -15,6 +16,26 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "CÉGEM.AI",
   description: "Vállalkozói asszisztens kisvállalkozásoknak",
+  // PWA — a manifest (src/app/manifest.ts) és az iOS-es "kezdőképernyőre"
+  // beállítások; a service worker regisztrációja a SwRegisztracio-ban.
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "CÉGEM.AI",
+    statusBarStyle: "black-translucent",
+  },
+  icons: {
+    apple: "/ikon-180.png",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#16171c",
+  width: "device-width",
+  initialScale: 1,
+  // Helyszíni, egykezes használat: a felhasználó nagyíthasson, ha kell
+  // (napfény, por, kesztyű) — a maximumScale korlátozása akadálymentességi
+  // hiba lenne, ezért nincs.
 };
 
 // A napfény mód (lásd TemaValto.tsx, globals.css) villanás nélkül kell,
@@ -41,7 +62,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: NAPFENY_ELOKESZITO }} />
       </head>
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        {children}
+        <SwRegisztracio />
+      </body>
     </html>
   );
 }

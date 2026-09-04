@@ -9,7 +9,9 @@ import { munkaAllapotValtas, munkaFrissitese } from "../actions";
 import { esemenyTorlese, esemenyLetrehozasa } from "../../naptar/actions";
 import { NaptarEsemenyForm } from "@/components/NaptarEsemenyForm";
 import { MunkaFotok } from "@/components/MunkaFotok";
+import { MasoloGomb } from "@/components/MasoloGomb";
 import { budapestMaDatum } from "@/lib/het";
+import { Ft } from "@/lib/format";
 import type { Enums } from "@/lib/supabase/types";
 
 const ALLAPOT_CIMKE: Record<Enums<"munka_allapot">, string> = {
@@ -53,6 +55,48 @@ export default async function MunkaReszletei({
     ]);
 
   if (!munka) notFound();
+
+  // Anyaglista — a vízió-dokumentum "Wow #7" hiányzó harmada ("projekt +
+  // naptár + ANYAGLISTA automatikusan"). A forrás-ajánlat "anyag"
+  // kategóriájú tételei, a mennyiséggel, és ha van hozzá nagyker-tétel, a
+  // beszállító beszerzési árával. SZÁNDÉKOSAN a vállalkozó saját
+  // árlista-kategóriáiból épül, nem egy beégetett anyagnormából (a
+  // `mag/anyagszukseglet.mjs` térkövezés-specifikus terméknevei nem
+  // egyeznének az ő árlistájával) — ami nincs "anyag"-ként felvéve, az
+  // itt sem jelenik meg, és ezt a felület ki is mondja.
+  type AnyagSor = { megnevezes: string; mennyiseg: number; mertekegyseg: string; beszerzesiAr: number | null; szallito: string | null };
+  let anyaglista: AnyagSor[] = [];
+  if (munka.ajanlat_id) {
+    const { data: tetelek } = await supabase
+      .from("ajanlat_tetelek")
+      .select("megnevezes, mennyiseg, mertekegyseg, termek_id, termekek(kategoria)")
+      .eq("ajanlat_id", munka.ajanlat_id)
+      .order("sorrend");
+    const anyagok = (tetelek ?? []).filter((t) => t.termekek?.kategoria === "anyag");
+    const termekIdk = anyagok.map((t) => t.termek_id).filter((x): x is string => !!x);
+    const { data: nagyker } = termekIdk.length
+      ? await supabase
+          .from("nagyker_tetelek")
+          .select("termek_id, beszerzesi_ar, partnerek(nev)")
+          .in("termek_id", termekIdk)
+          .eq("aktiv", true)
+      : { data: [] as { termek_id: string | null; beszerzesi_ar: number; partnerek: { nev: string } | null }[] };
+    anyaglista = anyagok.map((t) => {
+      const nk = (nagyker ?? []).find((n) => n.termek_id === t.termek_id);
+      return {
+        megnevezes: t.megnevezes,
+        mennyiseg: t.mennyiseg,
+        mertekegyseg: t.mertekegyseg,
+        beszerzesiAr: nk?.beszerzesi_ar ?? null,
+        szallito: nk?.partnerek?.nev ?? null,
+      };
+    });
+  }
+  const anyaglistaSzoveg = anyaglista
+    .map((a) => `${a.megnevezes}: ${a.mennyiseg} ${a.mertekegyseg}${a.szallito ? ` (${a.szallito})` : ""}`)
+    .join("\n");
+  const beszerzesOsszesen = anyaglista.reduce((s, a) => s + (a.beszerzesiAr != null ? a.beszerzesiAr * a.mennyiseg : 0), 0);
+  const arNelkul = anyaglista.filter((a) => a.beszerzesiAr == null).length;
 
   // A `munka-fotok` bucket privát (lásd db/migraciok/0015_munka_fotok.sql),
   // ezért a megjelenítéshez mindig aláírt, rövid élettartamú URL kell —
@@ -109,6 +153,51 @@ export default async function MunkaReszletei({
           mentesCimke="Mentem"
         />
       </Card>
+
+      {munka.ajanlat_id && (
+        <Card className="p-6">
+          <div className="flex items-center justify-between gap-3 mb-3">
+            <h2 className="font-bold">Anyaglista</h2>
+            {anyaglista.length > 0 && <MasoloGomb szoveg={anyaglistaSzoveg} cimke="Lista másolása" />}
+          </div>
+          {!anyaglista.length ? (
+            <p className="text-sm text-muted">
+              Az ajánlat tételei között nincs „anyag” kategóriájú — az anyaglista az árlista
+              kategóriáiból épül, a tétel kategóriáját az Árlistán állíthatod.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-2 text-sm">
+              {anyaglista.map((a, i) => (
+                <div key={i} className="flex items-center justify-between gap-3 border-b border-line pb-2">
+                  <div className="min-w-0">
+                    <div className="font-medium">{a.megnevezes}</div>
+                    <div className="text-muted">
+                      {a.szallito ? `${a.szallito} · ${Ft(a.beszerzesiAr ?? 0)}/${a.mertekegyseg}` : "nincs nagyker-ár"}
+                    </div>
+                  </div>
+                  <div className="text-right whitespace-nowrap">
+                    <div className="font-semibold tabular-nums">
+                      {a.mennyiseg} {a.mertekegyseg}
+                    </div>
+                    {a.beszerzesiAr != null && (
+                      <div className="text-muted tabular-nums">{Ft(a.beszerzesiAr * a.mennyiseg)}</div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              <div className="flex justify-between font-semibold pt-1">
+                <span>
+                  Beszerzés becsülve
+                  {arNelkul > 0 && (
+                    <span className="text-muted font-normal"> ({arNelkul} tételre nincs nagyker-ár)</span>
+                  )}
+                </span>
+                <span className="tabular-nums">{Ft(beszerzesOsszesen)}</span>
+              </div>
+            </div>
+          )}
+        </Card>
+      )}
 
       <Card className="p-6">
         <h2 className="font-bold mb-3">Fotódokumentáció</h2>

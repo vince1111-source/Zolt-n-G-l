@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { szerverKliens } from "@/lib/supabase/server";
 import { budapestIdopontIso } from "@/lib/het";
+import { flashUzenet } from "@/lib/flash";
 
 export type EsemenyAllapot = { hiba?: string };
 
@@ -43,6 +44,7 @@ export async function esemenyLetrehozasa(
   const { error } = await supabase.from("naptar_esemenyek").insert(mezok);
   if (error) return { hiba: error.message };
 
+  await flashUzenet("siker", `Naptárba téve: ${mezok.cim}`);
   revalidatePath("/naptar");
   if (mezok.munka_id) revalidatePath(`/munkak/${mezok.munka_id}`);
   redirect("/naptar");
@@ -60,6 +62,7 @@ export async function esemenyFrissitese(
   const { error } = await supabase.from("naptar_esemenyek").update(mezok).eq("id", id);
   if (error) return { hiba: error.message };
 
+  await flashUzenet("siker", "Esemény mentve.");
   revalidatePath("/naptar");
   revalidatePath(`/naptar/${id}`);
   if (mezok.munka_id) revalidatePath(`/munkak/${mezok.munka_id}`);

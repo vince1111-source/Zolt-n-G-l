@@ -782,6 +782,251 @@ mód, átmenetek), `webapp/src/components/ui/classes.ts` (árnyék, hover),
 page.tsx` (ikonok a szekciófejléceken), `webapp/package.json`
 (`lucide-react` új függőség).
 
+### 2.9 Ugyanaznap — PWA telepíthetőség, globális visszajelzés, keresés a listákon
+
+Vince kérése: "csináld meg azokat, amikhez nem kell API-kulcs" — a
+feltérképezett bővítési listából a három ilyen tétel.
+
+**PWA telepíthetőség** (`webapp/src/app/manifest.ts`, `public/sw.js`,
+`public/offline.html`, `components/SwRegisztracio.tsx`, gyökér
+`layout.tsx`): a CLAUDE.md "telepíthető PWA"-ként írja le a webappot, de
+eddig sem manifest, sem service worker nem volt. A manifest a Next.js
+saját fájl-konvenciójával készül (`/manifest.webmanifest`), a
+`theme-color` az új `viewport` exportba ment (a `metadata.themeColor`
+Next 14 óta deprecált — a helyi `node_modules/next/dist/docs` alapján
+ellenőrizve). Az ikonok a fejléc szóvédjegyét renderelik (Playwright, a
+repó gyökeréből — `ikon-192/512/180.png`).
+
+⚠ **A service worker tervezésének fő szempontja a biztonság volt, nem az
+offline-teljesség.** Ez egy hitelesített, több cég adatát RLS-szel
+elválasztó app — egy SW-cache pontosan az a hely, ahol egy cég adata
+átszivároghat egy másik felhasználóhoz ugyanazon az eszközön, vagy ahol
+kilépés után is "él" egy bejelentkezett képernyő (a kutatás: OWASP
+multi-tenant cheat sheet, w3c/ServiceWorker #909). Ezért a SW **HTML-
+navigációt soha nem cache-el** (hálózat-először, hálózat nélkül a
+statikus, adatmentes `/offline.html`), **csak** a tartalom-hash-elt
+`/_next/static/*` fájlokat, az ikonokat és a manifestet, és a
+`/naptar-feed/*` titkos feedhez hozzá sem nyúl. Mivel felhasználói adat
+sosem kerül a cache-be, kilépéskor nincs mit törölni — ez tudatos: egy
+"töröld kilépéskor" horog elfelejthető, egy soha-nem-cache-elt adat nem.
+A regisztráció csak `NODE_ENV=production`-ben fut (fejlesztés közben a
+HMR és a SW-cache egymásnak megy).
+
+⚠ **Amit itt NEM lehetett élesben bizonyítani**: az itteni beágyazott
+böngésző-pane a service worker script letöltését blokkolja
+("unknown error occurred when fetching the script"), miközben a `sw.js`
+`node --check`-kel hibátlan, a szerver 200-zal és helyes
+`application/javascript` típussal adja, és az oldalról sima `fetch`-csel
+is letölthető — a hiba tehát a környezeté, nem a kódé. **Vincének egyszer
+érdemes megnéznie** egy valódi Chrome-ban (DevTools → Application →
+Service Workers, ill. a "Telepítés" felajánlás a telefonon). A manifest,
+a meta-tagek (`mobile-web-app-capable`, `apple-mobile-web-app-title`,
+`apple-touch-icon`, `theme-color`) és az offline-oldal élesben
+(`next start`, :3100) ellenőrizve.
+
+**Globális visszajelzés — toast + flash** (`components/Toast.tsx`,
+`lib/flash.ts`, `(vedett)/layout.tsx`): eddig minden akció csak inline
+szöveggel jelzett, és a `redirect()`-tel záruló akciók után (új partner,
+munka, ajánlat, esemény) SEMMI visszajelzés nem volt — az inline üzenet
+az átirányítással eltűnt. Megoldás: egy 15 mp-es, nem-httpOnly
+`cegemai_flash` süti, amit a Server Action a `redirect()` előtt beállít
+(`flashUzenet`), a `(vedett)/layout.tsx` kiolvas (`flashOlvasas`), a
+kliens toast megjelenít, majd töröl. A `nonce` azért kell, hogy két
+egymás utáni azonos szöveg is két toastot adjon. SZÁNDÉKOSAN a
+`(vedett)` layoutban és nem a gyökérben: a süti-olvasás dinamikussá
+tenné a belépés/regisztráció oldalakat, amik most statikusak. A toast
+alul, min. 56 px-es, koppintásra is eltűnik — a telefon-első elv szerint.
+Bekötve: partner létrehozás/mentés, munka létrehozás/mentés, esemény
+létrehozás/mentés, ajánlat létrehozás/kiküldés, számla kiállítás (utóbbi
+eddig teljesen néma volt). A süti-értelmezés élei (rossz JSON, hiányzó
+mező, ismeretlen típus) önálló szkripttel tesztelve.
+
+**Keresés/szűrés** (`lib/kereses.ts`, `components/KeresoMezo.tsx`;
+partnerek, ajánlatok, munkák, árlista oldalak): `?q=` paraméter, a
+szűrés a szerveren, JS-ben, az RLS-szel már cégre szűrt lista fölött —
+egy kisvállalkozás listái tíz-száz elemesek, ehhez nem kell adatbázis-
+szintű keresés, és így a beágyazott mezőkre (ajánlat partnerének neve)
+is ugyanaz az egyszerű szabály érvényes. **Ékezet- és kisbetű-független**
+— ugyanaz a `norm()`, mint az AI-doboz szándékfelismerője: "kovacs"
+megtalálja a "Kovács Építő Kft."-t, "elfogadva" az állapot magyar
+címkéjére is illeszkedik. A `KeresoMezo` 250 ms késleltetéssel ír az
+URL-be (`router.replace`, görgetés megtartva), a keresés így linkként
+megosztható és túléli a frissítést. 9 illeszkedési eset szkripttel
+tesztelve (ékezet, nagybetű, pont, üres, kötőjel, két szó, nincs
+találat).
+
+Tudatosan kihagyva: teljes offline-működés (adatszinkron, konfliktus-
+kezelés — külön, nagy szelet, és a fenti biztonsági okból nem "ingyen"
+jön); push-értesítés (szerver oldali kulcsok kellenének); adatbázis-
+szintű teljes szöveges keresés (a listaméretek nem indokolják).
+
+### 2.10 Ugyanaznap — a "hosszú session": munkacsomagok, ajánlat-szerkesztés, partner-lap, anyaglista, teendő és partner-helyzet az AI-dobozból
+
+Vince: "kezdheted a hosszú sessiont, funkciókat akarok bővíteni" — API-kulcs
+nélkül megépíthető, a vízió-dokumentumból még hiányzó darabok, értéksorrendben.
+
+**Munkacsomagok — Wow #1** (`db/migraciok/0019_munkacsomagok.sql`,
+`lib/munkacsomag.ts`, `arlista/csomagok/*`): a 2.4-ben tudatosan kihagyott
+adatmodell. Egy csomag = az árlista tételei, tételenként azzal, hogy
+mennyi kell belőle a munka EGY egységére (1 m² térkövezés → 1,05 m² térkő,
+0,04 m³ homok…). **A csomag nem tárol árat** — az ár mindig az árlista
+aktuális eladási árából jön az `ajanlatSzamitas`-on át, így egy
+árfrissítés után a csomag magától a friss árat adja. **Nincs beégetett
+szakmai norma**: a mennyiségeket a vállalkozó adja meg (a 0005-ös
+normaidő elve). RLS + `force`, a tételeken a 0014/0015-ös
+cég-ellenőrző trigger mintája (a termék ugyanahhoz a céghez tartozzon,
+mint a csomag). Az AI-dobozban a mondat vége a csomag neve: "Készíts
+ajánlatot Kovácsnak 50 m²-re **térkövezés**" → a csomag tételei a saját
+arányaikkal; ha nincs ilyen nevű csomag, marad a régi, őszinte közelítés
+(minden m²-es tétel) ÉS a feltételezés kimondja, hogy a csomagot nem
+találta. Az ajánlat-űrlapon "Munkacsomagból" panel tölti fel a sorokat
+(ugyanaz a `csomagTetelBemenetek` tiszta függvény, mint a szerveren).
+
+**Ajánlat szerkesztése és másolása** (`ajanlatok/[id]/szerkesztes`,
+`ajanlatFrissitese`, `ajanlatMasolasa`, `ajanlatTetelekCsereje`): az
+AI-doboz feltételezés-szövege eddig azt ígérte, hogy "a kézi űrlapon még
+módosíthatod" — de nem volt szerkesztő oldal. Most van, **csak
+piszkozatra**, a szerveren ellenőrizve (a gomb hiánya nem biztonsági
+határ): a kiküldött ajánlat a kiadáskori árak pillanatképe (9. fejezet
+buktató), azt nem írjuk át — abból "Másolat" készül: új piszkozat
+ugyanazokkal a tételekkel, **a mai árakon**, új sorszámmal; ha egy tétel
+azóta kikerült az árlistából, a toast megmondja, hány maradt ki. Az
+`AjanlatForm` ehhez vezérelt sorokra lett átírva (`kezdoSorok`, `action`
+prop — ugyanaz a minta, mint a `MunkaForm`).
+
+**Partner-lap történettel** (`partnerek/[id]/page.tsx`): eddig csak az
+űrlap volt. Most: kintlévőség (ugyanaz a `mag/kintlevoseg.mjs`, mint a
+"Ma"), kimenő számlák **"Fizetve" gombbal**, ajánlatok és munkák
+jelvénnyel — az adatlap alulra került. Az AI-dobozban "Hogy állunk
+Kovácssal?" (a prototípus `partner` parancsa) ugyanezt foglalja össze
+egy kártyán, linkkel a lapra.
+
+**Anyaglista a munkához — Wow #7 hiányzó harmada** (`munkak/[id]/page.tsx`):
+a forrás-ajánlat "anyag" kategóriájú tételei mennyiséggel, és ha van
+hozzájuk aktív nagyker-tétel, a beszállító beszerzési árával és a becsült
+beszerzési összeggel; "Lista másolása" gomb a nagyker-rendeléshez.
+**Tudatosan a vállalkozó saját árlista-kategóriáiból épül**, nem a
+`mag/anyagszukseglet.mjs` beégetett térkövezés-anyagaiból — azok
+terméknevei nem egyeznének az ő árlistájával, és kitalált tétel lenne. Ami
+nincs "anyag"-ként felvéve, az itt sem jelenik meg, és a felület ezt
+kimondja. Ez belső nézet: a beszerzési ár a dokumentum-oldalra és a
+nyomtatásba továbbra sem megy ki.
+
+**Számla fizetve** (`szamlaFizetve`): belső nyilvántartás, nem külső
+hatású művelet — nem megy a kapun (ugyanaz az érv, mint az
+`ajanlatAllapotValtas`-nál). Enélkül a szimulált számla örökké
+kintlévőség maradt volna.
+
+**Lejárt ajánlat — származtatva, nem tárolva** (`lib/ajanlat-allapot.ts`):
+kiküldve + az `ervenyes_ig` a mai nap előtt. Nincs időzített feladat,
+nincs GET közbeni írás; a lista, a részletező, a partner-lap, a "Ma"
+függő-számlálója és az AI partner-helyzet ugyanabból az egy szabályból
+számol. Piszkozat nem jár le (nem küldtük ki).
+
+**Teendő az AI-dobozból** (`szandek.ts` `feladat_felvetel`): "Írd fel,
+hogy hívjam fel Kovácsot holnap" → teendő, az EREDETI (ékezetes) szöveggel
+címként, opcionális nap-szóval határidőnek, és ha a címben ismert partner
+van, hozzákötve (`forras: "ai_doboz"`). Kapu nélkül, mint a naptár.
+
+**Partnerkeresés toldalékos alakra** (`partnerKereses` a
+`(vedett)/actions.ts`-ben): "Kovácssal", "Kovácsnak", "Kovácshoz" — nem
+morfológia, hanem a partner nevének első szava a mondat egy szavának
+elején (≥ 4 betű). **Több találatnál nem választ** (CLAUDE.md 5. szabály),
+hanem felsorolja őket és pontosítást kér. A naptár-ág is erre állt át.
+
+**Ellenőrzés**: `npm run build` tiszta (30 route); a szándékfelismerő 11
+esete és az illeszkedés 9 esete szkripttel (`node
+--experimental-strip-types` közvetlenül a TS-en); az új táblákon RLS
+kényszerítve (SQL-lel ellenőrizve); ellenséges felülvizsgálat 5
+nézőpontból (tenant, állapotgép/pénz, bemenet, verseny/atomicitás,
+termékszabályok) — az eredménye és a javítások lentebb. ⚠ Élő, böngészős
+végigkattintás **nem történt**: a beágyazott böngészőben nem volt
+bejelentkezett munkamenet (lásd 2.9). Vincének érdemes egyszer
+végigmennie: csomag felvétele → AI-doboz "50 m² [csomagnév]" → jóváhagyás
+→ Szerkesztés → Kiküldöm → Másolat; "Hogy állunk …?"; "Írd fel, hogy …".
+
+**Az ellenséges felülvizsgálat eredménye és a javítások.** 11 megerősített
+állítás (4 magas, 6 közepes, 1 alacsony), 0 elutasított; a teljes riport
+`docs/felulvizsgalat-2026-09-03-bovites.md`, a lényeg itt:
+
+- **H1 — az AiBox nem renderelte az új állapotokat.** Valós volt, és a
+  gyökérok tanulságos: az AiBox-átírás egy `&&`-láncban állt egy bukó
+  teszt UTÁN, ezért a fájlírás csendben kimaradt, a build pedig a régi
+  fájllal is fordult (a JSX-feltétellánc nem kimerítőség-ellenőrzött).
+  Javítva: a két új ág + a beviteli mező ürül lefutott parancs után
+  (különben az újraküldés duplán írna). **Tanulság: fájlírást soha ne
+  köss `&&`-vel teszt eredményéhez.**
+- **H2 — inaktív termék csendben beárazódott** (másolat, szerkesztés,
+  csomag-ajánlat): az árlista nem töröl, csak inaktivál, és az
+  `ajanlatSzamitas` nem szűrt aktívra. Javítva egy helyen, minden hívóra:
+  `.eq("aktiv", true)` + Set-alapú hiányellenőrzés (ez egyben egy
+  rejtett hibát is megszüntet: ugyanaz a termék két sorban eddig hamis
+  "nem elérhető" hibát adott). A Másolat az inaktív tételeket kihagyja és
+  a toast megmondja, hányat; a csomag-ág névvel utasítja el az inaktív
+  tételt.
+- **H3/H4 — a vezérelt `<select>` csendes cseréje.** Ha a sor termékét
+  időközben inaktiválták, a böngésző (és a React) az ábécé ELSŐ aktív
+  termékét jelöli ki, a FormData a DOM-ból megy → 20 m² térkő helyett
+  "Ágyazóhomok 20" ment volna a szerverre, figyelmeztetés nélkül; a
+  csomagnál ugyanez az árazási törzsadatot rontotta volna el tartósan.
+  Javítva: jelölt "Már nincs az árlistában" opció tartja a helyet (NEM
+  disabled — az kimaradna a FormData-ból és elcsúsztatná az
+  indexpárosítást), piros figyelmeztetés, a csomag-szerkesztő a
+  hivatkozott inaktív terméket "— inaktív" jelöléssel mutatja, és a
+  szerver (`csomagok/actions.ts`, `ajanlatSzamitas`) névvel utasít el.
+- **M1 — nem atomi mentés + TOCTOU a kiküldéssel.** Javítva a minimális,
+  csak-TS változat: a szerkesztés fej-UPDATE-je `allapot = 'piszkozat'`
+  feltételű (Postgres sorzár alatt atomi; 0 sor → hiba, a tételekhez hozzá
+  sem nyúlunk), a kiküldés állapotváltása compare-and-set (`piszkozat` +
+  a kapu naplójában rögzített bruttó); ha közben változott, a naplósor
+  `elvetett` + hibaüzenet, hiba-toast, és NEM állítunk kiküldést.
+  ⚠ **Ami tudatosan nyitva maradt**: a fej → tételek törlése → tételek
+  beszúrása három külön PostgREST-hívás; egy közbeeső Supabase-hiba
+  fej-új-összeg/nulla-tétel piszkozatot hagyhat, amit az újramentés
+  helyrehoz. A teljes lezárás egy `0021` SECURITY INVOKER RPC
+  (`select … for update` + a három írás egy tranzakcióban) — akkor
+  érdemes, ha a szerkesztés valós használatba kerül.
+- **M2 — az `ervenyes_ig` csak létrehozáskor íródott**, így egy régebbi
+  piszkozat kiküldve azonnal "lejárt" lett volna. Javítva:
+  `alapErvenyesseg()` egy helyen, a kiküldés újraindítja a 30 napot.
+- **M3/M4 — csomag- és partnerkeresés találgatott.** Mindkettő a
+  `lib/szandek.ts`-be került (DB nélkül tesztelhető):
+  `csomagKereses` rangsorral (pontos → név-előtag toldalékkal, a
+  leghosszabb nyer → csonka bevitel → részsztring ≥ 4 betű, egymásba
+  ágyazott neveknél a hosszabb; egyébként `tobb` → kérdez);
+  `partnerKereses` `biztos` jelzéssel (teljes név egész szavakként =
+  biztos; részsztring/első-szó-előtag = tipp). A teendő CSAK biztos
+  találatot köt partnerhez ("nagyon fontos a beton" nem a Nagy Kft.-ről
+  szól); az ajánlat-ág tippnél feltételezés-sorban kimondja, mit értett.
+- **M5 — túl tág teendő-kiváltók**: "Állíts be 20% kedvezményt", "Vegyél
+  fel egy partnert", "Rögzíts egy számlát" csendben teendő lett volna.
+  Javítva a prototípus őrével: ezek az igék CSAK nap-szóval teendők,
+  különben a 0. réteg továbbad (ismeretlen).
+- **M6 — egység-átértelmezés**: "30 m²" egy fm-alapú csomagra 30 fm-et
+  adott volna. Javítva: nem-m² csomagnál hiba, nem átszámolás.
+- **L1 — jogosultságok**: a Supabase default-jogai miatt az `anon` és az
+  `authenticated` MINDEN public táblán ALL-t örökölt (TRUNCATE-tel, amire
+  az RLS nem vonatkozik); az anon-t egyedül a 0003-as
+  `revoke execute on aktualis_ceg()` tartotta távol. Javítva:
+  `0020_jogosultsag_szukites.sql` — anon: semmi táblajog; authenticated:
+  csak select/insert/update/delete; ugyanez a `postgres` szerep default
+  privileges-ében a jövőbeli táblákra. Élesben ellenőrizve (anon: 0 sor a
+  `role_table_grants`-ban; a naptár-feed `.ics` továbbra is 200). ⚠ A
+  `supabase_admin` default ACL-je (anon=ALL) marad, azt `postgres`-ként
+  nem lehet módosítani — a migrációk `postgres`-ként futnak, ezért nem
+  érinti őket; ha valaha `supabase_admin`-ként jönne létre tábla, arra
+  külön revoke kell.
+
+**Ellenőrzés a javítások után**: build tiszta; 15 szándék-eset + 8
+partnerkereső + 9 csomagkereső eset (mind zöld); a 0020 hatása SQL-lel;
+a feed `curl`-lel. A tesztek a repóban vannak, bármely gépen futnak,
+DB nélkül:
+
+```bash
+cd webapp && node --experimental-strip-types --no-warnings src/lib/szandek.teszt.mts
+node webapp/src/lib/kereses.teszt.mjs
+```
+
 ---
 
 ## 3. A sarkalatos szabályok

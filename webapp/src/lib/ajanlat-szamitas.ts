@@ -93,9 +93,16 @@ export async function ajanlatSzamitas(
     .in(
       "id",
       tetelBemenetek.map((s) => s.termekId),
-    );
-  if (!termekek || termekek.length !== tetelBemenetek.length) {
-    return { hiba: "Egy vagy több tétel már nem elérhető az árlistában." };
+    )
+    // Inaktivált tétel SOSEM árazódik be csendben — sem szerkesztésnél,
+    // sem másolatnál, sem csomagból (ellenséges felülvizsgálat, H2). Az
+    // árlista nem töröl, csak inaktivál, ezért ez az egyetlen őr.
+    .eq("aktiv", true);
+  const talaltIdk = new Set((termekek ?? []).map((t) => t.id));
+  if (!termekek || tetelBemenetek.some((s) => !talaltIdk.has(s.termekId))) {
+    return {
+      hiba: "Egy vagy több tétel már nincs az aktív árlistában — vedd ki a sorból, vagy aktiváld újra az Árlistán.",
+    };
   }
 
   const tetelek: AjanlatTetel[] = tetelBemenetek.map((s, i) => {
@@ -137,6 +144,16 @@ export async function ajanlatSzamitas(
 }
 
 /**
+ * Az ajánlat 30 napig érvényes, ha másképp nem szóltunk. Létrehozáskor ÉS
+ * kiküldéskor is innen számoljuk — a kiküldés indítja az órát, különben
+ * egy régebbi piszkozat kiküldve azonnal "lejárt" lenne
+ * (lib/ajanlat-allapot.ts ebből származtatja az állapotot).
+ */
+export function alapErvenyesseg(mostMs = Date.now()): string {
+  return new Date(mostMs + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+/**
  * A kiszámított tételek/összesítés tényleges DB-be mentése — ezt hívja a
  * kézi ajánlatűrlap és az AI-doboz jóváhagyása is, `ajanlatSzamitas`
  * eredményével.
@@ -158,11 +175,8 @@ export async function ajanlatMentese(
       afa: szamitas.afa,
       brutto: szamitas.brutto,
       kedvezmeny_szazalek: szamitas.partner.kedvezmeny_szazalek,
-      // Az ajánlat 30 napig érvényes, ha másképp nem szóltunk — ez kerül
-      // rá az ügyfélnek szóló dokumentumra is.
-      ervenyes_ig: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-        .toISOString()
-        .slice(0, 10),
+      // Ez kerül az ügyfélnek szóló dokumentumra is; kiküldéskor újraindul.
+      ervenyes_ig: alapErvenyesseg(),
     })
     .select("id")
     .single();
@@ -185,4 +199,58 @@ export async function ajanlatMentese(
   }
 
   return { id: ujAjanlat.id, sorszam };
+}
+
+/**
+ * Egy MEGLÉVŐ piszkozat tételeinek és összesítésének cseréje — az ajánlat
+ * szerkesztéséhez. Egy kiküldött ajánlat a kiadáskori árak pillanatképét
+ * hordozza (lásd HANDOVER 9. fejezet), azt nem írjuk át — abból "Másolat"
+ * készül. Ezért a fej-UPDATE maga is `allapot = 'piszkozat'` feltételű:
+ * a hívó előzetes ellenőrzése csak a barátságos hibaüzenetért van, az
+ * őr ez az egy feltételes sor-frissítés (Postgres sorzár alatt atomi) —
+ * ha közben kiküldték, 0 sor érintett, és a tételekhez hozzá sem nyúlunk.
+ * Ami NEM atomi: a fej → tételek törlés → tételek beszúrás három külön
+ * hívás; egy közbeeső Supabase-hiba fej-új-összeg/nulla-tétel állapotot
+ * hagyhat, amit a piszkozat újramentése helyrehoz (a kapun ilyen ajánlat
+ * nem megy át észrevétlenül: a dokumentum tételenként a tételekből ír).
+ */
+export async function ajanlatTetelekCsereje(
+  supabase: Awaited<ReturnType<typeof szerverKliens>>,
+  ajanlatId: string,
+  partnerId: string,
+  szamitas: AjanlatSzamitasSiker,
+): Promise<AjanlatHiba | { id: string }> {
+  const { data: fej, error: fejHiba } = await supabase
+    .from("ajanlatok")
+    .update({
+      partner_id: partnerId,
+      netto: szamitas.netto,
+      afa: szamitas.afa,
+      brutto: szamitas.brutto,
+      kedvezmeny_szazalek: szamitas.partner.kedvezmeny_szazalek,
+    })
+    .eq("id", ajanlatId)
+    .eq("allapot", "piszkozat")
+    .select("id")
+    .maybeSingle();
+  if (fejHiba) return { hiba: fejHiba.message };
+  if (!fej) {
+    return { hiba: "Csak piszkozat szerkeszthető — az ajánlatot időközben kiküldték. Készíts belőle másolatot." };
+  }
+
+  const { error: torlesHiba } = await supabase
+    .from("ajanlat_tetelek")
+    .delete()
+    .eq("ajanlat_id", ajanlatId);
+  if (torlesHiba) return { hiba: torlesHiba.message };
+
+  const { error: tetelHiba } = await supabase.from("ajanlat_tetelek").insert(
+    szamitas.tetelek.map(({ afa_kulcs: _afa_kulcs, ...tetel }) => ({
+      ...tetel,
+      ajanlat_id: ajanlatId,
+    })),
+  );
+  if (tetelHiba) return { hiba: `A tételek mentése sikertelen: ${tetelHiba.message}` };
+
+  return { id: ajanlatId };
 }

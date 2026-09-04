@@ -2,6 +2,7 @@ import Link from "next/link";
 import { szerverKliens } from "@/lib/supabase/server";
 import { sajatCegVagyIranyitas } from "@/lib/sajat-ceg";
 import { kintlevosegOsszesites, napokEltelte } from "@/lib/mag";
+import { ajanlatLejartE } from "@/lib/ajanlat-allapot";
 import { Ft } from "@/lib/format";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
@@ -17,7 +18,7 @@ export default async function Ma() {
   const ma = new Date().toISOString().slice(0, 10);
 
   const [
-    { count: fuggoAjanlatokSzama },
+    { data: fuggoAjanlatok },
     { data: teendok, count: teendokSzama },
     { count: nyitottMunkakSzama },
     { data: nyitottSzamlak },
@@ -25,9 +26,12 @@ export default async function Ma() {
     { data: kikuldesek },
     { data: fuggoArfrissitesek },
   ] = await Promise.all([
+    // Sorok kellenek, nem csak darabszám: a lejárt (kiküldve, de az
+    // érvényesség letelt) ajánlat származtatott állapot, nem tárolt — azt
+    // nem számoljuk "függőnek" (lib/ajanlat-allapot.ts).
     supabase
       .from("ajanlatok")
-      .select("*", { count: "exact", head: true })
+      .select("allapot, ervenyes_ig")
       .in("allapot", ["piszkozat", "kikuldve"]),
     supabase
       .from("feladatok")
@@ -63,6 +67,8 @@ export default async function Ma() {
       .eq("tipus", "arfrissites")
       .eq("allapot", "javasolt"),
   ]);
+
+  const fuggoAjanlatokSzama = (fuggoAjanlatok ?? []).filter((a) => !ajanlatLejartE(a, ma)).length;
 
   // A kintlévőség-számítás a mag/kintlevoseg.mjs-ből jön — ugyanaz a
   // determinisztikus logika, amit a `node --test mag/*.teszt.mjs` is

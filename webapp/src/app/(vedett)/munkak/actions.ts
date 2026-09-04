@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { szerverKliens } from "@/lib/supabase/server";
 import { sajatCegVagyIranyitas } from "@/lib/sajat-ceg";
+import { flashUzenet } from "@/lib/flash";
 import type { Enums } from "@/lib/supabase/types";
 
 export type MunkaAllapot = { hiba?: string };
@@ -28,6 +29,7 @@ export async function munkaLetrehozasa(
   const { error } = await supabase.from("munkak").insert(mezok);
   if (error) return { hiba: error.message };
 
+  await flashUzenet("siker", `Munka felvéve: ${mezok.cim}`);
   revalidatePath("/munkak");
   revalidatePath("/");
   redirect("/munkak");
@@ -45,6 +47,7 @@ export async function munkaFrissitese(
   const { error } = await supabase.from("munkak").update(mezok).eq("id", id);
   if (error) return { hiba: error.message };
 
+  await flashUzenet("siker", "Munka mentve.");
   revalidatePath("/munkak");
   revalidatePath(`/munkak/${id}`);
   redirect(`/munkak/${id}`);

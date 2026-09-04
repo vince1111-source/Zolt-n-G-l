@@ -3,7 +3,17 @@ import Link from "next/link";
 import { szerverKliens } from "@/lib/supabase/server";
 import { Ft } from "@/lib/format";
 import { osszesitettMunkaido, percOraSzoveg } from "@/lib/mag";
-import { ajanlatAllapotValtas, ajanlatKikuldese, szamlaKiallitasa } from "../actions";
+import { budapestMaDatum } from "@/lib/het";
+import { ajanlatLejartE } from "@/lib/ajanlat-allapot";
+import { Badge } from "@/components/ui/Badge";
+import { gombMasodlagos } from "@/components/ui/classes";
+import {
+  ajanlatAllapotValtas,
+  ajanlatKikuldese,
+  ajanlatMasolasa,
+  szamlaKiallitasa,
+  szamlaFizetve,
+} from "../actions";
 
 export default async function AjanlatReszletei({
   params,
@@ -37,9 +47,11 @@ export default async function AjanlatReszletei({
 
   const { data: szamla } = await supabase
     .from("szamlak")
-    .select("sorszam, brutto, kelt, fizetesi_hatarido, forras")
+    .select("id, sorszam, brutto, kelt, fizetesi_hatarido, forras, allapot")
     .eq("ajanlat_id", id)
     .maybeSingle();
+
+  const lejart = ajanlatLejartE(ajanlat, budapestMaDatum());
 
   // Csak akkor mutatjuk a becslést, ha legalább egy tételnél ténylegesen
   // meg van adva normaidő — máskülönben ez egy üres, felesleges doboz volna.
@@ -61,8 +73,13 @@ export default async function AjanlatReszletei({
         <h1 className="text-2xl font-extrabold tracking-tight">
           {ajanlat.partnerek?.nev}
         </h1>
-        <p className="text-muted mt-1">
+        <p className="text-muted mt-1 flex items-center gap-2 flex-wrap">
           {ajanlat.sorszam} · {new Date(ajanlat.kelt).toLocaleDateString("hu-HU")}
+          {lejart && (
+            <Badge szin="kritikus">
+              lejárt {ajanlat.ervenyes_ig && new Date(ajanlat.ervenyes_ig).toLocaleDateString("hu-HU")}
+            </Badge>
+          )}
         </p>
       </div>
 
@@ -155,6 +172,16 @@ export default async function AjanlatReszletei({
         >
           Így látja az ügyfél
         </Link>
+        {ajanlat.allapot === "piszkozat" && (
+          <Link href={`/ajanlatok/${id}/szerkesztes`} className={gombMasodlagos}>
+            Szerkesztés
+          </Link>
+        )}
+        <form action={ajanlatMasolasa.bind(null, id)}>
+          <button type="submit" className={gombMasodlagos} title="Új piszkozat ugyanezekkel a tételekkel, a mai árakon">
+            Másolat
+          </button>
+        </form>
       </div>
 
       {szamla && (
@@ -174,7 +201,20 @@ export default async function AjanlatReszletei({
                 ` · Fizetési határidő: ${new Date(szamla.fizetesi_hatarido).toLocaleDateString("hu-HU")}`}
             </div>
           </div>
-          <div className="font-bold tabular-nums">{Ft(szamla.brutto)}</div>
+          <div className="flex items-center gap-3">
+            <div className="font-bold tabular-nums">{Ft(szamla.brutto)}</div>
+            {szamla.allapot === "fizetve" ? (
+              <Badge szin="rendben">fizetve</Badge>
+            ) : szamla.allapot === "sztornozott" ? (
+              <Badge szin="muted">sztornózott</Badge>
+            ) : (
+              <form action={szamlaFizetve.bind(null, szamla.id)}>
+                <button type="submit" className={gombMasodlagos}>
+                  Fizetve
+                </button>
+              </form>
+            )}
+          </div>
         </div>
       )}
 

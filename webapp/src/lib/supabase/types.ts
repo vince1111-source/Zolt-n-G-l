@@ -606,6 +606,90 @@ export type Database = {
           },
         ]
       }
+      munkacsomag_tetelek: {
+        Row: {
+          csomag_id: string
+          id: string
+          mennyiseg_egysegre: number
+          sorrend: number
+          termek_id: string
+        }
+        Insert: {
+          csomag_id: string
+          id?: string
+          mennyiseg_egysegre: number
+          sorrend?: number
+          termek_id: string
+        }
+        Update: {
+          csomag_id?: string
+          id?: string
+          mennyiseg_egysegre?: number
+          sorrend?: number
+          termek_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "munkacsomag_tetelek_csomag_id_fkey"
+            columns: ["csomag_id"]
+            isOneToOne: false
+            referencedRelation: "munkacsomagok"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "munkacsomag_tetelek_termek_id_fkey"
+            columns: ["termek_id"]
+            isOneToOne: false
+            referencedRelation: "termek_arres"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "munkacsomag_tetelek_termek_id_fkey"
+            columns: ["termek_id"]
+            isOneToOne: false
+            referencedRelation: "termekek"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      munkacsomagok: {
+        Row: {
+          aktiv: boolean
+          ceg_id: string
+          id: string
+          leiras: string | null
+          letrehozva: string
+          mertekegyseg: string
+          nev: string
+        }
+        Insert: {
+          aktiv?: boolean
+          ceg_id?: string
+          id?: string
+          leiras?: string | null
+          letrehozva?: string
+          mertekegyseg?: string
+          nev: string
+        }
+        Update: {
+          aktiv?: boolean
+          ceg_id?: string
+          id?: string
+          leiras?: string | null
+          letrehozva?: string
+          mertekegyseg?: string
+          nev?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "munkacsomagok_ceg_id_fkey"
+            columns: ["ceg_id"]
+            isOneToOne: false
+            referencedRelation: "cegek"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       munkak: {
         Row: {
           ajanlat_id: string | null

@@ -47,7 +47,29 @@ export type NaptarSzandek = {
   leiras?: string;
 };
 
-export type Ertelmezes = AjanlatSzandek | NaptarSzandek | { szandek: "ismeretlen" };
+/** "Hogy állunk Kovácssal?" — a prototípus `partner` parancsa: egy partner helyzete egy lapon. */
+export type PartnerHelyzetSzandek = {
+  szandek: "partner_helyzet";
+  partnerSzoveg: string;
+};
+
+/**
+ * "Írd fel, hogy hívjam fel Kovácsot holnap" — a prototípus `feladat`
+ * parancsa. A `cim` az EREDETI (nem normalizált) szöveg, hogy a teendő
+ * címében megmaradjanak az ékezetek. A nap-szó és a partner opcionális.
+ */
+export type FeladatSzandek = {
+  szandek: "feladat_felvetel";
+  cim: string;
+  napszo?: NaptarSzandek["napszo"];
+};
+
+export type Ertelmezes =
+  | AjanlatSzandek
+  | NaptarSzandek
+  | PartnerHelyzetSzandek
+  | FeladatSzandek
+  | { szandek: "ismeretlen" };
 
 const AJANLAT_MINTA =
   /(?:keszits?|csinalj|adj)\s+(?:egy\s+)?(?:ajanlatot|arajanlatot|arat)\s+(.+?)\s*(?:nek|nak)\s+(\d+(?:[.,]\d+)?)\s*(?:negyzetmeter|nm2|m2|nm)(?:re|ra)?\b\s*(.*)/;
@@ -137,8 +159,75 @@ function ertelmezNaptarSzoveg(szoveg: string): NaptarSzandek | null {
   return { szandek: "naptar_esemeny", napszo, oraSzoveg, partnerSzoveg, leiras };
 }
 
+const PARTNER_HELYZET_MINTA =
+  /^(?:mutasd|nyisd meg|nezzuk|hogy allunk|mi a helyzet|mennyivel tartozik)\s+(?:meg\s+)?(?:a\s+|az\s+)?(.+?)\s*\??$/;
+
+/**
+ * A teendő-parancs kiváltó szavai — a prototípus `feladat` mintája.
+ * Szó-szintű, mert a címet az EREDETI szövegből kell kivágni (lásd
+ * `FeladatSzandek.cim`), a normalizált és az eredeti szöveg szavai
+ * viszont egy az egyben megfeleltethetők.
+ */
+const FELADAT_KIVALTOK: string[][] = [
+  ["emlekeztess"],
+  ["jegyezd", "fel"],
+  ["ird", "fel"],
+  ["ne", "felejtsem"],
+  ["teendo"],
+];
+
+/**
+ * Általános igék ("Állíts be 20% kedvezményt", "Vegyél fel egy partnert",
+ * "Rögzíts egy számlát") CSAK nap-szóval együtt jelentenek teendőt — a
+ * prototípus `kell:["hatarido"]` őre. Nélküle a 0. réteg továbbad
+ * (ismeretlen), nem ír csendben teendőt egy egészen más szándékból.
+ */
+const FELADAT_KIVALTOK_HATARIDOVEL: string[][] = [
+  ["vegyel", "fel"],
+  ["allits", "be"],
+  ["rogzits"],
+];
+
+function ertelmezFeladatSzoveg(nyersSzoveg: string): FeladatSzandek | null {
+  const nyersSzavak = nyersSzoveg.trim().split(/\s+/);
+  const normSzavak = nyersSzavak.map((sz) => norm(sz).replace(/[.,:;!?]+$/, ""));
+
+  const illik = (k: string[]) => k.every((sz, i) => normSzavak[i] === sz);
+  const kivalto = FELADAT_KIVALTOK.find(illik) ?? FELADAT_KIVALTOK_HATARIDOVEL.find(illik);
+  if (!kivalto) return null;
+  const hataridoKell = !FELADAT_KIVALTOK.includes(kivalto);
+
+  let index = kivalto.length;
+  if (normSzavak[index] === "hogy") index += 1;
+  const maradek = nyersSzavak.slice(index);
+  if (!maradek.length) return null;
+
+  let napszo: NaptarSzandek["napszo"] | undefined;
+  const cimSzavak = maradek.filter((sz, i) => {
+    const n = normSzavak[index + i];
+    const nap = NAP_ALAK_TERKEP[n];
+    if (nap && !napszo) {
+      napszo = nap;
+      return false;
+    }
+    return true;
+  });
+
+  if (hataridoKell && !napszo) return null;
+
+  // "Állíts be holnap, hogy hívjam…" — a nap-szó kivétele után maradó
+  // vezető "hogy" sem tartozik a címhez.
+  if (cimSzavak.length && norm(cimSzavak[0]).replace(/[.,:;!?]+$/, "") === "hogy") cimSzavak.shift();
+  const cim = cimSzavak.join(" ").replace(/^[,:\s]+/, "").trim();
+  if (!cim) return null;
+  return { szandek: "feladat_felvetel", cim: cim.charAt(0).toUpperCase() + cim.slice(1), napszo };
+}
+
 export function ertelmezSzoveg(nyersSzoveg: string): Ertelmezes {
   const szoveg = norm(nyersSzoveg);
+
+  const feladatSzandek = ertelmezFeladatSzoveg(nyersSzoveg);
+  if (feladatSzandek) return feladatSzandek;
 
   const ajanlatTalalat = szoveg.match(AJANLAT_MINTA);
   if (ajanlatTalalat) {
@@ -157,5 +246,116 @@ export function ertelmezSzoveg(nyersSzoveg: string): Ertelmezes {
   const naptarSzandek = ertelmezNaptarSzoveg(szoveg);
   if (naptarSzandek) return naptarSzandek;
 
+  // A partner-helyzet a naptár UTÁN jön: a "nézzük meg holnap Kovácsot"
+  // ne partner-lapot nyisson, ha van benne nap+idő — a szűkebb minta előbb.
+  const partnerTalalat = szoveg.match(PARTNER_HELYZET_MINTA);
+  const partnerSzoveg = partnerTalalat?.[1].trim();
+  // Ha a "név" részben nap-szó vagy időpont van ("nézzük meg holnap 9-kor
+  // Kovácsot"), az egy naptár-mondat, amit a 0. réteg ebben az alakban nem
+  // ismer — ilyenkor továbbad (ismeretlen), nem partner-lapot nyit.
+  if (
+    partnerSzoveg &&
+    !partnerSzoveg.split(" ").some((sz) => NAP_ALAK_TERKEP[sz]) &&
+    !IDO_MINTA.test(partnerSzoveg)
+  ) {
+    return { szandek: "partner_helyzet", partnerSzoveg };
+  }
+
   return { szandek: "ismeretlen" };
 }
+
+// ---------------------------------------------------------------------------
+// Név-illesztők — a szándékfelismerő párja: egy mondatból kivágott,
+// toldalékos névrészletet illesztenek a cég saját listáira. Itt vannak (és
+// nem az actions.ts-ben), hogy DB nélkül, szkripttel tesztelhetők legyenek.
+// ---------------------------------------------------------------------------
+
+export type NevTalalat<T> = { partner: T; biztos: boolean } | { tobb: T[] } | { nincs: true };
+
+/**
+ * Partner keresése egy (toldalékos) névrészletre: "Kovácssal", "Kovácsnak".
+ *
+ * `biztos`: a teljes normalizált név pontosan vagy egész szavakként benne
+ * van a szövegben — erre lehet csendben építeni (pl. teendő partnerhez
+ * kötése). Minden más (részsztring ≥ 4 betű, vagy a név ELSŐ szava egy
+ * mondatszó elején, ≥ 4 betű) csak TIPP: a hívó mondja ki, mit értett.
+ * Több jelölt → `tobb`, nem választunk (CLAUDE.md 5. szabály).
+ */
+export function partnerKereses<T extends { nev: string }>(partnerek: T[], szoveg: string): NevTalalat<T> {
+  const cel = norm(szoveg);
+  if (!cel) return { nincs: true };
+  const celSzavak = cel.split(" ");
+
+  const pontos = partnerek.filter((p) => norm(p.nev) === cel);
+  if (pontos.length === 1) return { partner: pontos[0], biztos: true };
+  if (pontos.length > 1) return { tobb: pontos };
+
+  const biztosak = partnerek.filter((p) => {
+    const nev = norm(p.nev);
+    return nev.length >= 4 && ` ${cel} `.includes(` ${nev} `);
+  });
+  if (biztosak.length === 1) return { partner: biztosak[0], biztos: true };
+  if (biztosak.length > 1) return { tobb: biztosak };
+
+  const tippek = partnerek.filter((p) => {
+    const nev = norm(p.nev);
+    if (nev.length >= 4 && cel.length >= 4 && (nev.includes(cel) || cel.includes(nev))) return true;
+    const elsoSzo = nev.split(" ")[0];
+    return elsoSzo.length >= 4 && celSzavak.some((sz) => sz.startsWith(elsoSzo));
+  });
+  if (tippek.length === 1) return { partner: tippek[0], biztos: false };
+  if (tippek.length > 1) return { tobb: tippek };
+  return { nincs: true };
+}
+
+/**
+ * Munkacsomag keresése az ajánlat-mondat végéből ("… 50 m²-re térkövezésre").
+ *
+ * Rangsor (a "ne találgass" elv mellett a toldalékos magyar alakokra):
+ *  0. pontos normalizált egyezés;
+ *  A. a csomag neve a leírás ELEJE, és utána csak toldalék jön (nincs
+ *     szóköz): "terkovezesre" ← "terkovezes". Több ilyen névnél a
+ *     LEGHOSSZABB nyer ("terko" és "terkovezes" közül az utóbbi — a
+ *     felhasználó térkövezést mondott, ez nem találgatás);
+ *  B. a leírás a csomagnév eleje (csonka bevitel: "terko" ← "Térkő szürke",
+ *     "Térkő antik"): egy jelölt → az; több → `tobb`;
+ *  C. részsztring bármelyik irányban (≥ 4 betű mindkét oldalon): egy → az;
+ *     több, de egymásba ágyazott nevek (a leghosszabb tartalmazza a
+ *     többit) → a leghosszabb; egyébként → `tobb`, kérdezünk.
+ */
+export function csomagKereses<T extends { nev: string }>(
+  csomagok: T[],
+  leiras: string,
+): { csomag: T } | { tobb: T[] } | { nincs: true } {
+  const cel = norm(leiras);
+  if (!cel) return { nincs: true };
+  const nevvel = csomagok.map((c) => ({ c, nev: norm(c.nev) })).filter((x) => x.nev.length >= 4);
+
+  const pontos = nevvel.filter((x) => x.nev === cel);
+  if (pontos.length === 1) return { csomag: pontos[0].c };
+  if (pontos.length > 1) return { tobb: pontos.map((x) => x.c) };
+
+  const eloTag = nevvel.filter((x) => cel.startsWith(x.nev) && !cel.slice(x.nev.length).includes(" "));
+  if (eloTag.length) {
+    const leghosszabb = eloTag.reduce((a, b) => (b.nev.length > a.nev.length ? b : a));
+    return { csomag: leghosszabb.c };
+  }
+
+  if (cel.length >= 4) {
+    const csonka = nevvel.filter((x) => x.nev.startsWith(cel));
+    if (csonka.length === 1) return { csomag: csonka[0].c };
+    if (csonka.length > 1) return { tobb: csonka.map((x) => x.c) };
+  }
+
+  const resz = cel.length >= 4 ? nevvel.filter((x) => cel.includes(x.nev) || x.nev.includes(cel)) : [];
+  if (resz.length === 1) return { csomag: resz[0].c };
+  if (resz.length > 1) {
+    const leghosszabb = resz.reduce((a, b) => (b.nev.length > a.nev.length ? b : a));
+    if (resz.every((x) => leghosszabb.nev.includes(x.nev))) return { csomag: leghosszabb.c };
+    return { tobb: resz.map((x) => x.c) };
+  }
+  return { nincs: true };
+}
+
+/** Amit az AI-doboz "m²"-nek ért — a csomag alapegységének egyeztetéséhez. */
+export const M2_ALIASOK = new Set(["m2", "nm", "nm2", "negyzetmeter"]);

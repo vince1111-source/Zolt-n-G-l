@@ -1,6 +1,9 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { Briefcase } from "lucide-react";
 import { szerverKliens } from "@/lib/supabase/server";
+import { illeszkedik, keresoSzo } from "@/lib/kereses";
+import { KeresoMezo } from "@/components/KeresoMezo";
 import { Badge } from "@/components/ui/Badge";
 import { gombElsodleges, kartya } from "@/components/ui/classes";
 import { EmptyState } from "@/components/ui/EmptyState";
@@ -18,24 +21,37 @@ const ALLAPOT_SZIN: Record<Enums<"munka_allapot">, "muted" | "figyelem" | "rendb
   befejezve: "rendben",
 };
 
-export default async function Munkak() {
+export default async function Munkak({ searchParams }: PageProps<"/munkak">) {
+  const { q } = await searchParams;
+  const kereses = keresoSzo(q);
+
   const supabase = await szerverKliens();
   const { data: munkak } = await supabase
     .from("munkak")
     .select("*, partnerek(nev)")
     .order("letrehozva", { ascending: false });
 
+  const szurt = (munkak ?? []).filter((m) =>
+    illeszkedik(kereses, m.partnerek?.nev, m.cim, m.leiras, ALLAPOT_CIMKE[m.allapot]),
+  );
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight flex items-center gap-2"><Briefcase size={22} className="text-cta" aria-hidden />Munkák</h1>
-          <p className="text-muted mt-1">{munkak?.length ?? 0} munka</p>
+          <p className="text-muted mt-1">
+            {kereses ? `${szurt.length} találat / ${munkak?.length ?? 0} munka` : `${munkak?.length ?? 0} munka`}
+          </p>
         </div>
         <Link href="/munkak/uj" className={gombElsodleges}>
           + Új munka
         </Link>
       </div>
+
+      <Suspense fallback={null}>
+        <KeresoMezo placeholder="Keresés partner, helyszín vagy állapot szerint…" />
+      </Suspense>
 
       <div className={`${kartya} divide-y divide-line`}>
         {!munkak?.length && (
@@ -44,7 +60,10 @@ export default async function Munkak() {
             létrejön, vagy felveheted kézzel is.
           </EmptyState>
         )}
-        {munkak?.map((m) => (
+        {!!munkak?.length && !szurt.length && (
+          <EmptyState>Nincs találat a keresésre.</EmptyState>
+        )}
+        {szurt.map((m) => (
           <Link
             key={m.id}
             href={`/munkak/${m.id}`}
