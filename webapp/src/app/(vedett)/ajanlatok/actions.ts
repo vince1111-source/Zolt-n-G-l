@@ -12,6 +12,10 @@ import {
   type TetelBemenet,
 } from "@/lib/ajanlat-szamitas";
 import { flashUzenet } from "@/lib/flash";
+import { aiBekotve } from "@/lib/ai/openai";
+import { aiNaplozas, napiPlafonElerve } from "@/lib/ai/naplo";
+import { kiseroLevelSzovege } from "@/lib/ai/kisero";
+import type { Json } from "@/lib/supabase/types";
 
 export type AjanlatAllapot = { hiba?: string };
 
@@ -361,6 +365,69 @@ export async function szamlaKiallitasa(id: string) {
 
   revalidatePath(`/ajanlatok/${id}`);
   revalidatePath("/");
+}
+
+/**
+ * Kísérőlevél az ajánlathoz — AI-generált PISZKOZAT, az ajánlaton tárolva
+ * (0021 `kisero_szoveg`). Nem küld e-mailt (10. modul, V2). Kérésre
+ * generálódik, a modell csak az ajánlat tényleges adatait kapja; naplózva.
+ */
+export async function kiseroSzovegGeneralasa(id: string) {
+  if (!aiBekotve()) return;
+  const { ceg, felhasznalo } = await sajatCegVagyIranyitas();
+  if (!ceg) return;
+  const supabase = await szerverKliens();
+
+  if (await napiPlafonElerve(supabase)) {
+    await flashUzenet("hiba", "A mai modellhívás-keret elfogyott.");
+    revalidatePath(`/ajanlatok/${id}`);
+    return;
+  }
+
+  const [{ data: ajanlat }, { data: tetelek }, { data: munka }] = await Promise.all([
+    supabase
+      .from("ajanlatok")
+      .select("sorszam, brutto, ervenyes_ig, partnerek(nev, kapcsolattarto)")
+      .eq("id", id)
+      .maybeSingle(),
+    supabase.from("ajanlat_tetelek").select("megnevezes").eq("ajanlat_id", id).order("sorrend"),
+    supabase.from("munkak").select("cim").eq("ajanlat_id", id).maybeSingle(),
+  ]);
+  if (!ajanlat) return;
+
+  const adatok = {
+    cegNev: ceg.nev,
+    kuldoNev: felhasznalo.nev,
+    partnerNev: ajanlat.partnerek?.nev ?? "",
+    kapcsolattarto: ajanlat.partnerek?.kapcsolattarto ?? null,
+    sorszam: ajanlat.sorszam,
+    bruttoFt: ajanlat.brutto,
+    ervenyesIg: ajanlat.ervenyes_ig,
+    tetelek: (tetelek ?? []).map((t) => t.megnevezes),
+    helyszin: munka?.cim ?? null,
+  };
+  const valasz = await kiseroLevelSzovege(adatok);
+  if (!valasz.ok) {
+    await flashUzenet("hiba", `A kísérőlevél nem készült el: ${valasz.uzenet}`);
+    revalidatePath(`/ajanlatok/${id}`);
+    return;
+  }
+
+  await aiNaplozas(supabase, {
+    muvelet: "kisero_level",
+    reteg: 2,
+    modell: valasz.modell,
+    bemenet: adatok as unknown as Json,
+    kimenet: { szoveg: valasz.adat },
+    tokenBe: valasz.tokenBe,
+    tokenKi: valasz.tokenKi,
+    tokenCache: valasz.tokenCache,
+    felhasznaloId: felhasznalo.id,
+  });
+  await supabase.from("ajanlatok").update({ kisero_szoveg: valasz.adat }).eq("id", id);
+
+  await flashUzenet("siker", "Kísérőlevél elkészült — olvasd át, mielőtt küldöd.");
+  revalidatePath(`/ajanlatok/${id}`);
 }
 
 /**

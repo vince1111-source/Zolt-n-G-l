@@ -4,17 +4,28 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { szerverKliens } from "@/lib/supabase/server";
 import { sajatCegVagyIranyitas } from "@/lib/sajat-ceg";
-import { ertelmezSzoveg, norm, partnerKereses, csomagKereses, M2_ALIASOK } from "@/lib/szandek";
-import { budapestMaDatum, budapestIdopontIso, napszoDatumma } from "@/lib/het";
+import {
+  ertelmezSzoveg,
+  norm,
+  partnerKereses,
+  csomagKereses,
+  M2_ALIASOK,
+  type Ertelmezes,
+} from "@/lib/szandek";
+import { budapestMaDatum, budapestIdopontIso, napszoDatumma, budapestIdoString } from "@/lib/het";
 import { kintlevosegOsszesites } from "@/lib/mag";
 import { csomagTetelBemenetek } from "@/lib/munkacsomag";
 import { ajanlatLejartE } from "@/lib/ajanlat-allapot";
+import { aiBekotve } from "@/lib/ai/openai";
+import { aiNaplozas, napiPlafonElerve } from "@/lib/ai/naplo";
+import { reteg1Felismeres, reteg1Ertelmezesse, reteg1Bemenet } from "@/lib/ai/reteg1";
 import {
   ajanlatSzamitas,
   ajanlatMentese,
   type TetelBemenet,
   type AjanlatSzamitasSiker,
 } from "@/lib/ajanlat-szamitas";
+import type { Json } from "@/lib/supabase/types";
 
 export async function kijelentkezes() {
   const supabase = await szerverKliens();
@@ -22,9 +33,13 @@ export async function kijelentkezes() {
   redirect("/bejelentkezes");
 }
 
-export type AiEredmeny =
+/** Melyik réteg felelt — a felület mindig kiírja (AI Act 50. cikk, CLAUDE.md 5–6. szabály). */
+export type AiForras = { reteg: 0 | 1; modell?: string };
+
+export type AiEredmenyAlap =
   | { allapot: "ismeretlen" }
   | { allapot: "hiba"; uzenet: string }
+  | { allapot: "kerdes"; uzenet: string }
   | {
       allapot: "javaslat";
       partnerId: string;
@@ -51,9 +66,20 @@ export type AiEredmeny =
       cim: string;
       hataridoSzoveg: string | null;
       partnerNev: string | null;
+    }
+  | {
+      allapot: "teendok";
+      teendok: { id: string; cim: string; hatarido: string | null; surgos: boolean; partnerNev: string | null }[];
+      esemenyek: { id: string; ido: string; cim: string }[];
+      /** Egy-két mondat, amit a felület fel is olvashat. */
+      felolvasas: string;
     };
 
-function partnerHiba(kereses: { tobb: { nev: string }[] } | { nincs: true }, szoveg: string): AiEredmeny {
+export type AiEredmeny = AiEredmenyAlap & AiForras;
+
+type Supabase = Awaited<ReturnType<typeof szerverKliens>>;
+
+function partnerHiba(kereses: { tobb: { nev: string }[] } | { nincs: true }, szoveg: string): AiEredmenyAlap {
   if ("tobb" in kereses) {
     return {
       allapot: "hiba",
@@ -67,35 +93,86 @@ function partnerHiba(kereses: { tobb: { nev: string }[] } | { nincs: true }, szo
 }
 
 /**
- * A szöveges AI-doboz szándékfelismerése.
+ * A szöveges AI-doboz — a lépcsős AI-réteg (CLAUDE.md költségszabály):
  *
- * Az ajánlat-szándéknál csak OLVAS, nem ír semmit — a tényleges ajánlat a
- * `aiJavaslatJovahagyasa`-val, külön jóváhagyás után jön létre (lásd
- * `JovahagyoLap`), mert egy ajánlat valódi pénzügyi adatot hordoz, amit
- * érdemes átnézni létrehozás előtt.
+ *   0. réteg  determinisztikus minta (lib/szandek.ts)      0 Ft
+ *   1. réteg  olcsó modell, zárt sémával (lib/ai/reteg1.ts) csak ha a 0. nem
+ *             ismerte fel; naplózva az ai_naplo-ba; napi plafonnal;
+ *             hiányzó adatnál KÉRDEZ, nem találgat
  *
- * A naptár- és teendő-szándéknál (vízió-dokumentum "Wow #2", ill. a
- * prototípus `feladat` parancsa) NINCS külön jóváhagyó lap — a sor azonnal
- * létrejön, és a válasz megmutatja, mit értett a rendszer. Ez szándékos,
- * nem következetlenség: ezek a táblák maguk sem mennek a
- * `javasolt_muveletek` kapun (lásd db/migraciok/0006_naptar.sql) — belső,
- * bármikor szabadon szerkeszthető/törölhető nyilvántartások, nem külső
- * hatású műveletek, mint egy ajánlat kiküldése.
+ * Mindkét réteg ugyanabba az `Ertelmezes` alakba fordít, és onnan UGYANAZ a
+ * determinisztikus kód fut (`vegrehajt`): partner-illesztés, árkalkuláció,
+ * jóváhagyás. A modell megért, nem számol.
  *
- * A partner-helyzet ("Hogy állunk Kovácssal?") csak olvas.
- *
- * Partner- és csomagnév-illesztés: `partnerKereses` / `csomagKereses`
- * (lib/szandek.ts) — több jelöltnél kérdez, nem választ; a "tipp"
- * szintű partner-találatot a válasz kimondja, a teendő pedig csak biztos
- * találatot köt partnerhez.
+ * Az ajánlat-szándéknál csak OLVAS — a tényleges ajánlat a
+ * `aiJavaslatJovahagyasa`-val, külön jóváhagyás után jön létre. A naptár-
+ * és teendő-szándék azonnal ír (belső nyilvántartás, nem külső hatású
+ * művelet — lásd db/migraciok/0006_naptar.sql). A partner-helyzet csak olvas.
  */
 export async function aiErtelmezes(nyersSzoveg: string): Promise<AiEredmeny> {
-  const ertelmezes = ertelmezSzoveg(nyersSzoveg);
-  if (ertelmezes.szandek === "ismeretlen") return { allapot: "ismeretlen" };
-
   const supabase = await szerverKliens();
   const ma = budapestMaDatum();
 
+  let ertelmezes: Ertelmezes = ertelmezSzoveg(nyersSzoveg);
+  let forras: AiForras = { reteg: 0 };
+
+  if (ertelmezes.szandek === "ismeretlen") {
+    if (!aiBekotve()) return { allapot: "ismeretlen", reteg: 0 };
+    if (await napiPlafonElerve(supabase)) {
+      return {
+        allapot: "hiba",
+        reteg: 0,
+        uzenet: "A mai modellhívás-keret elfogyott (védelem elszabadult költség ellen) — holnap újra, vagy fogalmazd a fenti minták szerint.",
+      };
+    }
+
+    const [{ data: partnerek }, { data: csomagok }, { felhasznalo }] = await Promise.all([
+      supabase.from("partnerek").select("nev").eq("archivalt", false).order("nev").limit(60),
+      supabase.from("munkacsomagok").select("nev").eq("aktiv", true).order("nev").limit(30),
+      sajatCegVagyIranyitas(),
+    ]);
+    const bemenetAdatok = {
+      szoveg: nyersSzoveg,
+      ma,
+      maNapNeve: new Date(`${ma}T12:00:00`).toLocaleDateString("hu-HU", { weekday: "long" }),
+      partnerNevek: (partnerek ?? []).map((p) => p.nev),
+      csomagNevek: (csomagok ?? []).map((c) => c.nev),
+    };
+
+    const valasz = await reteg1Felismeres(bemenetAdatok);
+    if (!valasz.ok) {
+      return { allapot: "hiba", reteg: 1, uzenet: `A modell most nem válaszolt (${valasz.uzenet}). Próbáld a fenti minták szerint.` };
+    }
+    // 2. sarkalatos szabály: mit látott a modell, mit adott vissza, mennyiért.
+    await aiNaplozas(supabase, {
+      muvelet: "szandek_felismeres",
+      reteg: 1,
+      modell: valasz.modell,
+      bemenet: { utasitas: "RETEG1_UTASITAS", bemenet: reteg1Bemenet(bemenetAdatok) },
+      kimenet: valasz.adat as unknown as Json,
+      tokenBe: valasz.tokenBe,
+      tokenKi: valasz.tokenKi,
+      tokenCache: valasz.tokenCache,
+      felhasznaloId: felhasznalo?.id ?? null,
+    });
+    forras = { reteg: 1, modell: valasz.modell };
+
+    const lekepezes = reteg1Ertelmezesse(valasz.adat);
+    if (lekepezes.szandek === "kerdes") return { allapot: "kerdes", uzenet: lekepezes.kerdes, ...forras };
+    if (lekepezes.szandek === "ismeretlen") return { allapot: "ismeretlen", ...forras };
+    ertelmezes = lekepezes;
+  }
+
+  // Ide csak konkrét szándékkal jutunk: a fenti ág minden más úton visszatért.
+  const eredmeny = await vegrehajt(supabase, ertelmezes, ma);
+  return { ...eredmeny, ...forras };
+}
+
+async function vegrehajt(
+  supabase: Supabase,
+  ertelmezes: Exclude<Ertelmezes, { szandek: "ismeretlen" }>,
+  ma: string,
+): Promise<AiEredmenyAlap> {
   if (ertelmezes.szandek === "feladat_felvetel") {
     // A partner opcionális, és CSAK biztos találatnál kötjük hozzá: a teendő
     // címe szabad szöveg ("nagyon fontos a beton" nem a Nagy Kft.-ről szól).
@@ -103,7 +180,8 @@ export async function aiErtelmezes(nyersSzoveg: string): Promise<AiEredmeny> {
     const kereses = partnerKereses(partnerek ?? [], ertelmezes.cim);
     const partner = "partner" in kereses && kereses.biztos ? kereses.partner : null;
 
-    const hatarido = ertelmezes.napszo ? napszoDatumma(ertelmezes.napszo, ma) : null;
+    const hatarido =
+      ertelmezes.datumIso ?? (ertelmezes.napszo ? napszoDatumma(ertelmezes.napszo, ma) : null);
 
     const { data: feladat, error } = await supabase
       .from("feladatok")
@@ -126,6 +204,42 @@ export async function aiErtelmezes(nyersSzoveg: string): Promise<AiEredmeny> {
         : null,
       partnerNev: partner?.nev ?? null,
     };
+  }
+
+  if (ertelmezes.szandek === "teendok") {
+    // "Mik a teendőim?" — csak olvas; a válasz egy-két felolvasható mondat a
+    // saját adatokból (nyitott teendők + mai időpontok), nem modell-szöveg.
+    const [{ data: teendok }, { data: esemenyek }] = await Promise.all([
+      supabase
+        .from("feladatok")
+        .select("id, cim, hatarido, surgos, partnerek(nev)")
+        .eq("allapot", "nyitott")
+        .order("surgos", { ascending: false })
+        .order("hatarido", { ascending: true, nullsFirst: false })
+        .limit(10),
+      supabase
+        .from("naptar_esemenyek")
+        .select("id, cim, kezdet")
+        .gte("kezdet", `${ma}T00:00:00+02:00`)
+        .lte("kezdet", `${ma}T23:59:59+02:00`)
+        .order("kezdet"),
+    ]);
+    const t = (teendok ?? []).map((x) => ({
+      id: x.id,
+      cim: x.cim,
+      hatarido: x.hatarido,
+      surgos: x.surgos,
+      partnerNev: x.partnerek?.nev ?? null,
+    }));
+    const e = (esemenyek ?? []).map((x) => ({ id: x.id, ido: budapestIdoString(x.kezdet), cim: x.cim }));
+    const surgos = t.filter((x) => x.surgos).length;
+    const mondatok = [
+      t.length
+        ? `Ma ${t.length} nyitott teendőd van${surgos ? `, ebből ${surgos} sürgős` : ""}: ${t.slice(0, 3).map((x) => x.cim).join(", ")}${t.length > 3 ? ` és még ${t.length - 3}` : ""}.`
+        : "Ma nincs nyitott teendőd.",
+      e.length ? `A naptárban ma: ${e.map((x) => `${x.ido} ${x.cim}`).join(", ")}.` : "Mai időpontod nincs.",
+    ];
+    return { allapot: "teendok", teendok: t, esemenyek: e, felolvasas: mondatok.join(" ") };
   }
 
   if (ertelmezes.szandek === "partner_helyzet") {
@@ -190,9 +304,10 @@ export async function aiErtelmezes(nyersSzoveg: string): Promise<AiEredmeny> {
     const { data: partnerek } = await supabase.from("partnerek").select("id, nev").eq("archivalt", false);
     const kereses = partnerKereses(partnerek ?? [], ertelmezes.partnerSzoveg);
     if (!("partner" in kereses)) return partnerHiba(kereses, ertelmezes.partnerSzoveg);
-    const partner = kereses.partner; // tipp is elfogadható: a válasz a cím­ben visszamondja a nevet
+    const partner = kereses.partner; // tipp is elfogadható: a válasz a címben visszamondja a nevet
 
-    const datum = napszoDatumma(ertelmezes.napszo, ma);
+    const datum =
+      ertelmezes.datumIso ?? (ertelmezes.napszo ? napszoDatumma(ertelmezes.napszo, ma) : null);
     if (!datum) return { allapot: "hiba", uzenet: "Nem sikerült értelmezni, melyik napra gondoltál." };
 
     const kezdetIso = budapestIdopontIso(datum, ertelmezes.oraSzoveg);
@@ -263,8 +378,7 @@ export async function aiErtelmezes(nyersSzoveg: string): Promise<AiEredmeny> {
 
   if ("csomag" in csomagTalalat) {
     const csomag = csomagTalalat.csomag;
-    // A mondatban m² van (AJANLAT_MINTA csak azt ismeri) — egy fm/db alapú
-    // csomagot nem számolunk át csendben.
+    // A mondatban m² van — egy fm/db alapú csomagot nem számolunk át csendben.
     if (!M2_ALIASOK.has(norm(csomag.mertekegyseg))) {
       return {
         allapot: "hiba",

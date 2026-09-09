@@ -1027,6 +1027,168 @@ cd webapp && node --experimental-strip-types --no-warnings src/lib/szandek.teszt
 node webapp/src/lib/kereses.teszt.mjs
 ```
 
+### 2.11 2026-09-04 — A lépcsős AI-réteg bekötése (OpenAI): 1. réteg, napi összefoglaló, kísérőlevél
+
+Vince: "ma bekötöm a ChatGPT API-t — találd ki, milyet, mennyit fogyaszt
+egy felhasználón, és tegyünk bele több API-s részt optimalizálva." Ez a
+CLAUDE.md költségszabályának (0. → 1. → 2. réteg) első valódi bekötése;
+eddig kulcs híján csak a 0. réteg futott.
+
+**Modellválasztás (2026-09-04-i listaárak, USD / 1M token — forrás:
+developers.openai.com/api/docs/pricing; a kód `lib/ai/naplo.ts`
+`MODELL_ARAK_USD_1M` táblája, dátummal):**
+
+| Feladat | Modell | Be / cache / ki | Miért |
+|---|---|---|---|
+| 1. réteg — zárt sémás szándékfelismerés | `gpt-5-nano` | 0,05 / 0,005 / 0,40 | a legolcsóbb; zárt séma mellett elég |
+| Rövid magyar szöveg (összefoglaló, kísérőlevél) | `gpt-5-mini` | 0,25 / 0,025 / 2,00 | 8× a nano ára, még mindig fillérek |
+| — nem kell — | gpt-5.6 Sol / gpt-6 Astra | 4/20 · 10/50 | 16–200× drágább; a 6. és 15. modulnál, spike-ok után |
+
+Mindhárom modellnév env-ből felülírható (`OPENAI_MODELL_OLCSO`,
+`OPENAI_MODELL_EROS`), a kulcs `OPENAI_API_KEY` (csak szerveren; lásd
+`.env.local.example`). **Kulcs nélkül minden működik tovább a 0. réteggel**
+— az AI-doboz ezt ki is írja, az összefoglaló és a kísérőlevél egyszerűen
+nem jelenik meg.
+
+**Fogyasztás egy cégre (becslés; a tényleges számot az `ai_naplo`
+`koltseg_ft` oszlopa adja, és a spike-mérés):** feltevés 300
+parancs/hó, ebből ~40% jut az 1. rétegre (a 0. réteg lefedettsége a
+spike korpuszán felső becslés), hívásonként ~700 be / ~120 ki token;
+22 napi összefoglaló (~600/200); 10 kísérőlevél (~500/250); 380 Ft/USD.
+
+| Tétel | Havi hívás | Havi költség |
+|---|---|---|
+| 1. réteg (nano) | ~120 | ~4 Ft |
+| Napi összefoglaló (mini) | 22 | ~5 Ft |
+| Kísérőlevél (mini) | 10 | ~2 Ft |
+| **Összesen** | | **~11 Ft / cég / hó** |
+
+Tízszeres használat mellett is ~110 Ft. A valódi kockázat nem az ár,
+hanem az elszabadult hurok — ezért **napi hívásplafon cégenként**
+(`AI_NAPI_PLAFON`, alap 200, az `ai_naplo` sorai számolják; elérve minden
+AI-funkció barátságos hibát ad): a legrosszabb eset 200 mini-hívás/nap
+≈ 50 Ft/nap. Az OpenAI prompt-cache csak 1024 token fölött indul, a
+mi promptjaink kisebbek — ezért nem építünk rá.
+
+**Amit beépítettünk (mind naplózva, plafonnal, AI Act-jelzéssel):**
+
+- **1. réteg az AI-dobozban** (`lib/ai/reteg1.ts`, `(vedett)/actions.ts`):
+  CSAK akkor hívódik, ha a 0. réteg `ismeretlen`-t ad. Responses API,
+  `strict` JSON-séma a webapp NÉGY műveletére (ajánlat, naptár, teendő,
+  partner-helyzet) + `ismeretlen`; a modell megkapja a cég partner- és
+  csomagneveit (max 60/30), hogy a "Kovácsék"-at feloldja, de a végső
+  illesztés továbbra is a determinisztikus `partnerKereses` (több
+  jelölt → kérdez). A válasz ugyanabba az `Ertelmezes` alakba fordul
+  (`reteg1Ertelmezesse`, tiszta, tesztelt), és **ugyanaz a `vegrehajt`
+  fut**, mint a 0. rétegnél — a modell megért, nem számol. Hiányzó adatnál
+  `kerdes` állapot: a modell rövid visszakérdezése jelenik meg, semmi nem
+  íródik. A gpt-5 család gondolkodó modell: `reasoning.effort: "minimal"`
+  (késleltetés és költség miatt), `temperature`-t nem küldünk (nem
+  támogatott). Az `ai_naplo`-ba kerül a teljes bemenet (utasítás-név +
+  a modellnek adott szöveg), a válasz, tokenek, Ft — 2. sarkalatos szabály.
+- **Napi összefoglaló** (`lib/ai/osszefoglalo.ts`, `osszefoglalo-actions.ts`,
+  `NapiOsszefoglalo.tsx`, tábla `napi_osszefoglalok` — 0021): a
+  vízió-dokumentum "Jó reggelt, Zoli!" képernyője. Naponta EGYSZER
+  cégenként, tárolva (kulcs: cég+nap; párhuzamos megnyitásnál a második
+  a tároltat olvassa). A bemenet kizárólag determinisztikus tény (a "Ma"
+  oldal számai, mai naptár, régóta várakozó ajánlatok), az utasítás tiltja
+  a kitalált számot/tanácsot. A kliens-komponens kéri le betöltéskor — az
+  oldal renderje nem ír adatbázist. ⚠ A `maiTenyek` a page.tsx
+  lekérdezéseinek másolata; ha bővül, érdemes a page.tsx-et is erre
+  átállítani.
+- **Kísérőlevél az ajánlathoz** (`lib/ai/kisero.ts`, `kiseroSzovegGeneralasa`,
+  `KiseroLevel.tsx`, oszlop `ajanlatok.kisero_szoveg` — 0021): kérésre
+  generált magázó PISZKOZAT (tárgy + törzs), tárolva, "Levél másolása"
+  gombbal. **Nem küld e-mailt** (10. modul, V2; Gmail tilos) — a
+  vállalkozó a saját levelezőjébe másolja.
+- **AI Act 50. cikk**: eddig hiányzott. Az AI-doboz felett állandó
+  jelzés, és MINDEN válasz alatt "0. réteg · helyi mintaillesztés" vagy
+  "1. réteg · nyelvi modell: gpt-5-nano"; az összefoglaló és a kísérőlevél
+  alatt "AI-generált szöveg — ellenőrizd".
+- **Spike 4 mérhető a te kulcsoddal**: `spike/parancs/merd.mjs` kapott
+  OpenAI-ágat (ugyanaz a séma/utasítás, Responses API) —
+  `OPENAI_API_KEY=... node parancs/merd.mjs --reteg1` a 68 mondatos
+  korpuszon valódi tokenszámot és Ft/hívást mér. **Ezt Vince futtassa**,
+  a kulcs nem kerül a chatbe és a repóba.
+
+**Ellenőrzés**: build tiszta; `reteg1.teszt.mts` 13 eset (leképezés,
+kérdés-ágak, ISO dátum, rossz idő) + a korábbi 32 eset zöld; a 0021
+alkalmazva; `tsconfig` `allowImportingTsExtensions` bekapcsolva (a
+tesztek Node-dal, bundler nélkül futhatnak). ⚠ **Valódi modellhívás NEM
+történt** ebben a munkamenetben — nincs kulcs a gépen. Az első éles
+próba Vincénél: kulcs a `.env.local`-ba, `npm run build && npm start`,
+majd az AI-dobozba egy 0. réteg által nem ismert mondat (pl. "Kovácséknak
+kéne egy ajánlat úgy nyolcszáz négyzetre") → a válasz alatt "1. réteg ·
+gpt-5-nano", az `ai_naplo`-ban egy sor Ft-költséggel. Ha a Responses API
+egy paramétert visszautasít (pl. `reasoning.effort` egy más modellnél), a
+doboz a modell hibaüzenetét mutatja — ott kell igazítani, nem csendben
+tűnik el.
+
+**Tudatosan NEM**: 6. modul (számlafotó-kiolvasás) — a 2. spike (50–100
+valódi számla) előtt tilos; a kulccsal a spike most futtatható.
+Csúcsmodell — nincs rá feladat. Beszélgetés-előzmény — az AI-doboz
+egyfordulós, nincs kontextus-plafon gond.
+
+**Kulcs-bekötés, ahogy tényleg történt (tanulság a következő gépre):** a
+kulcs beillesztése négy nekifutásba került — a chatben adott parancsot a
+felhasználó változatlanul futtatta (a helyőrző szöveg került a fájlba), majd
+a kulcsot közvetlenül a promptba illesztette (a zsh `command not found`-ot
+írt, a kulcs a shell-előzménybe került), végül a terminál paszta-duplázása
+miatt háromszor egymás után íródott be. A működő út: egy `read -s`-sel
+bekérő parancs, amit a felhasználó futtat, és a kulcsot a promptba
+illeszti; utána a fájl ellenőrzése az érték kiírása NÉLKÜL (hossz, `sk-`
+előtag, ismétlés). A chatbe került első kulcsot a felhasználó visszavonta.
+Az OpenAI-fiókban ekkor még nem volt egyenleg ("no credits remaining") —
+a kulcs érvényes, a feltöltés a felhasználó dolga. **A spike ingyenes
+része már megjött**: a 68 mondat 92,6%-át a 0. réteg oldja meg, 0 téves
+felismeréssel — a modellre a becsült 40% helyett ~8% jut (felső becslés,
+a korpuszt a minták írója írta).
+
+### 2.12 2026-09-04 — Hang: nyomva tartós mikrofon, „mik a teendőim?", felolvasás
+
+Vince: "a hangot oldjuk meg — naptárba bevinni dolgokat, megkérdezni, mik
+a teendők, és erre válaszoljon". A CLAUDE.md "félretéve" státusza ezzel
+megszűnt (a fájl frissítve).
+
+**Elv**: a hang nem új "agy", hanem új BEMENET. A gomb csak szöveget ad,
+ami ugyanabba a csőbe megy (0. → 1. réteg → `vegrehajt`), mint a gépelt
+parancs — semmi új szándéklogika nem került a hangba.
+
+- **`HangGomb.tsx`** — push-to-talk (pointer le/fel, billentyűvel is;
+  hosszú nyomásra nincs kontextusmenü; `touch-action: none`), 64 px, rezgés
+  a felvétel elején/végén, másodperc-számláló, legfeljebb 15 mp. Két
+  lépcső: (1) **a böngésző saját felismerője** (Web Speech API, `hu-HU`,
+  `continuous` + `interimResults`, a köztes átirat látszik) — 0 Ft; (2)
+  **felhő-tartalék**: `MediaRecorder` (webm/opus, iOS-en mp4) → Server
+  Action (`hang-actions.ts`) → `lib/ai/hang.ts` → OpenAI
+  `/v1/audio/transcriptions` (`gpt-4o-mini-transcribe`, 0,003 $/perc,
+  `language: hu`). Felhő akkor, ha a böngésző nem tud hangot, vagy a
+  felhasználó "zajos helyszín (felhő)" módra kapcsol (localStorage-ban
+  marad). Nincs folyamatos hallgatás, nincs ébresztőszó.
+- **Naplózás**: minden felhős átirat az `ai_naplo`-ban (`hang_atirat`,
+  hossz mp-ben, percarányos Ft) — a 3. spike szándékpontossága így élesben,
+  folyamatosan mérhető; a böngészős út 0 Ft, nincs szerverhívás.
+- **„Mik a teendőim?"** — új `teendok` szándék a 0. rétegben
+  (`mai teendo|mi a dolgom|teendoim|teendok|mi van ma|napirend|…`) és az
+  1. réteg sémájában; a hub csak OLVAS: nyitott teendők (sürgős elöl) +
+  mai naptár, és egy-két felolvasható mondatot ad a saját adatokból (nem
+  modell-szöveg). Az AiBox listát mutat linkekkel.
+- **Felolvasás** (`lib/felolvasas.ts` + `speechSynthesis`, `hu-HU`): CSAK
+  hangból jött parancs után szól, kikapcsolható ("felolvasás ki",
+  localStorage). Minden eredménytípushoz egy rövid mondat; az ajánlatnál
+  kimondja, hogy a képernyőn kell jóváhagyni.
+- **Biztonság/őszinteség**: az átirat megjelenik a mezőben, és a kockázatos
+  kimenet (ajánlat) továbbra is a jóváhagyó lapon áll meg; naptár/teendő
+  szerkeszthető. Üres vagy túl rövid felvételnél nem küld semmit.
+
+**Ellenőrzés**: build tiszta; szándék-teszt 16 eset (+ teendok), leképezés
+14, felolvasás 7 — mind zöld. ⚠ **Mikrofonos, élő próba NEM történt**: a
+beágyazott böngésző nem ad mikrofont, és a felhős átíráshoz egyenleg kell.
+Vince próbája telefonon (Chrome/Safari, HTTPS vagy localhost kell a
+mikrofonhoz): nyomva tart → "holnap tízkor megyek Kovácshoz" → elenged →
+az átirat a mezőben, naptárbejegyzés, felolvasva; majd "mik a mai
+teendőim?" → lista + felolvasás. Firefoxban csak a felhős út megy.
+
 ---
 
 ## 3. A sarkalatos szabályok

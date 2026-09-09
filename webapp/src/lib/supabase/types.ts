@@ -159,6 +159,7 @@ export type Database = {
           id: string
           kedvezmeny_szazalek: number
           kelt: string
+          kisero_szoveg: string | null
           letrehozva: string
           netto: number
           partner_id: string
@@ -174,6 +175,7 @@ export type Database = {
           id?: string
           kedvezmeny_szazalek?: number
           kelt?: string
+          kisero_szoveg?: string | null
           letrehozva?: string
           netto?: number
           partner_id: string
@@ -189,6 +191,7 @@ export type Database = {
           id?: string
           kedvezmeny_szazalek?: number
           kelt?: string
+          kisero_szoveg?: string | null
           letrehozva?: string
           netto?: number
           partner_id?: string
@@ -815,6 +818,47 @@ export type Database = {
             columns: ["termek_id"]
             isOneToOne: false
             referencedRelation: "termekek"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      napi_osszefoglalok: {
+        Row: {
+          bemenet: Json
+          ceg_id: string
+          datum: string
+          letrehozva: string
+          modell: string
+          szoveg: string
+          token_be: number
+          token_ki: number
+        }
+        Insert: {
+          bemenet: Json
+          ceg_id?: string
+          datum: string
+          letrehozva?: string
+          modell: string
+          szoveg: string
+          token_be?: number
+          token_ki?: number
+        }
+        Update: {
+          bemenet?: Json
+          ceg_id?: string
+          datum?: string
+          letrehozva?: string
+          modell?: string
+          szoveg?: string
+          token_be?: number
+          token_ki?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "napi_osszefoglalok_ceg_id_fkey"
+            columns: ["ceg_id"]
+            isOneToOne: false
+            referencedRelation: "cegek"
             referencedColumns: ["id"]
           },
         ]

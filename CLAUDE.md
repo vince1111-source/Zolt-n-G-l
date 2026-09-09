@@ -57,8 +57,10 @@ amit a modell nem jelölt be. A 3. spike fő mérőszáma nem a WER, hanem a
 
 Az eredményeket a `spike/eredmenyek/EREDMENY-SABLON.md` másolatába kell írni.
 
-**A hangot a tulajdonos egyelőre félretette** („lehet plugin, majd kitaláljuk") —
-ne ez legyen a következő fejlesztési irány, de a mérőeszköz készen áll.
+**A hangot a tulajdonos 2026-09-04-én kérte** (korábban félretette): nyomva tartós
+mikrofon az AI-dobozban, a böngésző saját felismerője az elsődleges, felhős
+átírás a tartalék (`lib/ai/hang.ts`), minden felhős átirat az `ai_naplo`-ban
+— így a 3. spike „szándékpontossága" élesben, folyamatosan mérhető.
 
 A következő fejlesztői lépések sorrendje a HANDOVER 8. fejezetében van.
 

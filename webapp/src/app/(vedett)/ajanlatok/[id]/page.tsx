@@ -13,7 +13,10 @@ import {
   ajanlatMasolasa,
   szamlaKiallitasa,
   szamlaFizetve,
+  kiseroSzovegGeneralasa,
 } from "../actions";
+import { KiseroLevel } from "@/components/KiseroLevel";
+import { aiBekotve } from "@/lib/ai/openai";
 
 export default async function AjanlatReszletei({
   params,
@@ -183,6 +186,12 @@ export default async function AjanlatReszletei({
           </button>
         </form>
       </div>
+
+      <KiseroLevel
+        szoveg={ajanlat.kisero_szoveg}
+        bekotve={aiBekotve()}
+        action={kiseroSzovegGeneralasa.bind(null, id)}
+      />
 
       {szamla && (
         <div className="bg-surface border border-line rounded-xl p-4 flex items-center justify-between gap-4">

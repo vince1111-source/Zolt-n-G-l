@@ -7,6 +7,8 @@ import { Ft } from "@/lib/format";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { AiBox } from "@/components/AiBox";
+import { NapiOsszefoglalo } from "@/components/NapiOsszefoglalo";
+import { aiBekotve } from "@/lib/ai/openai";
 import { KovetesLista, type Varakozo } from "@/components/KovetesLista";
 import { ListTodo, Wallet, Clock, TrendingUp, Sparkles } from "lucide-react";
 
@@ -117,6 +119,9 @@ export default async function Ma() {
         <h1 className="text-2xl font-extrabold tracking-tight">
           Jó napot, {felhasznalo.nev}!
         </h1>
+        <div className="mt-2">
+          <NapiOsszefoglalo />
+        </div>
       </div>
 
       <Card className="p-5">
@@ -206,7 +211,7 @@ export default async function Ma() {
 
       <Card className="p-5">
         <h2 className="font-bold mb-3 flex items-center gap-2"><Sparkles size={18} className="text-cta" aria-hidden />Mit szeretnél elintézni?</h2>
-        <AiBox />
+        <AiBox hangFelho={aiBekotve()} />
       </Card>
     </div>
   );

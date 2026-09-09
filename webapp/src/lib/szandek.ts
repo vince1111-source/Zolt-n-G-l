@@ -39,9 +39,13 @@ export type AjanlatSzandek = {
  * "mai nap Budapesten" a hívó (szerver oldali) felelőssége, hogy a modul
  * ne váljon időzóna-függő, nehezen tesztelhető kóddá.
  */
+export type NapSzo = "ma" | "holnap" | "holnaputan" | "hetfo" | "kedd" | "szerda" | "csutortok" | "pentek" | "szombat" | "vasarnap";
+
 export type NaptarSzandek = {
   szandek: "naptar_esemeny";
-  napszo: "ma" | "holnap" | "holnaputan" | "hetfo" | "kedd" | "szerda" | "csutortok" | "pentek" | "szombat" | "vasarnap";
+  /** ISO dátum (ÉÉÉÉ-HH-NN), ha az 1. réteg konkrét napot adott; ilyenkor a napszo null. */
+  datumIso?: string;
+  napszo: NapSzo | null;
   oraSzoveg: string; // "HH:MM"
   partnerSzoveg: string;
   leiras?: string;
@@ -61,20 +65,26 @@ export type PartnerHelyzetSzandek = {
 export type FeladatSzandek = {
   szandek: "feladat_felvetel";
   cim: string;
-  napszo?: NaptarSzandek["napszo"];
+  napszo?: NapSzo;
+  /** ISO dátum az 1. rétegtől, ha konkrét napot mondott. */
+  datumIso?: string;
 };
+
+/** "Mik a teendőim?", "mi van ma?" — a prototípus `teendo` parancsa: a mai teendők és időpontok, felolvasható válasszal. */
+export type TeendokSzandek = { szandek: "teendok" };
 
 export type Ertelmezes =
   | AjanlatSzandek
   | NaptarSzandek
   | PartnerHelyzetSzandek
   | FeladatSzandek
+  | TeendokSzandek
   | { szandek: "ismeretlen" };
 
 const AJANLAT_MINTA =
   /(?:keszits?|csinalj|adj)\s+(?:egy\s+)?(?:ajanlatot|arajanlatot|arat)\s+(.+?)\s*(?:nek|nak)\s+(\d+(?:[.,]\d+)?)\s*(?:negyzetmeter|nm2|m2|nm)(?:re|ra)?\b\s*(.*)/;
 
-const NAP_ALAK_TERKEP: Record<string, NaptarSzandek["napszo"]> = {
+export const NAP_ALAK_TERKEP: Record<string, NapSzo> = {
   ma: "ma",
   holnap: "holnap",
   holnaputan: "holnaputan",
@@ -159,6 +169,9 @@ function ertelmezNaptarSzoveg(szoveg: string): NaptarSzandek | null {
   return { szandek: "naptar_esemeny", napszo, oraSzoveg, partnerSzoveg, leiras };
 }
 
+const TEENDOK_MINTA =
+  /\b(mai teendo|mi a dolgom|teendoim|teendok|mik a teendo|mi van ma|mai feladat|napirend|mit kell ma|mi a mai|naptaram|mi van a naptar)/;
+
 const PARTNER_HELYZET_MINTA =
   /^(?:mutasd|nyisd meg|nezzuk|hogy allunk|mi a helyzet|mennyivel tartozik)\s+(?:meg\s+)?(?:a\s+|az\s+)?(.+?)\s*\??$/;
 
@@ -202,7 +215,7 @@ function ertelmezFeladatSzoveg(nyersSzoveg: string): FeladatSzandek | null {
   const maradek = nyersSzavak.slice(index);
   if (!maradek.length) return null;
 
-  let napszo: NaptarSzandek["napszo"] | undefined;
+  let napszo: NapSzo | undefined;
   const cimSzavak = maradek.filter((sz, i) => {
     const n = normSzavak[index + i];
     const nap = NAP_ALAK_TERKEP[n];
@@ -228,6 +241,8 @@ export function ertelmezSzoveg(nyersSzoveg: string): Ertelmezes {
 
   const feladatSzandek = ertelmezFeladatSzoveg(nyersSzoveg);
   if (feladatSzandek) return feladatSzandek;
+
+  if (TEENDOK_MINTA.test(szoveg)) return { szandek: "teendok" };
 
   const ajanlatTalalat = szoveg.match(AJANLAT_MINTA);
   if (ajanlatTalalat) {

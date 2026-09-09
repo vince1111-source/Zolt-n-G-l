@@ -37,6 +37,11 @@ const szandekok: [string, Record<string, unknown>][] = [
   // Nap+idő a "név" részben: naptár-mondat, amit ebben az alakban nem ismerünk — továbbad.
   ["Nézzük meg holnap 9-kor Kovácsot", { szandek: "ismeretlen" }],
   ["mennyibe kerül a térkő", { szandek: "ismeretlen" }],
+  // "Mik a teendőim?" — a mai teendők és időpontok (felolvasható válasz)
+  ["Mik a mai teendőim?", { szandek: "teendok" }],
+  ["mi a dolgom ma", { szandek: "teendok" }],
+  ["Mi van ma a naptárban?", { szandek: "teendok" }],
+  ["Teendő: számlát küldeni Nagyéknak", { szandek: "feladat_felvetel" }],
 ];
 for (const [be, vart] of szandekok) eset(JSON.stringify(be), ertelmezSzoveg(be), vart);
 

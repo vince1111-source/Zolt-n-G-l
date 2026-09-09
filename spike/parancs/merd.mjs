@@ -34,13 +34,21 @@ const KELL_RETEG1 = !!argv.reteg1;
    költségmodell egyetlen szabad paramétere — állítsd, ha más a valóság. */
 const HAVI_PARANCS = Number(process.env.HAVI_PARANCS || 300);
 
-/* USD / millió token. Forrás: platform.claude.com/docs — futtatás előtt ellenőrizd. */
+/* USD / millió token. Forrás: platform.claude.com/docs, ill.
+   developers.openai.com/api/docs/pricing (2026-09-04) — futtatás előtt ellenőrizd. */
 const ARAK = {
   'claude-haiku-4-5': { be: 1, ki: 5 },
   'claude-sonnet-5': { be: 2, ki: 10 },
   'claude-opus-5': { be: 5, ki: 25 },
+  'gpt-5-nano': { be: 0.05, ki: 0.4 },
+  'gpt-5.4-nano': { be: 0.2, ki: 1.25 },
+  'gpt-5-mini': { be: 0.25, ki: 2 },
 };
-const MODELL = process.env.PARANCS_MODELL || 'claude-haiku-4-5';
+/* OPENAI_API_KEY esetén az OpenAI Responses API-t hívja (ez a webapp
+   lib/ai/openai.ts útja), különben az Anthropic SDK-t. Ugyanaz a séma és
+   utasítás mindkettőnél — a mérés a szolgáltatótól függetlenül összevethető. */
+const OPENAI = !!process.env.OPENAI_API_KEY;
+const MODELL = process.env.PARANCS_MODELL || (OPENAI ? 'gpt-5-nano' : 'claude-haiku-4-5');
 const USD_HUF = Number(process.env.USD_HUF || 380);
 
 const korpusz = JSON.parse(fs.readFileSync(path.join(ITT, 'mondatok.json'), 'utf8')).mondatok;
@@ -98,9 +106,46 @@ if (rosszak.length) {
 
 let reteg1 = null;
 if (KELL_RETEG1) {
-  const { default: Anthropic } = await import('@anthropic-ai/sdk');
-  const client = new Anthropic();
   const { SEMA, UTASITAS } = await import('./reteg1.mjs');
+
+  let hivas;
+  if (OPENAI) {
+    hivas = async (szoveg) => {
+      const r = await fetch('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+        body: JSON.stringify({
+          model: MODELL,
+          instructions: UTASITAS,
+          input: szoveg,
+          max_output_tokens: 400,
+          reasoning: { effort: 'minimal' },
+          text: { format: { type: 'json_schema', name: 'parancs', strict: true, schema: SEMA } },
+        }),
+      });
+      const v = await r.json();
+      if (!r.ok) throw new Error(v.error?.message || `HTTP ${r.status}`);
+      const szov = v.output?.find((o) => o.type === 'message')?.content?.[0]?.text ?? '';
+      return { adat: JSON.parse(szov), be: v.usage?.input_tokens ?? 0, ki: v.usage?.output_tokens ?? 0 };
+    };
+  } else {
+    const { default: Anthropic } = await import('@anthropic-ai/sdk');
+    const client = new Anthropic();
+    hivas = async (szoveg) => {
+      const v = await client.messages.create({
+        model: MODELL,
+        max_tokens: 400,
+        system: UTASITAS,
+        messages: [{ role: 'user', content: szoveg }],
+        output_config: { format: { type: 'json_schema', schema: SEMA } },
+      });
+      return {
+        adat: JSON.parse(v.content.filter((b) => b.type === 'text').map((b) => b.text).join('')),
+        be: v.usage.input_tokens,
+        ki: v.usage.output_tokens,
+      };
+    };
+  }
 
   const maradek = eredmenyek.filter((e) => e.tovabbadja);
   console.log(`\n1. RÉTEG — ${MODELL}, ${maradek.length} mondat\n`);
@@ -108,16 +153,9 @@ if (KELL_RETEG1) {
   let beTok = 0, kiTok = 0, jo = 0;
   for (const m of maradek) {
     try {
-      const v = await client.messages.create({
-        model: MODELL,
-        max_tokens: 400,
-        system: UTASITAS,
-        messages: [{ role: 'user', content: m.szoveg }],
-        output_config: { format: { type: 'json_schema', schema: SEMA } },
-      });
-      beTok += v.usage.input_tokens;
-      kiTok += v.usage.output_tokens;
-      const adat = JSON.parse(v.content.filter((b) => b.type === 'text').map((b) => b.text).join(''));
+      const { adat, be, ki } = await hivas(m.szoveg);
+      beTok += be;
+      kiTok += ki;
       const talalt = adat.szandek === m.szandek;
       if (talalt) jo += 1;
       console.log(`  ${talalt ? '✓' : '✗'} „${m.szoveg}” → ${adat.szandek}`);

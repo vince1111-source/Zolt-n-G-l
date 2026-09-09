@@ -46,12 +46,15 @@ cd spike
 # a 0. réteg mérése — API kulcs nem kell
 node parancs/merd.mjs
 
-# mindkét réteg, valódi tokenszámmal és költséggel
+# mindkét réteg, valódi tokenszámmal és költséggel — OpenAI (a webapp útja):
+OPENAI_API_KEY=... node parancs/merd.mjs --reteg1
+# …vagy Anthropic:
 ANTHROPIC_API_KEY=... node parancs/merd.mjs --reteg1
 ```
 
 Állítható környezeti változók: `HAVI_PARANCS` (alapérték 300),
-`PARANCS_MODELL` (alapérték `claude-haiku-4-5`), `USD_HUF` (alapérték 380).
+`PARANCS_MODELL` (alapérték `gpt-5-nano` OpenAI-kulccsal, különben
+`claude-haiku-4-5`), `USD_HUF` (alapérték 380).
 
 Kimenet: `eredmenyek/parancs-riport.md`.
 
