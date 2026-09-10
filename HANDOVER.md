@@ -1387,6 +1387,63 @@ URL-t.
 „Telephely", 08-31-i kézi) valószínűleg böngésző-előzményből — a tulajdonos
 zárja le, ha nem kell. A szerkesztés mentéskor minden tételt a mai
 árlista-áron számol újra (piszkozatnál szándékos, de a felület nem jelzi).
+
+### 2.16 2026-09-10 — Zolinak: szabolcsi adatok, hangos árajánlat
+
+Zoli szabolcsi; neki az árajánlat-készítés és a hangvezérlés a legfontosabb.
+
+**Szabolcsi demóadatok.** Minden partner, munka és esemény
+Szabolcs-Szatmár-Bereg megyei címre került (Nyíregyháza, Kisvárda,
+Mátészalka, Nyírtelek, Nyírbátor, Nyíregyháza-Oros; kitalált házszámok),
+a Tüzép nyíregyházi körzetszámot kapott; új partner: Balogh Ferenc (Oros,
+a becenév-próbához). Munkadíjak a régió árszintjén, az LBL-Kertépítés
+(Szabolcs-Szatmár-Bereg) publikus árlistája alapján: tükörkészítés 1 800,
+alapréteg rétegenként 1 400, ágyazóréteg 650, térkő lerakás 3 800 Ft/m²,
+szegélykő rakás 3 000 Ft/fm. Zúzottkő 0/32: 11 500 Ft/m³, beszerzés
+10 000 (Sajópetri, Nyéki Kavics 5 550 Ft/t 2026.02.01-től, ~1,5 t/m³ +
+fuvar). Konténer 3–4 m³: 30 000 Ft (nyíregyházi ügyfél-visszajelzések:
+28–30 ezer, qjob.hu). Bontás 4 000 Ft/m² — becslés (országosan 6–8 ezer,
+sitt nélkül). Az anyagárak országosak maradtak. A két piszkozat (AJ-006,
+AJ-007) az új árakon újraszámolva; a kiküldött/elfogadott ajánlatok az
+eredeti áron maradtak, ahogy a valóságban is. Egy teljes rétegrendű
+gyalogos felület 50 m²-en most ~20 500 Ft/m² nettó.
+
+**Hangos árajánlat — a 0. rétegben**, mert élesben még nincs OpenAI-kulcs:
+- szóval mondott számok ("nyolcvan négyzet" → 80, "kétszázötven",
+  "tízkor") — csak mértékegység vagy időpont előtt, így az "egy
+  ajánlatot" névelője nem lesz szám;
+- "négyzet / négyzetes / nm" és a toldalékos alakok;
+- rugalmas szórend: "Mennyibe kerülne 80 négyzet térkövezés Kovácséknak?",
+  "Ajánlat Nagy Pistának 120 négyzet udvar";
+- kimondott kerület: "36 méter szegéllyel" → a csomag kerület-tételei
+  ezzel számolnak, nem becsléssel (a tő "szegel": a ly toldalékkal
+  kettőződik — ez volt az első hiba a tesztben);
+- becenevek: "Balogh Ferinek" → Balogh Ferenc, "Nagy Pistának" → Nagy
+  István — csak tipp, a jóváhagyó lap kimondja;
+- extrák a mondatból: "bontással", "két konténerrel", "kiszállással" →
+  csak a csomagban nem szereplő, egyértelműen illeszkedő árlista-tétel,
+  a feltételezésben kimondva (`lib/ajanlat-extrak.ts`);
+- szabolcsi í-zés: a "kíszíts" is ige;
+- ha a munka nem egyértelmű ("udvar": gyalogos vagy autós?), kérdez, a
+  csomagok kulcsszavaival — nem számol minden m²-es tétellel.
+
+**0024 `munkacsomagok.kulcsszavak`** (additív, nullable): vesszővel
+elválasztott szavak ("bejáró" → Kocsibeálló), a csomag-űrlapon
+szerkeszthető; az 1. réteg is a kulcsszavakkal kapja a csomagneveket.
+**1. réteg**: `kerulet_fm` a sémában; "négyzet" és becenév-szabály az
+utasításban.
+
+**Ellenőrzés.** Tesztek: szandek +21 eset, ajanlat-extrak 7 (új),
+munkacsomag +2, reteg1 +1 — mind a 7 csomag zöld, a build tiszta. Élesben
+végigkattintva: a Balogh-mintamondat (becenév, kulcsszó, bontás mint
+extra, szabolcsi árak — AJ-2026-009 létrejött, 4 feltételezéssel), a
+Kovács-mintamondat (80 m², a mondatbeli 36 fm-es kerülettel), az "udvar"
+visszakérdezés, a "hatvan négyzet bejáró két konténerrel" (kulcsszó +
+2 db konténer), és a szabolcsi "Kíszíts ajánlatot Tóth Gábornak 30 négyzet
+kocsibeállóra" (ugyanaz az ajánlat, mint a köznyelvi alakkal). ⚠ A mikrofont a Browser panel letiltja: a valódi
+hangos próba Zoli telefonján jön. Ha a böngésző felismerője gyenge (zaj,
+tájszólás), a felhős átírás a tartalék — ahhoz OpenAI-kulcs kell
+Vercelben.
 ---
 
 ## 3. A sarkalatos szabályok
