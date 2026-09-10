@@ -14,6 +14,7 @@ export function NaptarEsemenyForm({
   alapDatum,
   munkaId,
   munkak,
+  visszaUt,
   action,
   mentesCimke = "Naptárba teszem",
 }: {
@@ -24,6 +25,8 @@ export function NaptarEsemenyForm({
   munkaId?: string;
   /** Ha nincs `munkaId`, ebből lehet választani (opcionális kapcsolat). */
   munkak?: { id: string; cim: string | null }[];
+  /** Mentés után ide térünk vissza (pl. a munka oldala); különben az esemény hetére a naptárban. */
+  visszaUt?: string;
   action: (elozo: EsemenyAllapot, adat: FormData) => Promise<EsemenyAllapot>;
   mentesCimke?: string;
 }) {
@@ -31,6 +34,7 @@ export function NaptarEsemenyForm({
 
   return (
     <form action={formAction} className="flex flex-col gap-4 max-w-md">
+      {visszaUt && <input type="hidden" name="vissza" value={visszaUt} />}
       <label>
         Cím
         <input

@@ -65,6 +65,26 @@ export function hetNapjai(hetElsoNap: string): string[] {
   });
 }
 
+/**
+ * A naptár hét-nézetének tartománya a megjelölt nap körül: a hét napjai, a
+ * szomszédos hetek hétfője, és a lekérdezés [tol, ig) határai budapesti
+ * éjfélhez igazítva (UTC ISO-időbélyegként). A következő hét hétfője a
+ * hétfő + 7 nap — NEM a vasárnapból visszaszámolt hétfő, ami ugyanerre a
+ * hétre esne vissza (ez üres lekérdezést és helyben maradó lapozást adott).
+ */
+export function hetTartomany(datumStr: string) {
+  const hetfo = hetElsoDatum(datumStr);
+  const kovetkezoHet = napHozzaad(hetfo, 7);
+  return {
+    hetfo,
+    napok: hetNapjai(hetfo),
+    elozoHet: napHozzaad(hetfo, -7),
+    kovetkezoHet,
+    tol: budapestIdopontIso(hetfo, "00:00"),
+    ig: budapestIdopontIso(kovetkezoHet, "00:00"),
+  };
+}
+
 /** Dátum-string ("2026-09-03") magyar, olvasható alakja. */
 export function datumSzoveg(datumStr: string): string {
   return new Date(`${datumStr}T00:00:00Z`).toLocaleDateString("hu-HU", {

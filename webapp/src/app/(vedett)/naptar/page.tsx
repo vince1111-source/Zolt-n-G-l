@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Calendar } from "lucide-react";
 import { szerverKliens } from "@/lib/supabase/server";
-import { hetElsoDatum, hetNapjai, budapestMaDatum, budapestNapString, datumSzoveg } from "@/lib/het";
+import { hetTartomany, budapestMaDatum, budapestNapString, datumSzoveg } from "@/lib/het";
 import { esemenyTorlese } from "./actions";
 import { Card } from "@/components/ui/Card";
 import { gombElsodleges, gombMasodlagos, gombVeszelyes } from "@/components/ui/classes";
@@ -11,20 +11,21 @@ export default async function Naptar({
   searchParams,
 }: PageProps<"/naptar">) {
   const { het: hetParam } = await searchParams;
-  const megjelolt = typeof hetParam === "string" ? hetParam : budapestMaDatum();
-  const hetfo = hetElsoDatum(megjelolt);
-  const napok = hetNapjai(hetfo);
-  const kovetkezoHet = hetNapjai(hetElsoDatum(napok[6]))[0];
-  const elozoHetElso = new Date(`${hetfo}T00:00:00Z`);
-  elozoHetElso.setUTCDate(elozoHetElso.getUTCDate() - 7);
-  const elozoHet = elozoHetElso.toISOString().slice(0, 10);
+  // Érvénytelen ?het= esetén a mai hét — különben a dátum-aritmetika NaN-t adna.
+  const megjelolt =
+    typeof hetParam === "string" && /^\d{4}-\d{2}-\d{2}$/.test(hetParam) ? hetParam : budapestMaDatum();
+  // A hét tartománya tesztelt segédből (lib/het.ts). Korábban a "következő
+  // hét" a vasárnapból visszaszámolt UGYANAZON hétfő lett: a lekérdezés üres
+  // tartományt kapott, a naptár egy eseményt sem mutatott, és a "Következő
+  // hét" gomb helyben maradt.
+  const { napok, elozoHet, kovetkezoHet, tol, ig } = hetTartomany(megjelolt);
 
   const supabase = await szerverKliens();
   const { data: esemenyek } = await supabase
     .from("naptar_esemenyek")
     .select("*, munkak(cim, partnerek(nev))")
-    .gte("kezdet", `${hetfo}T00:00:00Z`)
-    .lt("kezdet", `${kovetkezoHet}T00:00:00Z`)
+    .gte("kezdet", tol)
+    .lt("kezdet", ig)
     .order("kezdet");
 
   const naponta = new Map<string, typeof esemenyek>();

@@ -51,6 +51,13 @@ export default async function AjanlatReszletei({
     .eq("hivatkozott_id", id)
     .order("javasolva", { ascending: false });
 
+  // Elfogadáskor automatikusan munka lesz belőle — innen egy kattintás legyen.
+  const { data: munka } = await supabase
+    .from("munkak")
+    .select("id")
+    .eq("ajanlat_id", id)
+    .maybeSingle();
+
   const { data: szamla } = await supabase
     .from("szamlak")
     .select("id, sorszam, brutto, kelt, fizetesi_hatarido, forras, allapot")
@@ -231,6 +238,11 @@ export default async function AjanlatReszletei({
               Számla kiállítása
             </button>
           </form>
+        )}
+        {munka && (
+          <Link href={`/munkak/${munka.id}`} className="px-5 py-3 rounded-full border border-line hover:border-cta font-semibold">
+            Munka megnyitása
+          </Link>
         )}
         <Link
           href={`/ajanlatok/${id}/dokumentum`}

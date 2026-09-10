@@ -33,6 +33,20 @@ function esemenyMezokFormbol(adat: FormData): EsemenyMezokVagyHiba {
   return { cim, kezdet, veg, munka_id: munkaId };
 }
 
+/**
+ * Mentés után oda vigyük a felhasználót, ahol az időpontot látja: ha a munka
+ * oldaláról jött, vissza a munkához; különben az esemény hetére a naptárban.
+ * Eddig mindig a MAI hétre ugrott — egy két hét múlva kezdődő kivitelezést
+ * így nem látott. Csak saját munka-útvonalra engedünk vissza (nincs nyílt
+ * átirányítás).
+ */
+function mentesUtaniUt(adat: FormData): string {
+  const vissza = String(adat.get("vissza") ?? "");
+  if (/^\/munkak\/[0-9a-f-]{36}$/.test(vissza)) return vissza;
+  const datum = String(adat.get("kezdet_datum") ?? "");
+  return /^\d{4}-\d{2}-\d{2}$/.test(datum) ? `/naptar?het=${datum}` : "/naptar";
+}
+
 export async function esemenyLetrehozasa(
   _elozo: EsemenyAllapot,
   adat: FormData,
@@ -47,7 +61,7 @@ export async function esemenyLetrehozasa(
   await flashUzenet("siker", `Naptárba téve: ${mezok.cim}`);
   revalidatePath("/naptar");
   if (mezok.munka_id) revalidatePath(`/munkak/${mezok.munka_id}`);
-  redirect("/naptar");
+  redirect(mentesUtaniUt(adat));
 }
 
 export async function esemenyFrissitese(
@@ -66,7 +80,7 @@ export async function esemenyFrissitese(
   revalidatePath("/naptar");
   revalidatePath(`/naptar/${id}`);
   if (mezok.munka_id) revalidatePath(`/munkak/${mezok.munka_id}`);
-  redirect("/naptar");
+  redirect(mentesUtaniUt(adat));
 }
 
 export async function esemenyTorlese(id: string) {

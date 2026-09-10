@@ -178,7 +178,8 @@ export async function ajanlatAllapotValtas(id: string, ujAllapot: "elfogadva" | 
       const { error } = await supabase.from("munkak").insert({
         ajanlat_id: id,
         partner_id: ajanlat.partner_id,
-        leiras: `Automatikusan létrehozva a ${ajanlat.sorszam} ajánlat elfogadásakor.`,
+        // "az": a sorszám mindig magánhangzóval kezdődik (AJ-…).
+        leiras: `Automatikusan létrehozva az ${ajanlat.sorszam} ajánlat elfogadásakor.`,
       });
       if (error && error.code !== "23505") {
         console.error("Munka létrehozása sikertelen:", error.message);

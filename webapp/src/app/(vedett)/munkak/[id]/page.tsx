@@ -129,7 +129,7 @@ export default async function MunkaReszletei({
               href={`/ajanlatok/${munka.ajanlat_id}`}
               className="text-sm text-muted underline"
             >
-              a {munka.ajanlatok.sorszam} ajánlatból
+              az {munka.ajanlatok.sorszam} ajánlatból
             </Link>
           )}
         </div>
@@ -230,6 +230,7 @@ export default async function MunkaReszletei({
           alapCim={munka.partnerek?.nev ? `Munka — ${munka.partnerek.nev}` : "Munka"}
           alapDatum={budapestMaDatum()}
           munkaId={id}
+          visszaUt={`/munkak/${id}`}
           action={esemenyLetrehozasa}
         />
       </Card>
