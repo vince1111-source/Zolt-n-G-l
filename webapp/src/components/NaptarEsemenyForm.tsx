@@ -36,6 +36,7 @@ export function NaptarEsemenyForm({
         <input
           name="cim"
           required
+          autoComplete="off"
           defaultValue={esemeny?.cim ?? alapCim}
           placeholder="pl. Felmérés — Kovács Kft."
         />

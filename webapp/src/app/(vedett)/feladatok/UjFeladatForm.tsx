@@ -16,7 +16,8 @@ export function UjFeladatForm({ partnerek }: { partnerek: Tables<"partnerek">[] 
     <form action={action} className="bg-surface border border-line rounded-xl p-5 flex flex-col gap-3">
       <label>
         Mit kell elintézni?
-        <input name="cim" required placeholder="pl. Hívd fel a Kovács Kft-t" />
+        {/* A "cim" itt cím = megnevezés, nem lakcím: a böngésző ne töltsön bele címet. */}
+        <input name="cim" required autoComplete="off" placeholder="pl. Hívd fel a Kovács Kft-t" />
       </label>
       <div className="flex flex-wrap gap-3">
         <label className="flex-1 min-w-[140px]">

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { naptarFeedTokenUjrageneralasa } from "@/app/(vedett)/cegprofil/actions";
-import { gombMasodlagos } from "./ui/classes";
+import { MasoloGomb } from "./MasoloGomb";
 
 export function NaptarSzinkron({
   feedUrl,
@@ -11,7 +11,6 @@ export function NaptarSzinkron({
   feedUrl: string;
   tulajdonos: boolean;
 }) {
-  const [masolva, setMasolva] = useState(false);
   const [hiba, setHiba] = useState<string | null>(null);
   const [folyamatban, kezdVeglegesites] = useTransition();
 
@@ -25,24 +24,14 @@ export function NaptarSzinkron({
         módosítás nem jön vissza ide. Ne oszd meg senkivel, akit nem
         szeretnél, hogy lássa a naptáradat.
       </p>
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-start gap-2">
         <input
           readOnly
           value={feedUrl}
           onFocus={(e) => e.currentTarget.select()}
           className="flex-1 min-w-0 font-mono text-xs"
         />
-        <button
-          type="button"
-          className={gombMasodlagos}
-          onClick={async () => {
-            await navigator.clipboard.writeText(feedUrl);
-            setMasolva(true);
-            setTimeout(() => setMasolva(false), 1500);
-          }}
-        >
-          {masolva ? "Másolva!" : "Másolom"}
-        </button>
+        <MasoloGomb szoveg={feedUrl} />
       </div>
       {tulajdonos && (
         <button

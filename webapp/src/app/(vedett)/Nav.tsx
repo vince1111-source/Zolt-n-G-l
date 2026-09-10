@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Home,
   Briefcase,
@@ -44,6 +44,25 @@ export function Nav() {
   const pathname = usePathname();
   const [tobbNyitva, setTobbNyitva] = useState(false);
   const tobbAktiv = TOBB_LINKEK.some((l) => l.href === pathname);
+  const tobbDoboz = useRef<HTMLDivElement>(null);
+
+  // Telefonon nincs "mouseleave": a menü a mellé koppintásra és Esc-re is
+  // záródjon, különben nyitva marad és eltakarja a tartalmat.
+  useEffect(() => {
+    if (!tobbNyitva) return;
+    const kivulKoppintas = (e: PointerEvent) => {
+      if (!tobbDoboz.current?.contains(e.target as Node)) setTobbNyitva(false);
+    };
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setTobbNyitva(false);
+    };
+    document.addEventListener("pointerdown", kivulKoppintas);
+    document.addEventListener("keydown", esc);
+    return () => {
+      document.removeEventListener("pointerdown", kivulKoppintas);
+      document.removeEventListener("keydown", esc);
+    };
+  }, [tobbNyitva]);
 
   return (
     <nav className="flex items-center gap-1 text-sm px-4 sm:px-5 pb-2 sm:pb-3">
@@ -59,7 +78,7 @@ export function Nav() {
           </Link>
         ))}
       </div>
-      <div className="relative flex-shrink-0">
+      <div ref={tobbDoboz} className="relative flex-shrink-0">
         <button
           type="button"
           onClick={() => setTobbNyitva((v) => !v)}

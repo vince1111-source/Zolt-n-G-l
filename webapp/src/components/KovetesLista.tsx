@@ -6,6 +6,7 @@ import { kovetesSzoveg } from "@/lib/kovetes";
 import { Ft } from "@/lib/format";
 import { Badge } from "./ui/Badge";
 import { gombMasodlagos } from "./ui/classes";
+import { MasoloGomb } from "./MasoloGomb";
 
 export type Varakozo = {
   id: string;
@@ -50,7 +51,6 @@ export function KovetesLista({ varakozok }: { varakozok: Varakozo[] }) {
 }
 
 function KovetesSzoveg({ varakozo }: { varakozo: Varakozo }) {
-  const [masolva, setMasolva] = useState(false);
   const szoveg = kovetesSzoveg({
     partnerNev: varakozo.partnerNev,
     sorszam: varakozo.sorszam,
@@ -61,17 +61,7 @@ function KovetesSzoveg({ varakozo }: { varakozo: Varakozo }) {
   return (
     <div className="mt-3 pt-3 border-t border-line flex flex-col gap-2">
       <p className="text-sm whitespace-pre-line text-muted">{szoveg}</p>
-      <button
-        type="button"
-        onClick={async () => {
-          await navigator.clipboard.writeText(szoveg);
-          setMasolva(true);
-          setTimeout(() => setMasolva(false), 1500);
-        }}
-        className={gombMasodlagos + " self-start"}
-      >
-        {masolva ? "Másolva!" : "Másolom"}
-      </button>
+      <MasoloGomb szoveg={szoveg} />
     </div>
   );
 }
