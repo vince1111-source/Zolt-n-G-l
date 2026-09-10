@@ -37,7 +37,7 @@ export default async function AjanlatReszletei({
 
   const { data: tetelek } = await supabase
     .from("ajanlat_tetelek")
-    .select("*")
+    .select("*, termekek(kategoria)")
     .eq("ajanlat_id", id)
     .order("sorrend");
 
@@ -68,7 +68,10 @@ export default async function AjanlatReszletei({
   // "Kiküldöttnek jelölöm" rögzíti — a levél és a rendszer ne mondjon mást.
   const { ceg, felhasznalo } = await sajatCegVagyIranyitas();
   const megszolitas = ajanlat.partnerek?.kapcsolattarto?.trim() || ajanlat.partnerek?.nev || "";
-  const ervenyesSzoveg = new Date(alapErvenyesseg()).toLocaleDateString("hu-HU");
+  // "2026. október 10-ig": toldalék előtt a dátum záró pontja elmarad ("10.-ig" hibás).
+  const ervenyesSzoveg = new Date(alapErvenyesseg())
+    .toLocaleDateString("hu-HU", { year: "numeric", month: "long", day: "numeric" })
+    .replace(/\.$/, "");
   let levelTargy = `Árajánlat: ${ajanlat.sorszam}`;
   let levelTorzs = [
     `Tisztelt ${megszolitas}!`,
@@ -93,8 +96,12 @@ export default async function AjanlatReszletei({
 
   // Csak akkor mutatjuk a becslést, ha legalább egy tételnél ténylegesen
   // meg van adva normaidő — máskülönben ez egy üres, felesleges doboz volna.
+  // Anyagnál a normaidő értelmetlen: a "nincs megadva" jelzés csak a munkadíj-
+  // és szolgáltatás-tételeket számolja, különben hiányzó adatnak tűnne.
   const munkaido = osszesitettMunkaido(
-    (tetelek ?? []).map((t) => ({ munkaidoPerc: t.munkaido_perc })),
+    (tetelek ?? [])
+      .filter((t) => t.termekek?.kategoria !== "anyag")
+      .map((t) => ({ munkaidoPerc: t.munkaido_perc })),
   );
   const vanNormaido = (tetelek ?? []).some((t) => t.munkaido_perc !== null);
 
