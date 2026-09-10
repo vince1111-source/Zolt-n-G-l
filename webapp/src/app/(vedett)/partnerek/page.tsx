@@ -4,20 +4,21 @@ import { Users } from "lucide-react";
 import { szerverKliens } from "@/lib/supabase/server";
 import { illeszkedik, keresoSzo } from "@/lib/kereses";
 import { KeresoMezo } from "@/components/KeresoMezo";
-import { partnerArchivalasa } from "./actions";
+import { gombMasodlagos, kartya } from "@/components/ui/classes";
+import { partnerArchivalasa, partnerVisszaallitasa } from "./actions";
 
 export default async function Partnerek({ searchParams }: PageProps<"/partnerek">) {
   const { q } = await searchParams;
   const kereses = keresoSzo(q);
 
   const supabase = await szerverKliens();
-  const { data: partnerek } = await supabase
-    .from("partnerek")
-    .select("*")
-    .eq("archivalt", false)
-    .order("nev");
+  const { data: mind } = await supabase.from("partnerek").select("*").order("nev");
+  // Az archiváltak is kellenek: a tévedésből archivált partner innen
+  // visszaállítható (archiválva az AI-doboz és az ajánlatűrlap sem látja).
+  const partnerek = (mind ?? []).filter((p) => !p.archivalt);
+  const archivaltak = (mind ?? []).filter((p) => p.archivalt);
 
-  const szurt = (partnerek ?? []).filter((p) =>
+  const szurt = partnerek.filter((p) =>
     illeszkedik(kereses, p.nev, p.kapcsolattarto, p.email, p.telefon, p.cim, p.adoszam),
   );
 
@@ -27,7 +28,7 @@ export default async function Partnerek({ searchParams }: PageProps<"/partnerek"
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight flex items-center gap-2"><Users size={22} className="text-cta" aria-hidden />Partnerek</h1>
           <p className="text-muted mt-1">
-            {kereses ? `${szurt.length} találat / ${partnerek?.length ?? 0} partner` : `${partnerek?.length ?? 0} partner`}
+            {kereses ? `${szurt.length} találat / ${partnerek.length} partner` : `${partnerek.length} partner`}
           </p>
         </div>
         <Link
@@ -43,10 +44,10 @@ export default async function Partnerek({ searchParams }: PageProps<"/partnerek"
       </Suspense>
 
       <div className="bg-surface border border-line rounded-xl divide-y divide-line">
-        {!partnerek?.length && (
+        {!partnerek.length && (
           <p className="p-5 text-muted text-sm">Még nincs felvett partner.</p>
         )}
-        {!!partnerek?.length && !szurt.length && (
+        {!!partnerek.length && !szurt.length && (
           <p className="p-5 text-muted text-sm">Nincs találat a keresésre.</p>
         )}
         {szurt.map((p) => (
@@ -83,6 +84,33 @@ export default async function Partnerek({ searchParams }: PageProps<"/partnerek"
           </div>
         ))}
       </div>
+
+      {!!archivaltak.length && (
+        <details className={`${kartya} p-4`}>
+          <summary className="cursor-pointer font-semibold">
+            Archivált partnerek ({archivaltak.length})
+          </summary>
+          <p className="text-sm text-muted mt-2">
+            Archiválva nem jelennek meg az ajánlatkészítésben és az AI-dobozban. Ha
+            tévedésből archiváltad, itt visszaállíthatod.
+          </p>
+          <div className="divide-y divide-line mt-2">
+            {archivaltak.map((p) => (
+              <div key={p.id} className="py-3 flex flex-wrap items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium">{p.nev}</div>
+                  {p.kapcsolattarto && <div className="text-sm text-muted">{p.kapcsolattarto}</div>}
+                </div>
+                <form action={partnerVisszaallitasa.bind(null, p.id)}>
+                  <button type="submit" className={gombMasodlagos}>
+                    Visszaállítom
+                  </button>
+                </form>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
     </div>
   );
 }

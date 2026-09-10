@@ -58,6 +58,27 @@ export async function partnerFrissitese(
 
 export async function partnerArchivalasa(id: string) {
   const supabase = await szerverKliens();
-  await supabase.from("partnerek").update({ archivalt: true }).eq("id", id);
+  const { data } = await supabase
+    .from("partnerek")
+    .update({ archivalt: true })
+    .eq("id", id)
+    .select("nev")
+    .maybeSingle();
+  if (data) {
+    await flashUzenet("siker", `Archiválva: ${data.nev}. Ha tévedés volt, a lista alján visszaállíthatod.`);
+  }
+  revalidatePath("/partnerek");
+}
+
+/** Az archiválás visszavonása — eddig nem volt rá út, a partner végleg eltűnt a felületről. */
+export async function partnerVisszaallitasa(id: string) {
+  const supabase = await szerverKliens();
+  const { data } = await supabase
+    .from("partnerek")
+    .update({ archivalt: false })
+    .eq("id", id)
+    .select("nev")
+    .maybeSingle();
+  if (data) await flashUzenet("siker", `Visszaállítva: ${data.nev}`);
   revalidatePath("/partnerek");
 }
