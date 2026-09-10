@@ -11,6 +11,7 @@ type CsomagMezok = {
   nev: string;
   mertekegyseg: string;
   leiras: string | null;
+  kulcsszavak: string | null;
   tetelek: { termek_id: string; mennyiseg_egysegre: number; sorrend: number; alap: "terulet" | "kerulet" }[];
 };
 
@@ -43,7 +44,13 @@ function csomagMezokFormbol(adat: FormData): CsomagMezok | { hiba: string } {
     return { hiba: "Ugyanaz a tétel kétszer szerepel — vond össze egy sorba." };
   }
 
-  return { nev, mertekegyseg, leiras: String(adat.get("leiras") ?? "").trim() || null, tetelek };
+  const kulcsszavak =
+    String(adat.get("kulcsszavak") ?? "")
+      .split(/[,;]/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .join(", ") || null;
+  return { nev, mertekegyseg, leiras: String(adat.get("leiras") ?? "").trim() || null, kulcsszavak, tetelek };
 }
 
 /**
@@ -79,7 +86,7 @@ export async function csomagLetrehozasa(
 
   const { data: csomag, error } = await supabase
     .from("munkacsomagok")
-    .insert({ nev: mezok.nev, mertekegyseg: mezok.mertekegyseg, leiras: mezok.leiras })
+    .insert({ nev: mezok.nev, mertekegyseg: mezok.mertekegyseg, leiras: mezok.leiras, kulcsszavak: mezok.kulcsszavak })
     .select("id")
     .single();
   if (error || !csomag) {
@@ -116,7 +123,7 @@ export async function csomagFrissitese(
 
   const { error } = await supabase
     .from("munkacsomagok")
-    .update({ nev: mezok.nev, mertekegyseg: mezok.mertekegyseg, leiras: mezok.leiras })
+    .update({ nev: mezok.nev, mertekegyseg: mezok.mertekegyseg, leiras: mezok.leiras, kulcsszavak: mezok.kulcsszavak })
     .eq("id", id);
   if (error) {
     return { hiba: error.code === "23505" ? "Már van ilyen nevű csomag." : error.message };

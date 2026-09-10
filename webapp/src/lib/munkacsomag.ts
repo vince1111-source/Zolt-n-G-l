@@ -38,9 +38,14 @@ export function darabosE(mertekegyseg: string | null | undefined): boolean {
  * ajánlat-űrlap "Tételek hozzáadása" gombja (kliens), hogy a kettő sose
  * számoljon másképp.
  */
-export function csomagTetelBemenetek(tetelek: CsomagTetel[], alapMennyiseg: number): TetelBemenet[] {
+export function csomagTetelBemenetek(
+  tetelek: CsomagTetel[],
+  alapMennyiseg: number,
+  /** Ha a felhasználó megmondta ("36 méter szegéllyel"), ez a kerület; különben becslés. */
+  keruletFm?: number,
+): TetelBemenet[] {
   if (!(alapMennyiseg > 0)) return [];
-  const kerulet = keruletBecsles(alapMennyiseg);
+  const kerulet = keruletFm && keruletFm > 0 ? keruletFm : keruletBecsles(alapMennyiseg);
   return tetelek.map((t) => {
     const nyers = (t.alap === "kerulet" ? kerulet : alapMennyiseg) * Number(t.mennyiseg_egysegre);
     const mennyiseg = darabosE(t.mertekegyseg) ? Math.ceil(nyers - 1e-9) : Math.round(nyers * 100) / 100;

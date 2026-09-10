@@ -8,7 +8,7 @@
  * betölthető.) Ha új parancsot veszel fel a 0. rétegbe, ide is tegyél
  * legalább egy pozitív és egy "továbbad" (ismeretlen) esetet.
  */
-import { ertelmezSzoveg, partnerKereses, csomagKereses } from "./szandek.ts";
+import { ertelmezSzoveg, partnerKereses, csomagKereses, becenevFeloldas, szamSzoErteke } from "./szandek.ts";
 
 let hibak = 0;
 function eset(leiras: string, kapott: unknown, vart: Record<string, unknown>) {
@@ -48,6 +48,15 @@ const szandekok: [string, Record<string, unknown>][] = [
   ["Holnap 10-kor megyek Tóth Gáborhoz", { szandek: "naptar_esemeny", partnerSzoveg: "toth gabor", oraSzoveg: "10:00" }],
   ["Hogy állunk a Kovács Építővel?", { szandek: "partner_helyzet", partnerSzoveg: "kovacs epitovel" }],
   ["Írd fel, hogy hívjam fel Tóth Gábort holnap", { szandek: "feladat_felvetel", cim: "Hívjam fel Tóth Gábort", napszo: "holnap" }],
+  // Beszélt alakok (hang): számszavak, "négyzet", rugalmas szórend, kerület
+  ["Mennyibe kerülne nyolcvan négyzet térkövezés Kovácséknak, 36 méter szegéllyel?", { szandek: "ajanlat_keszites", partnerSzoveg: "kovacs", m2: 80, leiras: "terkovezes", kerulet: 36 }],
+  ["Készíts ajánlatot Balogh Ferinek 45 négyzet kocsibeállóra, bontással", { szandek: "ajanlat_keszites", partnerSzoveg: "balogh feri", m2: 45, leiras: "kocsibeallora, bontassal" }],
+  ["Ajánlat Nagy Pistának százhúsz négyzetméter udvar", { szandek: "ajanlat_keszites", partnerSzoveg: "nagy pista", m2: 120, leiras: "udvar" }],
+  ["Csinálj egy árajánlatot Szabóéknak kétszázötven négyzetméterre", { szandek: "ajanlat_keszites", partnerSzoveg: "szaboek", m2: 250 }],
+  ["Adj árat Tóth Gábornak 30 négyzetes kocsibeállóra, szegély 22 méter", { szandek: "ajanlat_keszites", partnerSzoveg: "toth gabor", m2: 30, leiras: "kocsibeallora", kerulet: 22 }],
+  ["Mennyibe kerülne 50 négyzet Kovácséknak?", { szandek: "ajanlat_keszites", partnerSzoveg: "kovacs", m2: 50 }],
+  ["Holnap kilenckor megyek Tóth Gáborhoz", { szandek: "naptar_esemeny", oraSzoveg: "09:00", partnerSzoveg: "toth gabor" }],
+  ["Készíts egy ajánlatot", { szandek: "ismeretlen" }],
 ];
 for (const [be, vart] of szandekok) eset(JSON.stringify(be), ertelmezSzoveg(be), vart);
 
@@ -85,6 +94,16 @@ eset("két Kovács: „Kovács Építővel” → a második szó dönt", pk2("k
 eset("két Kovács: „Kovács Tüzéptől” → a Tüzép", pk2("kovacs tuzeptol"), { nev: "Kovács Tüzép", biztos: false });
 eset("két Kovács: „Kovácssal” → döntetlen, kérdez", pk2("kovacssal"), { tobb: 2 });
 eset("Tóth Gáborhoz", pk2("toth gabor"), { nev: "Tóth Gábor", biztos: true });
+const P3 = [{ nev: "Balogh Ferenc" }, { nev: "Nagy István" }, { nev: "Nagy Kft." }, { nev: "Kovács Építő Kft." }];
+const pk3 = (sz: string) => {
+  const r = partnerKereses(P3, sz) as Record<string, unknown>;
+  return "partner" in r ? { nev: (r.partner as { nev: string }).nev, biztos: r.biztos } : "tobb" in r ? { tobb: (r.tobb as { nev: string }[]).length } : { nincs: true };
+};
+eset("becenév: „balogh feri” → Balogh Ferenc (tipp)", pk3("balogh feri"), { nev: "Balogh Ferenc", biztos: false });
+eset("a becenév dönt: „nagy pista” → Nagy István, nem a Nagy Kft.", pk3("nagy pista"), { nev: "Nagy István", biztos: false });
+eset("csak becenév: „ferinek” → Balogh Ferenc", pk3("ferinek"), { nev: "Balogh Ferenc", biztos: false });
+eset("becenevFeloldas: pistaval → istvan", { v: becenevFeloldas("pistaval") }, { v: "istvan" });
+eset("becenevFeloldas: nem becenév (imitt)", { v: becenevFeloldas("imitt") }, { v: null });
 
 console.log("— csomagKereses —");
 const C = [{ nev: "Térkövezés" }, { nev: "Térkövezés bontással" }, { nev: "Térkő" }, { nev: "Mázolás" }];
@@ -120,6 +139,25 @@ const ck3 = (sz: string) => {
 };
 eset("kocsibeallora → Kocsibeálló", ck3("kocsibeallora"), { nev: "Kocsibeálló" });
 eset("terkovezesre → Térkövezés", ck3("terkovezesre"), { nev: "Térkövezés" });
+const C4 = [
+  { nev: "Térkövezés", kulcsszavak: "járda, terasz, kerti út" },
+  { nev: "Kocsibeálló", kulcsszavak: "kocsibejáró, bejáró, garázsbejáró" },
+];
+const ck4 = (sz: string) => {
+  const r = csomagKereses(C4, sz) as Record<string, unknown>;
+  return "csomag" in r ? { nev: (r.csomag as { nev: string }).nev } : "tobb" in r ? { tobb: (r.tobb as { nev: string }[]).length } : { nincs: true };
+};
+eset("kulcsszó: bejarora → Kocsibeálló", ck4("bejarora"), { nev: "Kocsibeálló" });
+eset("kulcsszó: teraszra → Térkövezés", ck4("teraszra"), { nev: "Térkövezés" });
+eset("kulcsszó + extra: kocsibejarora, bontassal → Kocsibeálló", ck4("kocsibejarora, bontassal"), { nev: "Kocsibeálló" });
+eset("udvar → nincs (gyalogos vagy autós? kérdezni kell)", ck4("udvar"), { nincs: true });
+
+console.log("— számszavak (hang) —");
+eset(
+  "szamSzoErteke",
+  { v: ["nyolcvan", "szazhusz", "ketszazotven", "ezerketszaz", "tizenot", "hat", "negyzet", "hetfo"].map(szamSzoErteke) },
+  { v: [80, 120, 250, 1200, 15, 6, null, null] },
+);
 
 console.log(hibak ? `\n${hibak} HIBA` : "\nMinden eset rendben");
 process.exit(hibak ? 1 : 0);

@@ -32,12 +32,14 @@ export type Reteg1Valasz = {
   szoveg: string;
   hianyzik: ("partner" | "mennyiseg" | "nap" | "ido" | "szoveg")[];
   visszakerdezes: string;
+  /** A szegély / a terület kerülete folyóméterben, ha elhangzott. Opcionális, hogy a régebbi válaszok is érvényesek maradjanak. */
+  kerulet_fm?: number | null;
 };
 
 export const RETEG1_SEMA = {
   type: "object",
   additionalProperties: false,
-  required: ["szandek", "partner", "mennyiseg_m2", "csomag", "nap", "ido", "szoveg", "hianyzik", "visszakerdezes"],
+  required: ["szandek", "partner", "mennyiseg_m2", "kerulet_fm", "csomag", "nap", "ido", "szoveg", "hianyzik", "visszakerdezes"],
   properties: {
     szandek: { type: "string", enum: [...RETEG1_SZANDEKOK] },
     partner: {
@@ -46,6 +48,10 @@ export const RETEG1_SEMA = {
         "A megnevezett partner. Ha a felsorolt partnerek egyikére utal egyértelműen, annak a teljes neve; különben ahogy elhangzott. Üres, ha nincs.",
     },
     mennyiseg_m2: { type: ["number", "null"], description: "Felület négyzetméterben, számként. null, ha nem hangzott el." },
+    kerulet_fm: {
+      type: ["number", "null"],
+      description: "A szegély vagy a terület kerülete folyóméterben, ha elhangzott (\"36 méter szegéllyel\" → 36). null, ha nem.",
+    },
     csomag: { type: "string", description: "A felsorolt munkacsomagok egyikének neve, ha a munka típusa egyértelműen arra utal. Üres, ha nincs." },
     nap: {
       type: "string",
@@ -69,6 +75,8 @@ Szabályok:
 - Csak a felsorolt szándékok közül válassz. Ha egyik sem illik, "ismeretlen" — ez nem hiba, ez a helyes válasz.
 - Semmit ne számolj ki, és semmit ne találj ki. Ami nem hangzott el, maradjon üres / null, és kerüljön a hianyzik listába.
 - A mennyiség számként kerüljön vissza, akkor is, ha szóban hangzott el ("nyolcszáz négyzet" → 800).
+- A "négyzet" négyzetmétert jelent. Ha a szegély vagy a kerület hossza is elhangzik ("36 méter szegéllyel"), az a kerulet_fm.
+- Beceneveket is mondanak ("Feri" = Ferenc, "Pista" = István, "Laci" = László): a partnert a felsoroltak közül a teljes nevével add vissza.
 - A beszélt nyelv pongyola: tegez, félbehagy, a cégnevet röviden mondja ("Kovácsék", "a Zöldnél"). Ez normális.
 - Partnert és munkacsomagot CSAK a felsoroltak közül nevezz meg teljes névvel, és csak ha egyértelmű; ha nem az, add vissza úgy, ahogy elhangzott.
 - A visszakerdezes egyetlen rövid, konkrét magyar kérdés, amit egy szóval meg lehet válaszolni. Csak akkor, ha hiányzik valami.
@@ -145,6 +153,7 @@ export function reteg1Ertelmezesse(v: Reteg1Valasz): Reteg1Ertelmezes {
         partnerSzoveg: partner,
         m2: v.mennyiseg_m2,
         leiras: v.csomag.trim() || undefined,
+        ...(typeof v.kerulet_fm === "number" && v.kerulet_fm > 0 ? { kerulet: v.kerulet_fm } : {}),
       };
     }
     case "naptar_esemeny": {

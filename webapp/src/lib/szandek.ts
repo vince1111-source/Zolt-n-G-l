@@ -25,11 +25,88 @@ export function norm(szoveg: string): string {
     .replace(/\s+/g, " ");
 }
 
+// ---------------------------------------------------------------------------
+// Szóval kimondott számok. A böngésző hangfelismerője néha betűvel írja ki
+// ("nyolcvan négyzetméter", "tízkor"). Csak akkor írjuk át számjegyre, ha
+// mértékegység vagy időpont követi — így az "egy ajánlatot" névelője vagy a
+// "jövő héten" nem változik meg.
+// ---------------------------------------------------------------------------
+
+const EGYESEK: [string, number][] = [
+  ["ketto", 2], ["harom", 3], ["negy", 4], ["nyolc", 8], ["kilenc", 9],
+  ["egy", 1], ["ket", 2], ["hat", 6], ["het", 7], ["ot", 5],
+];
+const TIZESEK: [string, number][] = [
+  ["tizen", 10], ["huszon", 20], ["harminc", 30], ["negyven", 40], ["otven", 50],
+  ["hatvan", 60], ["hetven", 70], ["nyolcvan", 80], ["kilencven", 90], ["tiz", 10], ["husz", 20],
+];
+
+function elotag(s: string, lista: [string, number][]): [number, string] | null {
+  for (const [alak, ertek] of lista) if (s.startsWith(alak)) return [ertek, s.slice(alak.length)];
+  return null;
+}
+
+/** Ékezet nélküli számszó értéke: "nyolcvanot" → 85, "ketszazotven" → 250, "ezerketszaz" → 1200; ha nem szám: null. */
+export function szamSzoErteke(szo: string): number | null {
+  let s = szo;
+  let osszeg = 0;
+  let volt = false;
+  for (const [kulcs, szorzo] of [["ezer", 1000], ["szaz", 100]] as const) {
+    const e = elotag(s, EGYESEK);
+    if (e && e[1].startsWith(kulcs)) {
+      osszeg += e[0] * szorzo;
+      s = e[1].slice(kulcs.length);
+      volt = true;
+    } else if (s.startsWith(kulcs)) {
+      osszeg += szorzo;
+      s = s.slice(kulcs.length);
+      volt = true;
+    }
+  }
+  const t = elotag(s, TIZESEK);
+  if (t) {
+    osszeg += t[0];
+    s = t[1];
+    volt = true;
+  }
+  const e = elotag(s, EGYESEK);
+  if (e) {
+    osszeg += e[0];
+    s = e[1];
+    volt = true;
+  }
+  return volt && s === "" ? osszeg : null;
+}
+
+/** Ami után egy számszó biztosan szám: mértékegység vagy időpont. */
+const SZAM_UTAN = /^(negyzet|nm|m2|m3|meter|fm|folyometer|orakor|ora|kor|zsak|db|darab|kontener|alkalom|raklap|kobmeter|tonna)/;
+
+/** A normalizált mondat szóval kiírt számait számjegyre cseréli ("nyolcvan negyzet" → "80 negyzet", "tizkor" → "10kor"). */
+export function szamSzavakAtirasa(szoveg: string): string {
+  const szavak = szoveg.split(" ");
+  return szavak
+    .map((sz, i) => {
+      const tiszta = sz.replace(/[.,!?;:]+$/, "");
+      const vege = sz.slice(tiszta.length);
+      const kor = tiszta.match(/^(.+?)(orakor|kor)$/);
+      if (kor) {
+        const ertek = szamSzoErteke(kor[1]);
+        if (ertek !== null) return `${ertek}${kor[2]}${vege}`;
+      }
+      const ertek = szamSzoErteke(tiszta);
+      if (ertek !== null && SZAM_UTAN.test(szavak[i + 1] ?? "")) return `${ertek}${vege}`;
+      return sz;
+    })
+    .join(" ");
+}
+
 export type AjanlatSzandek = {
   szandek: "ajanlat_keszites";
   partnerSzoveg: string;
   m2: number;
   leiras?: string;
+  /** Ha a mondat megmondta ("36 méter szegéllyel"): a kerület folyóméterben — különben becslés. */
+  kerulet?: number;
 };
 
 /**
@@ -81,8 +158,80 @@ export type Ertelmezes =
   | TeendokSzandek
   | { szandek: "ismeretlen" };
 
-const AJANLAT_MINTA =
-  /(?:keszits?|csinalj|adj)\s+(?:egy\s+)?(?:ajanlatot|arajanlatot|arat)\s+(.+?)\s*(?:nek|nak)\s+(\d+(?:[.,]\d+)?)\s*(?:negyzetmeter|nm2|m2|nm)(?:re|ra)?\b\s*(.*)/;
+/** Négyzetméter írt és beszélt alakjai: m2, nm, négyzetméter(re|es|en), négyzet(re|es). */
+const M2_EGYSEG = "(?:negyzet\\w*|nm2?\\w*|m2\\w*)";
+
+const AJANLAT_MINTA = new RegExp(
+  `(?:keszit\\w*|csinal\\w*|adj)\\s+(?:egy\\s+)?(?:ajanlatot|arajanlatot|arat)\\s+(.+?)\\s*(?:nek|nak)\\s+(\\d+(?:[.,]\\d+)?)\\s*${M2_EGYSEG}\\s*(.*)`,
+);
+
+/**
+ * "36 méter szegéllyel", "szegély 40 fm", "kerülete 28 méter" — a kerület, ha
+ * elhangzott. A tő "szegel": toldalékkal a ly kettőződik (szegély → szegéllyel).
+ */
+const KERULET_MINTA =
+  /(\d+(?:[.,]\d+)?)\s*(?:fm|folyometer\w*|meter\w*)\s+(?:szegel\w*|kerulet\w*)|(?:szegel\w*|kerulet\w*)\s+(\d+(?:[.,]\d+)?)\s*(?:fm|folyometer\w*|meter\w*)?/;
+
+function keruletKivetel(szoveg: string): { kerulet?: number; maradek: string } {
+  const vegeTisztitva = (s: string) => s.replace(/\s+/g, " ").trim().replace(/[\s,.;:!?]+$/, "");
+  const t = szoveg.match(KERULET_MINTA);
+  if (!t || t.index === undefined) return { maradek: vegeTisztitva(szoveg) };
+  const kerulet = Number((t[1] ?? t[2]).replace(",", "."));
+  if (!(kerulet > 0)) return { maradek: vegeTisztitva(szoveg) };
+  return { kerulet, maradek: vegeTisztitva(`${szoveg.slice(0, t.index)} ${szoveg.slice(t.index + t[0].length)}`) };
+}
+
+/** A rugalmas ajánlat-mondat kiváltó szavai: "mennyibe kerülne…", "ajánlat Kovácséknak…". */
+const AJANLAT_KIVALTO = /\b(?:ajanlat\w*|arajanlat\w*|arat|araz\w*|mennyibe|mennyiert|kalkulal\w*|szamold)\b|mennyi lenne|mennyi az ara/;
+const MENNYISEG_M2 = new RegExp(`(\\d+(?:[.,]\\d+)?)\\s*${M2_EGYSEG}`);
+/** Parancs- és töltelékszavak — nem nevek, nem munkák. */
+const AJANLAT_TOLTELEK = new Set([
+  "keszits", "keszitsd", "keszitsen", "csinalj", "csinald", "adj", "kerek", "kellene", "kell", "kene", "legyen",
+  "lenne", "mennyibe", "kerulne", "kerul", "mennyi", "mennyiert", "arazd", "be", "ki", "szamold", "kalkulald",
+  "egy", "az", "a", "es", "meg", "is", "nekem", "neki", "annak", "ennek", "ajanlat", "ajanlatot", "arajanlat",
+  "arajanlatot", "arat", "ar", "ara", "arra", "erre", "hogy", "mar", "most", "gyorsan", "legyszi", "kerlek",
+  "plusz", "kb", "korulbelul", "nagyjabol", "valami", "olyan", "kozel",
+]);
+/** Munka- és extra-szótövek: a név ezeknél véget ér ("… térkövezés Kovácséknak"). */
+const MUNKA_TOVEK = ["terko", "kocsibe", "bejaro", "udvar", "jard", "terasz", "garazs", "parkol", "burkol", "szegel", "bontas", "kontener", "kiszall", "sitt"];
+const RESZES_ESET = /^(.{2,}?)(eknak|eknek|nak|nek)$/;
+
+/**
+ * Rugalmas szórendű ajánlat-mondat — ahogy hangosan mondjuk:
+ * "Mennyibe kerülne 80 négyzet térkövezés Kovácséknak?",
+ * "Ajánlat Nagy Pistának 120 négyzet udvar". Kell: kiváltó szó, egy m²-es
+ * mennyiség és egy részes esetű (-nak/-nek) név. A név a részes szó és a
+ * közvetlenül előtte álló névszavak (legfeljebb 3); a maradék a leírás.
+ */
+function ertelmezAjanlatRugalmas(szoveg: string): AjanlatSzandek | null {
+  if (!AJANLAT_KIVALTO.test(szoveg)) return null;
+  const { kerulet, maradek } = keruletKivetel(szoveg);
+  const mennyiseg = maradek.match(MENNYISEG_M2);
+  if (!mennyiseg || mennyiseg.index === undefined) return null;
+  const m2 = Number(mennyiseg[1].replace(",", "."));
+  if (!(m2 > 0)) return null;
+  const tobbi = `${maradek.slice(0, mennyiseg.index)} ${maradek.slice(mennyiseg.index + mennyiseg[0].length)}`;
+  const szavak = tobbi
+    .split(" ")
+    .map((sz) => sz.replace(/[.,!?;:]+$/, ""))
+    .filter(Boolean);
+
+  const reszes = szavak.findIndex((sz) => RESZES_ESET.test(sz) && !AJANLAT_TOLTELEK.has(sz));
+  if (reszes < 0) return null;
+  const nevIndexek = [reszes];
+  for (let i = reszes - 1; i >= 0 && nevIndexek.length < 3; i--) {
+    const sz = szavak[i];
+    if (AJANLAT_TOLTELEK.has(sz) || /\d/.test(sz) || MUNKA_TOVEK.some((m) => sz.startsWith(m)) || AJANLAT_KIVALTO.test(sz)) break;
+    nevIndexek.unshift(i);
+  }
+  const partnerSzoveg = nevIndexek
+    .map((i) => (i === reszes ? szavak[i].replace(RESZES_ESET, "$1") : szavak[i]))
+    .join(" ");
+  const leiras = szavak
+    .filter((sz, i) => !nevIndexek.includes(i) && !AJANLAT_TOLTELEK.has(sz) && !AJANLAT_KIVALTO.test(sz))
+    .join(" ");
+  return { szandek: "ajanlat_keszites", partnerSzoveg, m2, leiras: leiras || undefined, ...(kerulet ? { kerulet } : {}) };
+}
 
 export const NAP_ALAK_TERKEP: Record<string, NapSzo> = {
   ma: "ma",
@@ -237,7 +386,9 @@ function ertelmezFeladatSzoveg(nyersSzoveg: string): FeladatSzandek | null {
 }
 
 export function ertelmezSzoveg(nyersSzoveg: string): Ertelmezes {
-  const szoveg = norm(nyersSzoveg);
+  // A szóval kimondott számok ("nyolcvan négyzet", "tízkor") számjegyre — a
+  // minták számjegyre illeszkednek.
+  const szoveg = szamSzavakAtirasa(norm(nyersSzoveg));
 
   const feladatSzandek = ertelmezFeladatSzoveg(nyersSzoveg);
   if (feladatSzandek) return feladatSzandek;
@@ -246,17 +397,24 @@ export function ertelmezSzoveg(nyersSzoveg: string): Ertelmezes {
 
   const ajanlatTalalat = szoveg.match(AJANLAT_MINTA);
   if (ajanlatTalalat) {
-    const [, partnerSzoveg, m2Szoveg, leiras] = ajanlatTalalat;
+    const [, partnerSzoveg, m2Szoveg, leirasNyers] = ajanlatTalalat;
     const m2 = Number(m2Szoveg.replace(",", "."));
     if (m2 > 0 && partnerSzoveg.trim()) {
+      const { kerulet, maradek } = keruletKivetel(leirasNyers ?? "");
       return {
         szandek: "ajanlat_keszites",
         partnerSzoveg: partnerSzoveg.trim(),
         m2,
-        leiras: leiras?.trim() || undefined,
+        leiras: maradek || undefined,
+        ...(kerulet ? { kerulet } : {}),
       };
     }
   }
+
+  // Rugalmas szórend, ahogy beszélni szokás: "Mennyibe kerülne 80 négyzet
+  // térkövezés Kovácséknak?", "Ajánlat Nagy Pistának 120 négyzet udvar".
+  const rugalmas = ertelmezAjanlatRugalmas(szoveg);
+  if (rugalmas) return rugalmas;
 
   const naptarSzandek = ertelmezNaptarSzoveg(szoveg);
   if (naptarSzandek) return naptarSzandek;
@@ -299,10 +457,38 @@ export type NevTalalat<T> = { partner: T; biztos: boolean } | { tobb: T[] } | { 
 /** Cégforma-szavak: a döntetlen-bontásnál nem számítanak névszónak. */
 const CEGFORMAK = new Set(["kft", "bt", "zrt", "nyrt", "kkt", "egyeni", "vallalkozo"]);
 
+/**
+ * Becenév → hivatalos keresztnév (ékezet nélkül). Beszédben ritkán mondjuk a
+ * hivatalos nevet: "Nagy Pistának", "Balogh Ferinek".
+ */
+const BECENEVEK: Record<string, string> = {
+  pista: "istvan", pisti: "istvan", laci: "laszlo", feri: "ferenc", ferko: "ferenc", jozsi: "jozsef",
+  jani: "janos", jancsi: "janos", gabi: "gabor", zoli: "zoltan", sanyi: "sandor", misi: "mihaly",
+  miska: "mihaly", bandi: "andras", andris: "andras", tibi: "tibor", gyuri: "gyorgy", karcsi: "karoly",
+  lajcsi: "lajos", imi: "imre", ati: "attila", csabi: "csaba", peti: "peter", robi: "robert",
+  zsolti: "zsolt", tomi: "tamas", marci: "marton", dani: "daniel", gergo: "gergely", szabi: "szabolcs",
+  levi: "levente", kati: "katalin", erzsi: "erzsebet", marika: "maria", juci: "judit", zsuzsi: "zsuzsanna",
+  evi: "eva", ili: "ilona", gizi: "gizella", panni: "anna", anci: "anna", niki: "nikolett", kriszti: "krisztina",
+  moni: "monika", eni: "eniko", bea: "beata",
+};
+const BECENEV_TOLDALEK = /^(|t|nak|nek|val|vel|hoz|hez|nal|nel|tol|rol|ra|re|ek|eknak|eknek|ekhez|eknel|eknal|eket|ekkel)$/;
+
+/** "ferinek" → "ferenc", "pistaval" → "istvan"; ha nem becenév: null. */
+export function becenevFeloldas(szo: string): string | null {
+  for (const [bece, teljes] of Object.entries(BECENEVEK)) {
+    if (szo.startsWith(bece) && BECENEV_TOLDALEK.test(szo.slice(bece.length))) return teljes;
+  }
+  return null;
+}
+
 export function partnerKereses<T extends { nev: string }>(partnerek: T[], szoveg: string): NevTalalat<T> {
   const cel = norm(szoveg);
   if (!cel) return { nincs: true };
   const celSzavak = cel.split(" ");
+  // Becenév ("Balogh Ferinek", "Nagy Pistával"): a hivatalos keresztnév is
+  // illeszthető szó — de csak tippként, a jóváhagyó lap kimondja.
+  const formalisSzavak = celSzavak.map(becenevFeloldas).filter((x): x is string => !!x);
+  const bovitett = [...celSzavak, ...formalisSzavak];
 
   const pontos = partnerek.filter((p) => norm(p.nev) === cel);
   if (pontos.length === 1) return { partner: pontos[0], biztos: true };
@@ -318,8 +504,11 @@ export function partnerKereses<T extends { nev: string }>(partnerek: T[], szoveg
   const tippek = partnerek.filter((p) => {
     const nev = norm(p.nev);
     if (nev.length >= 4 && cel.length >= 4 && (nev.includes(cel) || cel.includes(nev))) return true;
-    const elsoSzo = nev.split(" ")[0];
-    return elsoSzo.length >= 4 && celSzavak.some((sz) => sz.startsWith(elsoSzo));
+    const nevSzavak = nev.split(" ");
+    const elsoSzo = nevSzavak[0];
+    if (elsoSzo.length >= 4 && bovitett.some((sz) => sz.startsWith(elsoSzo))) return true;
+    // Csak becenévvel ("Ferinek"): a hivatalos keresztnév szerepel a partner nevében.
+    return formalisSzavak.some((f) => nevSzavak.includes(f));
   });
   if (tippek.length === 1) return { partner: tippek[0], biztos: false };
   if (tippek.length > 1) {
@@ -332,7 +521,7 @@ export function partnerKereses<T extends { nev: string }>(partnerek: T[], szoveg
         .split(" ")
         .map((w) => w.replace(/[.,]+$/, ""))
         .filter((w) => w.length >= 4 && !CEGFORMAK.has(w))
-        .filter((w) => celSzavak.some((sz) => sz.startsWith(w))).length;
+        .filter((w) => bovitett.some((sz) => sz.startsWith(w))).length;
     const rangsor = tippek.map((p) => ({ p, n: pont(p) })).sort((a, b) => b.n - a.n);
     if (rangsor[0].n > rangsor[1].n) return { partner: rangsor[0].p, biztos: false };
     return { tobb: tippek };
@@ -355,17 +544,21 @@ export function partnerKereses<T extends { nev: string }>(partnerek: T[], szoveg
  *     több, de egymásba ágyazott nevek (a leghosszabb tartalmazza a
  *     többit) → a leghosszabb; egyébként → `tobb`, kérdezünk.
  */
-export function csomagKereses<T extends { nev: string }>(
+export function csomagKereses<T extends { nev: string; kulcsszavak?: string | null }>(
   csomagok: T[],
   leiras: string,
 ): { csomag: T } | { tobb: T[] } | { nincs: true } {
   const cel = norm(leiras);
   if (!cel) return { nincs: true };
-  const nevvel = csomagok.map((c) => ({ c, nev: norm(c.nev) })).filter((x) => x.nev.length >= 4);
+  // A csomag neve MELLETT a kulcsszavai is nevek ("bejáró" → Kocsibeálló, 0024).
+  const nevvel = csomagok
+    .flatMap((c) => [c.nev, ...kulcsszoLista(c.kulcsszavak)].map((nev) => ({ c, nev: norm(nev) })))
+    .filter((x) => x.nev.length >= 4);
+  const egyedi = (xs: { c: T }[]) => [...new Set(xs.map((x) => x.c))];
 
-  const pontos = nevvel.filter((x) => x.nev === cel);
-  if (pontos.length === 1) return { csomag: pontos[0].c };
-  if (pontos.length > 1) return { tobb: pontos.map((x) => x.c) };
+  const pontos = egyedi(nevvel.filter((x) => x.nev === cel));
+  if (pontos.length === 1) return { csomag: pontos[0] };
+  if (pontos.length > 1) return { tobb: pontos };
 
   const eloTag = nevvel.filter((x) => cel.startsWith(x.nev) && !cel.slice(x.nev.length).includes(" "));
   if (eloTag.length) {
@@ -374,19 +567,28 @@ export function csomagKereses<T extends { nev: string }>(
   }
 
   if (cel.length >= 4) {
-    const csonka = nevvel.filter((x) => x.nev.startsWith(cel));
-    if (csonka.length === 1) return { csomag: csonka[0].c };
-    if (csonka.length > 1) return { tobb: csonka.map((x) => x.c) };
+    const csonka = egyedi(nevvel.filter((x) => x.nev.startsWith(cel)));
+    if (csonka.length === 1) return { csomag: csonka[0] };
+    if (csonka.length > 1) return { tobb: csonka };
   }
 
   const resz = cel.length >= 4 ? nevvel.filter((x) => cel.includes(x.nev) || x.nev.includes(cel)) : [];
-  if (resz.length === 1) return { csomag: resz[0].c };
-  if (resz.length > 1) {
+  const reszCsomagok = egyedi(resz);
+  if (reszCsomagok.length === 1) return { csomag: reszCsomagok[0] };
+  if (reszCsomagok.length > 1) {
     const leghosszabb = resz.reduce((a, b) => (b.nev.length > a.nev.length ? b : a));
     if (resz.every((x) => leghosszabb.nev.includes(x.nev))) return { csomag: leghosszabb.c };
-    return { tobb: resz.map((x) => x.c) };
+    return { tobb: reszCsomagok };
   }
   return { nincs: true };
+}
+
+/** A csomag kulcsszavai listaként ("járda, terasz" → ["járda", "terasz"]). */
+export function kulcsszoLista(kulcsszavak?: string | null): string[] {
+  return (kulcsszavak ?? "")
+    .split(/[,;]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 /** Amit az AI-doboz "m²"-nek ért — a csomag alapegységének egyeztetéséhez. */

@@ -16,6 +16,8 @@ const alap: Reteg1Valasz = { szandek: "ismeretlen", partner: "", mennyiseg_m2: n
 
 eset("ajánlat teljes", reteg1Ertelmezesse({ ...alap, szandek: "ajanlat_keszites", partner: "Kovács Építő Kft.", mennyiseg_m2: 800, csomag: "Térkövezés" }),
   { szandek: "ajanlat_keszites", partnerSzoveg: "Kovács Építő Kft.", m2: 800, leiras: "Térkövezés" });
+eset("ajánlat kerülettel", reteg1Ertelmezesse({ ...alap, szandek: "ajanlat_keszites", partner: "Balogh Ferenc", mennyiseg_m2: 45, csomag: "Kocsibeálló", kerulet_fm: 28 }),
+  { szandek: "ajanlat_keszites", partnerSzoveg: "Balogh Ferenc", m2: 45, kerulet: 28 });
 eset("ajánlat m² nélkül → kérdés (a modellé)", reteg1Ertelmezesse({ ...alap, szandek: "ajanlat_keszites", partner: "Kovácsék", visszakerdezes: "Hány négyzetméterre?" }),
   { szandek: "kerdes", kerdes: "Hány négyzetméterre?" });
 eset("ajánlat partner nélkül → alap kérdés", reteg1Ertelmezesse({ ...alap, szandek: "ajanlat_keszites", mennyiseg_m2: 50 }),

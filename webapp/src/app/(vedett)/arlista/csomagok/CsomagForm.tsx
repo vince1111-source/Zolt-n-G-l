@@ -75,6 +75,16 @@ export function CsomagForm({
         </label>
       </div>
 
+      <label>
+        Kulcsszavak — ezekre is ráismer az AI-doboz (vesszővel)
+        <input
+          name="kulcsszavak"
+          autoComplete="off"
+          defaultValue={csomag?.kulcsszavak ?? ""}
+          placeholder="pl. járda, terasz, kerti út"
+        />
+      </label>
+
       <div className="flex flex-col gap-3">
         <div className="text-sm text-muted flex flex-col gap-1">
           <span>

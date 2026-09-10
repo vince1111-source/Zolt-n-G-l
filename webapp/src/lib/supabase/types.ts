@@ -663,6 +663,7 @@ export type Database = {
           aktiv: boolean
           ceg_id: string
           id: string
+          kulcsszavak: string | null
           leiras: string | null
           letrehozva: string
           mertekegyseg: string
@@ -672,6 +673,7 @@ export type Database = {
           aktiv?: boolean
           ceg_id?: string
           id?: string
+          kulcsszavak?: string | null
           leiras?: string | null
           letrehozva?: string
           mertekegyseg?: string
@@ -681,6 +683,7 @@ export type Database = {
           aktiv?: boolean
           ceg_id?: string
           id?: string
+          kulcsszavak?: string | null
           leiras?: string | null
           letrehozva?: string
           mertekegyseg?: string

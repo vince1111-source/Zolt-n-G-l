@@ -9,12 +9,16 @@ import {
   norm,
   partnerKereses,
   csomagKereses,
+  kulcsszoLista,
+  szamSzavakAtirasa,
   M2_ALIASOK,
   type Ertelmezes,
 } from "@/lib/szandek";
 import { budapestMaDatum, budapestIdopontIso, napszoDatumma, budapestIdoString } from "@/lib/het";
 import { kintlevosegOsszesites, keruletBecsles } from "@/lib/mag";
 import { csomagTetelBemenetek, vanKeruletesTetel } from "@/lib/munkacsomag";
+import { extraTetelekKeresese } from "@/lib/ajanlat-extrak";
+import { mertekegysegSzoveg } from "@/lib/format";
 import { ajanlatLejartE } from "@/lib/ajanlat-allapot";
 import { aiBekotve } from "@/lib/ai/openai";
 import { aiNaplozas, napiPlafonElerve } from "@/lib/ai/naplo";
@@ -128,7 +132,7 @@ export async function aiErtelmezes(nyersSzoveg: string): Promise<AiEredmeny> {
 
     const [{ data: partnerek }, { data: csomagok }, { felhasznalo }] = await Promise.all([
       supabase.from("partnerek").select("nev").eq("archivalt", false).order("nev").limit(60),
-      supabase.from("munkacsomagok").select("nev").eq("aktiv", true).order("nev").limit(30),
+      supabase.from("munkacsomagok").select("nev, kulcsszavak").eq("aktiv", true).order("nev").limit(30),
       sajatCegVagyIranyitas(),
     ]);
     const bemenetAdatok = {
@@ -136,7 +140,12 @@ export async function aiErtelmezes(nyersSzoveg: string): Promise<AiEredmeny> {
       ma,
       maNapNeve: new Date(`${ma}T12:00:00`).toLocaleDateString("hu-HU", { weekday: "long" }),
       partnerNevek: (partnerek ?? []).map((p) => p.nev),
-      csomagNevek: (csomagok ?? []).map((c) => c.nev),
+      // A kulcsszavakkal együtt ("Kocsibeálló (bejáró, kocsibejáró)"), hogy a
+      // modell a beszélt alakot is a csomaghoz köthesse.
+      csomagNevek: (csomagok ?? []).map((c) => {
+        const k = kulcsszoLista(c.kulcsszavak);
+        return k.length ? `${c.nev} (${k.join(", ")})` : c.nev;
+      }),
     };
 
     const valasz = await reteg1Felismeres(bemenetAdatok);
@@ -164,7 +173,7 @@ export async function aiErtelmezes(nyersSzoveg: string): Promise<AiEredmeny> {
   }
 
   // Ide csak konkrét szándékkal jutunk: a fenti ág minden más úton visszatért.
-  const eredmeny = await vegrehajt(supabase, ertelmezes, ma);
+  const eredmeny = await vegrehajt(supabase, ertelmezes, ma, szamSzavakAtirasa(norm(nyersSzoveg)));
   return { ...eredmeny, ...forras };
 }
 
@@ -172,6 +181,8 @@ async function vegrehajt(
   supabase: Supabase,
   ertelmezes: Exclude<Ertelmezes, { szandek: "ismeretlen" }>,
   ma: string,
+  /** A teljes mondat normalizálva, számszavak számmal — az ajánlat extráihoz ("bontással"). */
+  mondat: string,
 ): Promise<AiEredmenyAlap> {
   if (ertelmezes.szandek === "feladat_felvetel") {
     // A partner opcionális, és CSAK biztos találatnál kötjük hozzá: a teendő
@@ -366,25 +377,31 @@ async function vegrehajt(
   // tétel), és a feltételezés kimondja, hogy a csomagot nem találtuk.
   const { data: csomagok } = await supabase
     .from("munkacsomagok")
-    .select("id, nev, mertekegyseg, munkacsomag_tetelek(termek_id, mennyiseg_egysegre, alap, termekek(nev, aktiv, mertekegyseg))")
+    .select("id, nev, mertekegyseg, kulcsszavak, munkacsomag_tetelek(termek_id, mennyiseg_egysegre, alap, termekek(nev, aktiv, mertekegyseg))")
     .eq("aktiv", true)
     .order("nev");
   const csomagCel = ertelmezes.leiras?.trim() ?? "";
   let csomagTalalat = csomagCel ? csomagKereses(csomagok ?? [], csomagCel) : { nincs: true as const };
 
-  // Ha a mondat NEM nevez meg munkacsomagot: egyetlen m²-alapú csomagnál
-  // azzal számolunk (a feltételezés kimondja), többnél rákérdezünk — nem
-  // találgatunk (CLAUDE.md 5.). Csomag nélkül marad a régi közelítés.
+  // Ha a mondat nem nevez meg (felismerhető) munkacsomagot: egyetlen
+  // m²-alapú csomagnál azzal számolunk (a feltételezés kimondja), többnél
+  // rákérdezünk — pl. az "udvar" lehet gyalogos és autós is, ezt nem
+  // találgatjuk (CLAUDE.md 5.). Csomag nélkül marad a régi közelítés.
   const m2Csomagok = (csomagok ?? []).filter((c) => M2_ALIASOK.has(norm(c.mertekegyseg)));
   let alapertelmezettCsomag = false;
-  if (!csomagCel && m2Csomagok.length === 1) {
+  if ("nincs" in csomagTalalat && m2Csomagok.length === 1) {
     csomagTalalat = { csomag: m2Csomagok[0] };
     alapertelmezettCsomag = true;
   }
-  if (!csomagCel && m2Csomagok.length > 1) {
+  if ("nincs" in csomagTalalat && m2Csomagok.length > 1) {
+    // Hangos kérdésnél a kulcsszó segít választani: "Térkövezés (járda, terasz)".
+    const cimke = (c: (typeof m2Csomagok)[number]) => {
+      const k = kulcsszoLista(c.kulcsszavak).slice(0, 3);
+      return k.length ? `${c.nev} (${k.join(", ")})` : c.nev;
+    };
     return {
       allapot: "kerdes",
-      uzenet: `Melyik munkára készüljön az ajánlat: ${m2Csomagok.map((c) => c.nev).join(", ")}? Mondd a munka nevét a mondat végén.`,
+      uzenet: `${csomagCel ? `A „${csomagCel}” alapján nem tudom eldönteni, melyik munka. ` : ""}Melyik munkára készüljön az ajánlat: ${m2Csomagok.map(cimke).join(" vagy ")}? Mondd újra a munka nevével együtt.`,
     };
   }
 
@@ -414,18 +431,47 @@ async function vegrehajt(
         uzenet: `A „${csomag.nev}” csomag inaktív tételre hivatkozik (${inaktivak.join(", ")}) — aktiváld újra az Árlistán, vagy vedd ki a csomagból, és próbáld újra.`,
       };
     }
+    const keruletFm = ertelmezes.kerulet && ertelmezes.kerulet > 0 ? ertelmezes.kerulet : undefined;
     tetelBemenetek = csomagTetelBemenetek(
       csomag.munkacsomag_tetelek.map((t) => ({ ...t, mertekegyseg: t.termekek?.mertekegyseg })),
       ertelmezes.m2,
+      keruletFm,
     );
     feltetelezesek.push(
       alapertelmezettCsomag
-        ? `${hu.format(ertelmezes.m2)} m²-re a „${csomag.nev}” munkacsomaggal számoltam, mert ez az egyetlen munkacsomagod.`
+        ? `${csomagCel ? `A „${csomagCel}” szóhoz nincs külön munkacsomag, ezért ` : ""}${hu.format(ertelmezes.m2)} m²-re a „${csomag.nev}” munkacsomaggal számoltam, mert ez az egyetlen munkacsomagod.`
         : `${hu.format(ertelmezes.m2)} m² „${csomag.nev}” munkacsomag alapján számoltam, a csomag tételarányaival.`,
     );
     if (vanKeruletesTetel(csomag.munkacsomag_tetelek)) {
       feltetelezesek.push(
-        `A kerülethez arányos tételeket, például a szegélyt, ${keruletBecsles(ertelmezes.m2)} fm becsült kerülettel számoltam, négyzet alakú területet feltételezve. Ha más az alak, a piszkozatban módosítsd a mennyiséget.`,
+        keruletFm
+          ? `A kerülethez arányos tételeket (szegély) a mondatod szerinti ${hu.format(keruletFm)} fm-rel számoltam.`
+          : `A kerülethez arányos tételeket, például a szegélyt, ${keruletBecsles(ertelmezes.m2)} fm becsült kerülettel számoltam, négyzet alakú területet feltételezve. Ha más az alak, mondd a hosszát is („36 méter szegéllyel”), vagy a piszkozatban módosítsd.`,
+      );
+    }
+
+    // Extrák a mondatból ("…, bontással, konténerrel"): az árlista csomagon
+    // kívüli tételei, csak egyértelmű egyezéssel — a feltételezés kimondja.
+    const { data: termekek } = await supabase.from("termekek").select("id, nev, mertekegyseg").eq("aktiv", true);
+    const extra = extraTetelekKeresese({
+      mondat,
+      termekek: termekek ?? [],
+      kizartTermekek: new Set(csomag.munkacsomag_tetelek.map((t) => t.termek_id)),
+      kizartSzavak: [partner.nev, csomag.nev, ...kulcsszoLista(csomag.kulcsszavak)].flatMap((s) => norm(s).split(" ")),
+      m2: ertelmezes.m2,
+      kerulet: keruletFm ?? keruletBecsles(ertelmezes.m2),
+    });
+    if (extra.tetelek.length) {
+      tetelBemenetek.push(...extra.tetelek.map((t) => ({ termekId: t.termekId, mennyiseg: t.mennyiseg })));
+      feltetelezesek.push(
+        `A mondatod alapján hozzáadtam: ${extra.tetelek
+          .map((t) => `${t.nev} (${hu.format(t.mennyiseg)} ${mertekegysegSzoveg(t.mertekegyseg)})`)
+          .join(", ")} — ha nem kell, a piszkozatban töröld.`,
+      );
+    }
+    if (extra.ketertelmu.length) {
+      feltetelezesek.push(
+        `A(z) „${extra.ketertelmu.join("”, „")}” szóra több árlistatétel is illik, ezért nem tettem hozzá — a piszkozatban válaszd ki.`,
       );
     }
   } else {

@@ -22,6 +22,8 @@ eset("darabos pontos: 50 m² × 0,08 zsák = 4 zsák, nem 5", q([{ termek_id: "a
 eset("darabos kerülettel: 30 fm × 1 db/fm = 30 db", q([{ termek_id: "a", mennyiseg_egysegre: 1, alap: "kerulet", mertekegyseg: "db" }], 50), [30]);
 eset("ismeretlen alap = terület", q([{ termek_id: "a", mennyiseg_egysegre: 2, alap: "valami" }], 10), [20]);
 eset("nulla terület → nincs tétel", q([{ termek_id: "a", mennyiseg_egysegre: 1 }], 0), []);
+eset("megadott kerület: 50 m², 36 fm → 36 fm szegély", csomagTetelBemenetek([{ termek_id: "a", mennyiseg_egysegre: 1, alap: "kerulet" }], 50, 36).map((t) => t.mennyiseg), [36]);
+eset("megadott kerület csak a kerület-tételt érinti", csomagTetelBemenetek([{ termek_id: "a", mennyiseg_egysegre: 1.05 }, { termek_id: "b", mennyiseg_egysegre: 0.02, alap: "kerulet" }], 50, 40).map((t) => t.mennyiseg), [52.5, 0.8]);
 eset("vanKeruletesTetel", vanKeruletesTetel([{ termek_id: "a", mennyiseg_egysegre: 1 }, { termek_id: "b", mennyiseg_egysegre: 1, alap: "kerulet" }]), true);
 
 console.log(hibak ? `\n${hibak} HIBA` : "\nMinden eset rendben");
