@@ -56,6 +56,8 @@ const szandekok: [string, Record<string, unknown>][] = [
   ["Adj árat Tóth Gábornak 30 négyzetes kocsibeállóra, szegély 22 méter", { szandek: "ajanlat_keszites", partnerSzoveg: "toth gabor", m2: 30, leiras: "kocsibeallora", kerulet: 22 }],
   ["Mennyibe kerülne 50 négyzet Kovácséknak?", { szandek: "ajanlat_keszites", partnerSzoveg: "kovacs", m2: 50 }],
   ["Holnap kilenckor megyek Tóth Gáborhoz", { szandek: "naptar_esemeny", oraSzoveg: "09:00", partnerSzoveg: "toth gabor" }],
+  ["Kíszíts ajánlatot Tóth Gábornak 30 négyzet kocsibeállóra", { szandek: "ajanlat_keszites", partnerSzoveg: "toth gabor", m2: 30, leiras: "kocsibeallora" }],
+  ["Adj árat Nagy Istvánnak ötven négyzetre, térkövezés", { szandek: "ajanlat_keszites", partnerSzoveg: "nagy istvan", m2: 50, leiras: "terkovezes" }],
   ["Készíts egy ajánlatot", { szandek: "ismeretlen" }],
 ];
 for (const [be, vart] of szandekok) eset(JSON.stringify(be), ertelmezSzoveg(be), vart);

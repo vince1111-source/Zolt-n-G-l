@@ -161,8 +161,10 @@ export type Ertelmezes =
 /** Négyzetméter írt és beszélt alakjai: m2, nm, négyzetméter(re|es|en), négyzet(re|es). */
 const M2_EGYSEG = "(?:negyzet\\w*|nm2?\\w*|m2\\w*)";
 
+// "k[ei]sz[ei]t": a szabolcsi í-zést ("kíszíts") is felismeri — a böngésző
+// hangfelismerője gyakran úgy írja le, ahogy hallja.
 const AJANLAT_MINTA = new RegExp(
-  `(?:keszit\\w*|csinal\\w*|adj)\\s+(?:egy\\s+)?(?:ajanlatot|arajanlatot|arat)\\s+(.+?)\\s*(?:nek|nak)\\s+(\\d+(?:[.,]\\d+)?)\\s*${M2_EGYSEG}\\s*(.*)`,
+  `(?:k[ei]sz[ei]t\\w*|csinal\\w*|adj)\\s+(?:egy\\s+)?(?:ajanlatot|arajanlatot|arat)\\s+(.+?)\\s*(?:nek|nak)\\s+(\\d+(?:[.,]\\d+)?)\\s*${M2_EGYSEG}\\s*(.*)`,
 );
 
 /**
@@ -173,7 +175,8 @@ const KERULET_MINTA =
   /(\d+(?:[.,]\d+)?)\s*(?:fm|folyometer\w*|meter\w*)\s+(?:szegel\w*|kerulet\w*)|(?:szegel\w*|kerulet\w*)\s+(\d+(?:[.,]\d+)?)\s*(?:fm|folyometer\w*|meter\w*)?/;
 
 function keruletKivetel(szoveg: string): { kerulet?: number; maradek: string } {
-  const vegeTisztitva = (s: string) => s.replace(/\s+/g, " ").trim().replace(/[\s,.;:!?]+$/, "");
+  const vegeTisztitva = (s: string) =>
+    s.replace(/\s+/g, " ").trim().replace(/^[\s,.;:!?]+/, "").replace(/[\s,.;:!?]+$/, "");
   const t = szoveg.match(KERULET_MINTA);
   if (!t || t.index === undefined) return { maradek: vegeTisztitva(szoveg) };
   const kerulet = Number((t[1] ?? t[2]).replace(",", "."));
@@ -186,7 +189,7 @@ const AJANLAT_KIVALTO = /\b(?:ajanlat\w*|arajanlat\w*|arat|araz\w*|mennyibe|menn
 const MENNYISEG_M2 = new RegExp(`(\\d+(?:[.,]\\d+)?)\\s*${M2_EGYSEG}`);
 /** Parancs- és töltelékszavak — nem nevek, nem munkák. */
 const AJANLAT_TOLTELEK = new Set([
-  "keszits", "keszitsd", "keszitsen", "csinalj", "csinald", "adj", "kerek", "kellene", "kell", "kene", "legyen",
+  "keszits", "keszitsd", "keszitsen", "kiszits", "kiszitsd", "kiszitsen", "csinalj", "csinald", "adj", "kerek", "kellene", "kell", "kene", "legyen",
   "lenne", "mennyibe", "kerulne", "kerul", "mennyi", "mennyiert", "arazd", "be", "ki", "szamold", "kalkulald",
   "egy", "az", "a", "es", "meg", "is", "nekem", "neki", "annak", "ennek", "ajanlat", "ajanlatot", "arajanlat",
   "arajanlatot", "arat", "ar", "ara", "arra", "erre", "hogy", "mar", "most", "gyorsan", "legyszi", "kerlek",
