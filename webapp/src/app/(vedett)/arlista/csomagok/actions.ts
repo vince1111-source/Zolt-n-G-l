@@ -142,6 +142,29 @@ export async function csomagFrissitese(
 
 export async function csomagInaktivalasa(id: string) {
   const supabase = await szerverKliens();
-  await supabase.from("munkacsomagok").update({ aktiv: false }).eq("id", id);
+  const { data } = await supabase
+    .from("munkacsomagok")
+    .update({ aktiv: false })
+    .eq("id", id)
+    .select("nev")
+    .maybeSingle();
+  if (data) {
+    await flashUzenet(
+      "siker",
+      `Inaktiválva: ${data.nev}. Ha tévedés volt, a lista alján visszakapcsolhatod.`,
+    );
+  }
+  revalidatePath("/arlista/csomagok");
+}
+
+export async function csomagAktivalasa(id: string) {
+  const supabase = await szerverKliens();
+  const { data } = await supabase
+    .from("munkacsomagok")
+    .update({ aktiv: true })
+    .eq("id", id)
+    .select("nev")
+    .maybeSingle();
+  if (data) await flashUzenet("siker", `Újra aktív: ${data.nev}`);
   revalidatePath("/arlista/csomagok");
 }

@@ -2,9 +2,11 @@ import { szerverKliens } from "@/lib/supabase/server";
 import { ListChecks } from "lucide-react";
 import { UjFeladatForm } from "./UjFeladatForm";
 import { feladatKeszre, feladatTorlese } from "./actions";
+import { budapestMaDatum } from "@/lib/het";
 import { Badge } from "@/components/ui/Badge";
 import { gombVeszelyes, kartya } from "@/components/ui/classes";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { MegerositoGomb } from "@/components/ui/MegerositoGomb";
 
 export default async function Feladatok() {
   const supabase = await szerverKliens();
@@ -18,7 +20,9 @@ export default async function Feladatok() {
     supabase.from("partnerek").select("*").eq("archivalt", false).order("nev"),
   ]);
 
-  const ma = new Date().toISOString().slice(0, 10);
+  // Budapesti nap, nem UTC: éjfél után két óráig a tegnapi határidő
+  // különben még nem számított lejártnak.
+  const ma = budapestMaDatum();
 
   return (
     <div className="flex flex-col gap-6">
@@ -60,9 +64,12 @@ export default async function Feladatok() {
                 </button>
               </form>
               <form action={feladatTorlese.bind(null, f.id)}>
-                <button type="submit" className={gombVeszelyes}>
+                <MegerositoGomb
+                  kerdes={`Biztosan törlöd: „${f.cim}”? Nem vonható vissza — ha elvégezted, inkább a „Kész” gombot nyomd.`}
+                  className={gombVeszelyes}
+                >
                   Törlöm
-                </button>
+                </MegerositoGomb>
               </form>
             </div>
           );

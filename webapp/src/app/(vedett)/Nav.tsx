@@ -34,8 +34,11 @@ const TOBB_LINKEK: { href: string; cimke: string; ikon: LucideIcon }[] = [
   { href: "/cegprofil", cimke: "Cégadatok", ikon: Building2 },
 ];
 
+// Telefonon (sm alatt) ikon fölött kis felirat: így mind az öt fő pont és a
+// Több is kifér 375 px-en. Korábban a Naptár és a Teendők oldalra kilógott,
+// és a rejtett görgetősáv miatt semmi nem jelezte, hogy ott vannak.
 function linkOsztaly(aktiv: boolean) {
-  return `px-3 py-2 rounded-lg whitespace-nowrap flex-shrink-0 flex items-center gap-1.5 ${
+  return `flex-1 sm:flex-none min-w-0 px-1 sm:px-3 py-2 rounded-lg whitespace-nowrap flex flex-col sm:flex-row items-center gap-1 sm:gap-1.5 text-[11px] sm:text-sm ${
     aktiv ? "bg-white/15 font-semibold" : "hover:bg-white/10"
   }`;
 }
@@ -65,8 +68,8 @@ export function Nav() {
   }, [tobbNyitva]);
 
   return (
-    <nav className="flex items-center gap-1 text-sm px-4 sm:px-5 pb-2 sm:pb-3">
-      <div className="flex items-center gap-1 min-w-0 flex-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+    <nav className="flex items-center gap-0 sm:gap-1 text-sm px-2 sm:px-5 pb-2 sm:pb-3">
+      <div className="flex items-center gap-0 sm:gap-1 min-w-0 flex-1 overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {FO_LINKEK.map((l) => (
           <Link
             key={l.href}
@@ -78,19 +81,21 @@ export function Nav() {
           </Link>
         ))}
       </div>
-      <div ref={tobbDoboz} className="relative flex-shrink-0">
+      <div ref={tobbDoboz} className="relative flex-shrink-0 w-14 sm:w-auto">
         <button
           type="button"
           onClick={() => setTobbNyitva((v) => !v)}
-          className={linkOsztaly(tobbAktiv)}
+          className={`${linkOsztaly(tobbAktiv)} w-full`}
           aria-expanded={tobbNyitva}
         >
           <MoreHorizontal size={16} aria-hidden />
           Több
         </button>
         {tobbNyitva && (
+          // Jobbra igazítva: a gomb a sor végén van, balra igazítva a menü
+          // kilógott a képernyőből ("Partnere…", "Dokumen…").
           <div
-            className="absolute left-0 top-full mt-1 bg-brand border border-white/15 rounded-lg overflow-hidden shadow-lg z-20 min-w-[10rem]"
+            className="absolute right-0 top-full mt-1 bg-brand border border-white/15 rounded-lg overflow-hidden shadow-lg z-20 min-w-[10rem]"
             onMouseLeave={() => setTobbNyitva(false)}
           >
             {TOBB_LINKEK.map((l) => (

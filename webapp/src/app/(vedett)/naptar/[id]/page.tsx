@@ -4,6 +4,7 @@ import { NaptarEsemenyForm } from "@/components/NaptarEsemenyForm";
 import { esemenyFrissitese, esemenyTorlese } from "../actions";
 import { Card } from "@/components/ui/Card";
 import { gombVeszelyes } from "@/components/ui/classes";
+import { MegerositoGomb } from "@/components/ui/MegerositoGomb";
 
 async function torlesEsUgrasNaptarba(id: string) {
   "use server";
@@ -40,9 +41,9 @@ export default async function EsemenySzerkesztese({
         />
       </Card>
       <form action={torlesEsUgrasNaptarba.bind(null, id)}>
-        <button type="submit" className={gombVeszelyes}>
+        <MegerositoGomb kerdes={`Biztosan törlöd: „${esemeny.cim}”?`} className={gombVeszelyes}>
           Esemény törlése
-        </button>
+        </MegerositoGomb>
       </form>
     </div>
   );

@@ -5,6 +5,7 @@ import { hetElsoDatum, hetNapjai, budapestMaDatum, budapestNapString, datumSzove
 import { esemenyTorlese } from "./actions";
 import { Card } from "@/components/ui/Card";
 import { gombElsodleges, gombMasodlagos, gombVeszelyes } from "@/components/ui/classes";
+import { MegerositoGomb } from "@/components/ui/MegerositoGomb";
 
 export default async function Naptar({
   searchParams,
@@ -92,9 +93,9 @@ export default async function Naptar({
                           </Link>
                         )}
                         <form action={esemenyTorlese.bind(null, e.id)}>
-                          <button type="submit" className={gombVeszelyes}>
+                          <MegerositoGomb kerdes={`Biztosan törlöd: „${e.cim}”?`} className={gombVeszelyes}>
                             Törlöm
-                          </button>
+                          </MegerositoGomb>
                         </form>
                       </div>
                     </div>

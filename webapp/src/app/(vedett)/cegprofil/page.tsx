@@ -10,6 +10,7 @@ import { NaptarSzinkron } from "@/components/NaptarSzinkron";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { gombMasodlagos } from "@/components/ui/classes";
+import { MegerositoGomb } from "@/components/ui/MegerositoGomb";
 
 const SZEREP_CIMKE = { tulajdonos: "tulajdonos", munkatars: "munkatárs", konyvelo: "könyvelő" } as const;
 
@@ -79,9 +80,12 @@ export default async function Cegprofil() {
                     <>
                       <Badge szin="figyelem">várja a regisztrációt</Badge>
                       <form action={meghivasVisszavonasa.bind(null, t.id)}>
-                        <button type="submit" className="text-kritikus text-xs underline">
+                        <MegerositoGomb
+                          kerdes={`Visszavonod ${t.email} meghívását? Amíg újra meg nem hívod, ezzel a címmel nem tud csatlakozni a céghez.`}
+                          className="text-kritikus text-xs underline"
+                        >
                           Visszavonom
-                        </button>
+                        </MegerositoGomb>
                       </form>
                     </>
                   )}

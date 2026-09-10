@@ -3,15 +3,17 @@ import { Package } from "lucide-react";
 import { szerverKliens } from "@/lib/supabase/server";
 import { gombElsodleges, gombMasodlagos, gombVeszelyes, kartya } from "@/components/ui/classes";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { csomagInaktivalasa } from "./actions";
+import { csomagAktivalasa, csomagInaktivalasa } from "./actions";
 
 export default async function Csomagok() {
   const supabase = await szerverKliens();
-  const { data: csomagok } = await supabase
+  const { data: mind } = await supabase
     .from("munkacsomagok")
     .select("*, munkacsomag_tetelek(id)")
-    .eq("aktiv", true)
     .order("nev");
+  // Az inaktívak is kellenek, hogy a tévedésből inaktivált visszakapcsolható legyen.
+  const csomagok = (mind ?? []).filter((c) => c.aktiv);
+  const inaktivak = (mind ?? []).filter((c) => !c.aktiv);
 
   return (
     <div className="flex flex-col gap-6">
@@ -37,13 +39,13 @@ export default async function Csomagok() {
       </div>
 
       <div className={`${kartya} divide-y divide-line`}>
-        {!csomagok?.length && (
+        {!csomagok.length && (
           <EmptyState>
             Még nincs munkacsomag. Egy csomag az árlista tételeiből áll, tételenként megadva,
             mennyi kell belőle a munka egy egységére.
           </EmptyState>
         )}
-        {csomagok?.map((c) => (
+        {csomagok.map((c) => (
           <div key={c.id} className="p-4 flex flex-wrap items-center gap-3">
             <div className="flex-1 min-w-0">
               <div className="font-semibold">{c.nev}</div>
@@ -63,6 +65,31 @@ export default async function Csomagok() {
           </div>
         ))}
       </div>
+
+      {!!inaktivak.length && (
+        <details className={`${kartya} p-4`}>
+          <summary className="cursor-pointer font-semibold">
+            Inaktív csomagok ({inaktivak.length})
+          </summary>
+          <div className="divide-y divide-line mt-2">
+            {inaktivak.map((c) => (
+              <div key={c.id} className="py-3 flex flex-wrap items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium">{c.nev}</div>
+                  <div className="text-sm text-muted">
+                    {c.munkacsomag_tetelek.length} tétel · egység: {c.mertekegyseg}
+                  </div>
+                </div>
+                <form action={csomagAktivalasa.bind(null, c.id)}>
+                  <button type="submit" className={gombMasodlagos}>
+                    Újraaktiválom
+                  </button>
+                </form>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
     </div>
   );
 }

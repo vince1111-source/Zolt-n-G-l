@@ -3,6 +3,7 @@ import { FolderOpen } from "lucide-react";
 import { szerverKliens } from "@/lib/supabase/server";
 import { gombElsodleges, gombVeszelyes, kartya } from "@/components/ui/classes";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { MegerositoGomb } from "@/components/ui/MegerositoGomb";
 import { dokumentumTorlese } from "./actions";
 
 export default async function Dokumentumok() {
@@ -45,9 +46,12 @@ export default async function Dokumentumok() {
               </div>
             </a>
             <form action={dokumentumTorlese.bind(null, d.id)}>
-              <button type="submit" className={gombVeszelyes}>
+              <MegerositoGomb
+                kerdes={`Biztosan törlöd a listából: „${d.eredeti_nev ?? d.tipus}”? A fájl a linken megmarad, de a könyvelő innen már nem látja.`}
+                className={gombVeszelyes}
+              >
                 Törlöm
-              </button>
+              </MegerositoGomb>
             </form>
           </div>
         ))}

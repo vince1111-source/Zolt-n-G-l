@@ -4,6 +4,7 @@ import { szerverKliens } from "@/lib/supabase/server";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { gombMasodlagos } from "@/components/ui/classes";
+import { MegerositoGomb } from "@/components/ui/MegerositoGomb";
 import { MunkaForm } from "../MunkaForm";
 import { munkaAllapotValtas, munkaFrissitese } from "../actions";
 import { esemenyTorlese, esemenyLetrehozasa } from "../../naptar/actions";
@@ -217,9 +218,9 @@ export default async function MunkaReszletei({
                   </div>
                 </Link>
                 <form action={esemenyTorlese.bind(null, e.id)}>
-                  <button type="submit" className="text-kritikus text-sm">
+                  <MegerositoGomb kerdes={`Biztosan törlöd: „${e.cim}”?`} className="text-kritikus text-sm">
                     Törlöm
-                  </button>
+                  </MegerositoGomb>
                 </form>
               </div>
             ))}

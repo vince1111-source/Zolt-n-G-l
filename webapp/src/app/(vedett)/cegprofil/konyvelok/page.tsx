@@ -2,6 +2,7 @@ import { szerverKliens } from "@/lib/supabase/server";
 import { Card } from "@/components/ui/Card";
 import { kartya, gombVeszelyes } from "@/components/ui/classes";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { MegerositoGomb } from "@/components/ui/MegerositoGomb";
 import { MeghivasForm } from "./MeghivasForm";
 import { konyveloVisszavonasa } from "./actions";
 
@@ -40,9 +41,12 @@ export default async function Konyvelok() {
             </div>
             {!h.visszavonva && (
               <form action={konyveloVisszavonasa.bind(null, h.id)}>
-                <button type="submit" className={gombVeszelyes}>
+                <MegerositoGomb
+                  kerdes="Visszavonod a könyvelő hozzáférését? Ezután nem látja a cég dokumentumait."
+                  className={gombVeszelyes}
+                >
                   Visszavonom
-                </button>
+                </MegerositoGomb>
               </form>
             )}
           </div>

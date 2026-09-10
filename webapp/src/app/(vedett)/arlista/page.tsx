@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import { Tag } from "lucide-react";
 import { szerverKliens } from "@/lib/supabase/server";
-import { termekInaktivalasa } from "./actions";
+import { termekAktivalasa, termekInaktivalasa } from "./actions";
 import { Ft } from "@/lib/format";
 import { illeszkedik, keresoSzo } from "@/lib/kereses";
 import { KeresoMezo } from "@/components/KeresoMezo";
@@ -22,13 +22,13 @@ export default async function Arlista({ searchParams }: PageProps<"/arlista">) {
   const kereses = keresoSzo(q);
 
   const supabase = await szerverKliens();
-  const { data: termekek } = await supabase
-    .from("termekek")
-    .select("*")
-    .eq("aktiv", true)
-    .order("nev");
+  const { data: mind } = await supabase.from("termekek").select("*").order("nev");
+  // Az inaktív tételek is kellenek: a tévedésből inaktiváltat innen lehet
+  // visszakapcsolni (a munkacsomag-szerkesztő hibaüzenete is ide küld).
+  const termekek = (mind ?? []).filter((t) => t.aktiv);
+  const inaktivak = (mind ?? []).filter((t) => !t.aktiv);
 
-  const szurt = (termekek ?? []).filter((t) =>
+  const szurt = termekek.filter((t) =>
     illeszkedik(kereses, t.nev, t.cikkszam, t.mertekegyseg, t.kategoria),
   );
 
@@ -38,7 +38,7 @@ export default async function Arlista({ searchParams }: PageProps<"/arlista">) {
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight flex items-center gap-2"><Tag size={22} className="text-cta" aria-hidden />Árlista</h1>
           <p className="text-muted mt-1">
-            {kereses ? `${szurt.length} találat / ${termekek?.length ?? 0} tétel` : `${termekek?.length ?? 0} tétel`}
+            {kereses ? `${szurt.length} találat / ${termekek.length} tétel` : `${termekek.length} tétel`}
           </p>
         </div>
         <div className="flex gap-2 flex-wrap justify-end">
@@ -56,8 +56,8 @@ export default async function Arlista({ searchParams }: PageProps<"/arlista">) {
       </Suspense>
 
       <div className={`${kartya} divide-y divide-line`}>
-        {!termekek?.length && <EmptyState>Még nincs felvett tétel.</EmptyState>}
-        {!!termekek?.length && !szurt.length && (
+        {!termekek.length && <EmptyState>Még nincs felvett tétel.</EmptyState>}
+        {!!termekek.length && !szurt.length && (
           <EmptyState>Nincs találat a keresésre.</EmptyState>
         )}
         {szurt.map((t) => {
@@ -96,6 +96,35 @@ export default async function Arlista({ searchParams }: PageProps<"/arlista">) {
           );
         })}
       </div>
+
+      {!!inaktivak.length && (
+        <details className={`${kartya} p-4`}>
+          <summary className="cursor-pointer font-semibold">
+            Inaktív tételek ({inaktivak.length})
+          </summary>
+          <p className="text-sm text-muted mt-2">
+            Ezek nem jelennek meg az ajánlatkészítésben és a munkacsomagokban. Ha
+            tévedésből inaktiváltad, itt visszakapcsolhatod.
+          </p>
+          <div className="divide-y divide-line mt-2">
+            {inaktivak.map((t) => (
+              <div key={t.id} className="py-3 flex flex-wrap items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium">{t.nev}</div>
+                  <div className="text-sm text-muted">
+                    {t.mertekegyseg} · {Ft(t.eladasi_ar)}
+                  </div>
+                </div>
+                <form action={termekAktivalasa.bind(null, t.id)}>
+                  <button type="submit" className={gombMasodlagos}>
+                    Újraaktiválom
+                  </button>
+                </form>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
     </div>
   );
 }

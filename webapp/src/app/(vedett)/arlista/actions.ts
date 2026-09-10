@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { szerverKliens } from "@/lib/supabase/server";
+import { flashUzenet } from "@/lib/flash";
 import type { Enums } from "@/lib/supabase/types";
 
 export type TermekAllapot = { hiba?: string };
@@ -62,6 +63,29 @@ export async function termekFrissitese(
 
 export async function termekInaktivalasa(id: string) {
   const supabase = await szerverKliens();
-  await supabase.from("termekek").update({ aktiv: false }).eq("id", id);
+  const { data } = await supabase
+    .from("termekek")
+    .update({ aktiv: false })
+    .eq("id", id)
+    .select("nev")
+    .maybeSingle();
+  if (data) {
+    await flashUzenet(
+      "siker",
+      `Inaktiválva: ${data.nev}. Ha tévedés volt, a lista alján, az „Inaktív tételek” alatt visszakapcsolhatod.`,
+    );
+  }
+  revalidatePath("/arlista");
+}
+
+export async function termekAktivalasa(id: string) {
+  const supabase = await szerverKliens();
+  const { data } = await supabase
+    .from("termekek")
+    .update({ aktiv: true })
+    .eq("id", id)
+    .select("nev")
+    .maybeSingle();
+  if (data) await flashUzenet("siker", `Újra aktív: ${data.nev}`);
   revalidatePath("/arlista");
 }

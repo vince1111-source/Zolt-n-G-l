@@ -3,6 +3,7 @@
 import { useActionState } from "react";
 import { fotoFeltoltese, fotoTorlese, type FotoAllapot } from "@/app/(vedett)/munkak/actions";
 import { gombMasodlagos } from "./ui/classes";
+import { MegerositoGomb } from "./ui/MegerositoGomb";
 
 const kezdoAllapot: FotoAllapot = {};
 
@@ -39,13 +40,13 @@ export function MunkaFotok({
                 </div>
               )}
               <form action={fotoTorlese.bind(null, f.id, f.storageUtvonal, munkaId)}>
-                <button
-                  type="submit"
-                  aria-label="Fotó törlése"
+                <MegerositoGomb
+                  kerdes="Biztosan törlöd ezt a fotót? Nem vonható vissza."
+                  ariaLabel="Fotó törlése"
                   className="absolute top-1 right-1 bg-black/60 text-white rounded-full w-6 h-6 text-xs leading-none"
                 >
                   ✕
-                </button>
+                </MegerositoGomb>
               </form>
             </div>
           ))}
