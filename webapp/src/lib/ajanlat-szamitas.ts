@@ -163,6 +163,8 @@ export async function ajanlatMentese(
   cegId: string,
   partnerId: string,
   szamitas: AjanlatSzamitasSiker,
+  /** Amit az AI feltételezett (pl. becsült kerület) — az ajánlaton megmarad, kiküldés előtt átnézhető. */
+  feltetelezesek: string[] = [],
 ): Promise<AjanlatHiba | { id: string; sorszam: string }> {
   const sorszam = await kovetkezoSorszam(supabase, cegId);
 
@@ -177,6 +179,7 @@ export async function ajanlatMentese(
       kedvezmeny_szazalek: szamitas.partner.kedvezmeny_szazalek,
       // Ez kerül az ügyfélnek szóló dokumentumra is; kiküldéskor újraindul.
       ervenyes_ig: alapErvenyesseg(),
+      feltetelezesek,
     })
     .select("id")
     .single();

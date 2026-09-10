@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { szerverKliens } from "@/lib/supabase/server";
 import { sajatCegVagyIranyitas } from "@/lib/sajat-ceg";
-import { Ft } from "@/lib/format";
+import { Ft, mennyisegEgyseggel } from "@/lib/format";
 import { NyomtatasGomb } from "./NyomtatasGomb";
 import { alapErvenyesseg } from "@/lib/ajanlat-szamitas";
 
@@ -111,7 +111,7 @@ export default async function AjanlatDokumentum({
               <tr key={t.id} className="border-b border-[#eceef2]">
                 <td className="py-2">{t.megnevezes}</td>
                 <td className="py-2 text-right tabular-nums whitespace-nowrap">
-                  {t.mennyiseg} {t.mertekegyseg}
+                  {mennyisegEgyseggel(t.mennyiseg, t.mertekegyseg)}
                 </td>
                 <td className="py-2 text-right tabular-nums whitespace-nowrap">
                   {Ft(t.egysegar)}

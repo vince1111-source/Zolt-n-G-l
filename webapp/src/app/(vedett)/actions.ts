@@ -465,7 +465,8 @@ async function vegrehajt(
   if (partner.kedvezmeny_szazalek > 0) {
     feltetelezesek.push(`${partner.kedvezmeny_szazalek}% törzsvásárlói kedvezményt alkalmaztam ${partner.nev} adatlapja alapján.`);
   }
-  feltetelezesek.push("Jóváhagyás után az ajánlat piszkozat marad — a Szerkesztés gombbal még módosíthatod, mielőtt kiküldöd.");
+  // A "piszkozat marad" figyelmeztetés a jóváhagyó lap állandó szövege, nem
+  // feltételezés — ezért nincs itt: a feltételezések az ajánlatra is rákerülnek.
 
   return {
     allapot: "javaslat",
@@ -486,6 +487,7 @@ async function vegrehajt(
 export async function aiJavaslatJovahagyasa(
   partnerId: string,
   tetelBemenetek: TetelBemenet[],
+  feltetelezesek: unknown = [],
 ) {
   const { ceg } = await sajatCegVagyIranyitas();
   if (!ceg) return { hiba: "Nem található a céged." } as const;
@@ -494,7 +496,14 @@ export async function aiJavaslatJovahagyasa(
   const szamitas = await ajanlatSzamitas(supabase, partnerId, tetelBemenetek);
   if ("hiba" in szamitas) return { hiba: szamitas.hiba } as const;
 
-  const eredmeny = await ajanlatMentese(supabase, ceg.id, partnerId, szamitas);
+  // Amit a jóváhagyó lap "Amit feltételeztem" dobozában látott, az ajánlaton
+  // is megmarad (CLAUDE.md 2. és 5. szabály). Szövegként jön a klienstől,
+  // ezért méretkorlát: legfeljebb 10 tétel, tételenként 600 karakter.
+  const feltetelezesLista = (Array.isArray(feltetelezesek) ? feltetelezesek : [])
+    .filter((f): f is string => typeof f === "string")
+    .slice(0, 10)
+    .map((f) => f.slice(0, 600));
+  const eredmeny = await ajanlatMentese(supabase, ceg.id, partnerId, szamitas, feltetelezesLista);
   if ("hiba" in eredmeny) return eredmeny;
 
   revalidatePath("/ajanlatok");

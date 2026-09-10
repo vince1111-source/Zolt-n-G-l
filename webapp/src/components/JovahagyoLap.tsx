@@ -1,8 +1,8 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { aiJavaslatJovahagyasa, type AiEredmeny } from "@/app/(vedett)/actions";
-import { Ft } from "@/lib/format";
+import { Ft, mennyisegEgyseggel } from "@/lib/format";
 import { gombElsodleges, gombVeszelyes } from "./ui/classes";
 
 type Javaslat = Extract<AiEredmeny, { allapot: "javaslat" }>;
@@ -22,14 +22,22 @@ export function JovahagyoLap({
   onJovahagyva: (siker: { id: string; sorszam: string }) => void;
 }) {
   const [folyamatban, kezdMentes] = useTransition();
+  const [hiba, setHiba] = useState<string | null>(null);
 
   function jovahagyas() {
+    setHiba(null);
     kezdMentes(async () => {
       const eredmeny2 = await aiJavaslatJovahagyasa(
         eredmeny.partnerId,
         eredmeny.tetelBemenetek,
+        eredmeny.feltetelezesek,
       );
-      if ("hiba" in eredmeny2) return;
+      // Hibánál nem hallgatunk el: a gomb különben visszaáll, és úgy tűnik,
+      // mintha semmi nem történt volna.
+      if ("hiba" in eredmeny2) {
+        setHiba(String(eredmeny2.hiba));
+        return;
+      }
       onJovahagyva(eredmeny2);
     });
   }
@@ -57,13 +65,17 @@ export function JovahagyoLap({
                 <li key={i}>{f}</li>
               ))}
             </ul>
+            <span className="text-xs mt-1">
+              Jóváhagyás után az ajánlat piszkozat marad, és ezek a feltételezések rajta
+              maradnak — a Szerkesztés gombbal még módosíthatod, mielőtt kiküldöd.
+            </span>
           </div>
 
           <div className="flex flex-col divide-y divide-line">
             {eredmeny.elonezet.tetelek.map((t, i) => (
               <div key={i} className="py-2 flex justify-between gap-3 text-sm">
                 <span>
-                  {t.megnevezes} · {t.mennyiseg} {t.mertekegyseg}
+                  {t.megnevezes} · {mennyisegEgyseggel(t.mennyiseg, t.mertekegyseg)}
                 </span>
                 <span className="tabular-nums whitespace-nowrap">{Ft(t.netto)}</span>
               </div>
@@ -78,6 +90,10 @@ export function JovahagyoLap({
               </div>
             )}
             <div className="flex justify-between text-muted">
+              <span>Nettó</span>
+              <span className="tabular-nums">{Ft(eredmeny.elonezet.netto)}</span>
+            </div>
+            <div className="flex justify-between text-muted">
               <span>Áfa</span>
               <span>{Ft(eredmeny.elonezet.afa)}</span>
             </div>
@@ -89,6 +105,11 @@ export function JovahagyoLap({
         </div>
 
         <div className="p-5 border-t border-line flex flex-col gap-2">
+          {hiba && (
+            <p className="text-kritikus text-sm" role="alert">
+              Nem sikerült létrehozni: {hiba}
+            </p>
+          )}
           <button
             onClick={jovahagyas}
             disabled={folyamatban}

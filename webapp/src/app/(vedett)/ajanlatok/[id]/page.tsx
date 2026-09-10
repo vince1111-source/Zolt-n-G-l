@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { szerverKliens } from "@/lib/supabase/server";
-import { Ft } from "@/lib/format";
+import { Ft, mennyisegEgyseggel } from "@/lib/format";
 import { osszesitettMunkaido, percOraSzoveg } from "@/lib/mag";
 import { budapestMaDatum } from "@/lib/het";
 import { ajanlatLejartE } from "@/lib/ajanlat-allapot";
@@ -58,6 +58,9 @@ export default async function AjanlatReszletei({
     .maybeSingle();
 
   const lejart = ajanlatLejartE(ajanlat, budapestMaDatum());
+  const feltetelezesek = Array.isArray(ajanlat.feltetelezesek)
+    ? ajanlat.feltetelezesek.filter((f): f is string => typeof f === "string")
+    : [];
 
   // Küldés az ügyfélnek: a rendszer nem küld e-mailt (V2), de a vállalkozó
   // saját levelezőjének és üzenetküldőjének előre kitöltött szöveget ad. Az
@@ -125,7 +128,7 @@ export default async function AjanlatReszletei({
               <div className="flex-1">
                 <div className="font-medium">{t.megnevezes}</div>
                 <div className="text-sm text-muted tabular-nums">
-                  {t.mennyiseg} {t.mertekegyseg} × {Ft(t.egysegar)}
+                  {mennyisegEgyseggel(t.mennyiseg, t.mertekegyseg)} × {Ft(t.egysegar)}
                   {t.munkaido_perc !== null && ` · becsült idő: ${percOraSzoveg(t.munkaido_perc)}`}
                 </div>
               </div>
@@ -167,6 +170,27 @@ export default async function AjanlatReszletei({
               </span>
             )}
           </span>
+        </div>
+      )}
+
+      {feltetelezesek.length > 0 && (
+        <div
+          className={`rounded-xl p-4 text-sm flex flex-col gap-1 ${
+            ajanlat.allapot === "piszkozat"
+              ? "bg-figyelem-soft text-figyelem"
+              : "bg-surface border border-line text-muted"
+          }`}
+        >
+          <span className="font-semibold">
+            {ajanlat.allapot === "piszkozat"
+              ? "Az AI feltételezései — kiküldés előtt nézd át"
+              : "Az AI feltételezései az ajánlat készítésekor"}
+          </span>
+          <ul className="list-disc pl-5 space-y-1">
+            {feltetelezesek.map((f, i) => (
+              <li key={i}>{f}</li>
+            ))}
+          </ul>
         </div>
       )}
 

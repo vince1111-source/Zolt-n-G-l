@@ -12,7 +12,7 @@ import { NaptarEsemenyForm } from "@/components/NaptarEsemenyForm";
 import { MunkaFotok } from "@/components/MunkaFotok";
 import { MasoloGomb } from "@/components/MasoloGomb";
 import { budapestMaDatum } from "@/lib/het";
-import { Ft } from "@/lib/format";
+import { Ft, mennyisegEgyseggel, mertekegysegSzoveg } from "@/lib/format";
 import type { Enums } from "@/lib/supabase/types";
 
 const ALLAPOT_CIMKE: Record<Enums<"munka_allapot">, string> = {
@@ -94,7 +94,7 @@ export default async function MunkaReszletei({
     });
   }
   const anyaglistaSzoveg = anyaglista
-    .map((a) => `${a.megnevezes}: ${a.mennyiseg} ${a.mertekegyseg}${a.szallito ? ` (${a.szallito})` : ""}`)
+    .map((a) => `${a.megnevezes}: ${mennyisegEgyseggel(a.mennyiseg, a.mertekegyseg)}${a.szallito ? ` (${a.szallito})` : ""}`)
     .join("\n");
   const beszerzesOsszesen = anyaglista.reduce((s, a) => s + (a.beszerzesiAr != null ? a.beszerzesiAr * a.mennyiseg : 0), 0);
   const arNelkul = anyaglista.filter((a) => a.beszerzesiAr == null).length;
@@ -173,12 +173,12 @@ export default async function MunkaReszletei({
                   <div className="min-w-0">
                     <div className="font-medium">{a.megnevezes}</div>
                     <div className="text-muted">
-                      {a.szallito ? `${a.szallito} · ${Ft(a.beszerzesiAr ?? 0)}/${a.mertekegyseg}` : "nincs nagyker-ár"}
+                      {a.szallito ? `${a.szallito} · ${Ft(a.beszerzesiAr ?? 0)}/${mertekegysegSzoveg(a.mertekegyseg)}` : "nincs nagyker-ár"}
                     </div>
                   </div>
                   <div className="text-right whitespace-nowrap">
                     <div className="font-semibold tabular-nums">
-                      {a.mennyiseg} {a.mertekegyseg}
+                      {mennyisegEgyseggel(a.mennyiseg, a.mertekegyseg)}
                     </div>
                     {a.beszerzesiAr != null && (
                       <div className="text-muted tabular-nums">{Ft(a.beszerzesiAr * a.mennyiseg)}</div>
