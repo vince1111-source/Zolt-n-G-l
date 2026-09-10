@@ -1189,6 +1189,58 @@ mikrofonhoz): nyomva tart → "holnap tízkor megyek Kovácshoz" → elenged →
 az átirat a mezőben, naptárbejegyzés, felolvasva; majd "mik a mai
 teendőim?" → lista + felolvasás. Firefoxban csak a felhős út megy.
 
+### 2.13 2026-09-10 — Élesítés Zolinak: Vercel + munkatárs meghívása
+
+Cél: egy cím Zolinak (az első valódi tesztelő) és belépés — jelszó
+kézbeadása és kézzel gyártott fiók NÉLKÜL.
+
+**Munkatárs meghívása** (`0022_munkatars_meghivas.sql`, Cégprofil →
+Munkatársak, `regisztracio/befejezes`): a tulajdonos felvesz egy e-mailt
+(függő meghívás: `felhasznalok`-sor `auth_user_id` nélkül); a meghívott a
+saját címével regisztrál a belépő oldalon; a `sajat_ceg_letrehozasa` a
+MEGERŐSÍTETT e-mail alapján a meglévő sorhoz köti a fiókot, és nem hoz
+létre új céget — így Zoli a demóadatos cégben landol. A befejező oldal
+"Csatlakozom: <cég>"-et mutat (`fuggo_meghivas` RPC), cégnév mező nélkül.
+Biztonság: csak `email_confirmed_at` mellett köt (más nevében nem lehet
+beülni egy meghívásba); egy cégen belül egy e-mailre egy függő meghívás.
+**Mellékhatásként javított hiba**: a `felhasznalok` táblát eddig a cég
+MINDEN tagja írhatta — egy munkatárs a saját szerepét tulajdonosra
+írhatta volna. Most: olvasás minden tagnak, írás/törlés csak a
+tulajdonosnak (`sajat_szerep()` SECURITY DEFINER segéd, hogy a policy ne
+hivatkozzon rekurzívan a saját táblájára); élő tag törlése szándékosan
+nincs (külön döntés, mi legyen az adataival).
+
+**Vercel** — Vince csapata ("garntos", Hobby). ⚠ **A projekt még NINCS
+létrehozva**: a Vercel-eszközből indított `create_git_project` a GitHub-
+kapcsolatnál elbukott (a csapat projektlistája utána is üres) — Vince
+Vercel-fiókjában nincs telepítve a Vercel GitHub-alkalmazás a
+`vince1111-source` fiókra, ezért a repót nem látja. Ez egyszeri kézi
+lépés a Vercel felületén: Add New → Project → Import Git Repository →
+"Add GitHub Account" → `vince1111-source` engedélyezése → a
+`Zolt-n-G-l` repó importja (ág: `claude/projekt-folytatasa-p0titv`).
+Utána — vagy a varázslóban — ezek kellenek (a Vercel-eszköz env-változót
+nem tud írni, és kulcsot én nem írok be):
+
+1. Settings → General → Root Directory: `webapp`, és **„Include source
+   files outside of the Root Directory"** bepipálva (a `mag/` import miatt;
+   enélkül a build elbukik).
+2. Settings → Environment Variables: `NEXT_PUBLIC_SUPABASE_URL`,
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITE_URL` (a Vercel-cím),
+   `OPENAI_API_KEY` (+ opcionálisan `OPENAI_MODELL_*`, `USD_HUF`,
+   `AI_NAPI_PLAFON`, `SUPABASE_SERVICE_ROLE_KEY` a könyvelő-meghíváshoz).
+   Utána Redeploy.
+3. Supabase → Authentication → URL Configuration: Site URL = a Vercel-cím,
+   és a Redirect URLs közé `https://<cím>/auth/confirm` — különben a
+   regisztrációs megerősítő link localhostra mutat.
+4. Hobby csomag: a szerverfüggvény-időkorlát rövid; az AI-hívások 1–5 mp,
+   beleférnek. Ha a napi összefoglaló megszakadna, ez az oka.
+
+**Zoli útja**: Vince a Cégprofilban meghívja Zoli e-mailjét → Zoli a
+Vercel-címen "Regisztráció" (saját jelszó) → megerősítő e-mail → belép, és
+a demócéget látja munkatársként. A "Ma" oldalon az AI-doboz és a mikrofon
+HTTPS-en már működik (a felhős átíráshoz és az 1. réteghez OpenAI-egyenleg
+kell — enélkül a 0. réteg fut).
+
 ---
 
 ## 3. A sarkalatos szabályok
