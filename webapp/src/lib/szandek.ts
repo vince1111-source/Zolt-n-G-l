@@ -296,6 +296,9 @@ export type NevTalalat<T> = { partner: T; biztos: boolean } | { tobb: T[] } | { 
  * mondatszó elején, ≥ 4 betű) csak TIPP: a hívó mondja ki, mit értett.
  * Több jelölt → `tobb`, nem választunk (CLAUDE.md 5. szabály).
  */
+/** Cégforma-szavak: a döntetlen-bontásnál nem számítanak névszónak. */
+const CEGFORMAK = new Set(["kft", "bt", "zrt", "nyrt", "kkt", "egyeni", "vallalkozo"]);
+
 export function partnerKereses<T extends { nev: string }>(partnerek: T[], szoveg: string): NevTalalat<T> {
   const cel = norm(szoveg);
   if (!cel) return { nincs: true };
@@ -319,7 +322,21 @@ export function partnerKereses<T extends { nev: string }>(partnerek: T[], szoveg
     return elsoSzo.length >= 4 && celSzavak.some((sz) => sz.startsWith(elsoSzo));
   });
   if (tippek.length === 1) return { partner: tippek[0], biztos: false };
-  if (tippek.length > 1) return { tobb: tippek };
+  if (tippek.length > 1) {
+    // Döntetlen-bontás: hány névszava (≥ 4 betű, cégforma nélkül) áll a mondat
+    // valamelyik szavának ELEJÉN. "Kovács Építővel": a Kovács Építő Kft. két
+    // szóval illik, a Kovács Tüzép eggyel — ezt a mondat dönti el, nem
+    // találgatás. Egyenlőségnél ("Kovácssal") továbbra is kérdezünk.
+    const pont = (p: T) =>
+      norm(p.nev)
+        .split(" ")
+        .map((w) => w.replace(/[.,]+$/, ""))
+        .filter((w) => w.length >= 4 && !CEGFORMAK.has(w))
+        .filter((w) => celSzavak.some((sz) => sz.startsWith(w))).length;
+    const rangsor = tippek.map((p) => ({ p, n: pont(p) })).sort((a, b) => b.n - a.n);
+    if (rangsor[0].n > rangsor[1].n) return { partner: rangsor[0].p, biztos: false };
+    return { tobb: tippek };
+  }
   return { nincs: true };
 }
 

@@ -18,11 +18,12 @@ import { felolvasasSzoveg } from "@/lib/felolvasas";
 import { gombElsodleges, gombMasodlagos } from "./ui/classes";
 
 const PELDAK = [
-  "Készíts ajánlatot Kovács Építő Kft.-nek 50 m²-re",
-  "Holnap 10-kor megyek Kovácshoz",
+  "Készíts ajánlatot Kovács Építő Kft.-nek 50 m² térkövezésre",
+  "Készíts ajánlatot Tóth Gábornak 30 m² kocsibeállóra",
+  "Holnap 10-kor megyek Tóth Gáborhoz",
   "Mik a mai teendőim?",
-  "Hogy állunk Kovácssal?",
-  "Írd fel, hogy hívjam fel Kovácsot holnap",
+  "Hogy állunk a Kovács Építővel?",
+  "Írd fel, hogy hívjam fel Tóth Gábort holnap",
 ];
 
 const AJANLAT_CIMKE: Record<string, string> = {

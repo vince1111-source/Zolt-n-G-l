@@ -42,6 +42,12 @@ const szandekok: [string, Record<string, unknown>][] = [
   ["mi a dolgom ma", { szandek: "teendok" }],
   ["Mi van ma a naptárban?", { szandek: "teendok" }],
   ["Teendő: számlát küldeni Nagyéknak", { szandek: "feladat_felvetel" }],
+  // A demó mintamondatai
+  ["Készíts ajánlatot Kovács Építő Kft.-nek 50 m² térkövezésre", { szandek: "ajanlat_keszites", partnerSzoveg: "kovacs epito kft.", m2: 50, leiras: "terkovezesre" }],
+  ["Készíts ajánlatot Tóth Gábornak 30 m² kocsibeállóra", { szandek: "ajanlat_keszites", partnerSzoveg: "toth gabor", m2: 30, leiras: "kocsibeallora" }],
+  ["Holnap 10-kor megyek Tóth Gáborhoz", { szandek: "naptar_esemeny", partnerSzoveg: "toth gabor", oraSzoveg: "10:00" }],
+  ["Hogy állunk a Kovács Építővel?", { szandek: "partner_helyzet", partnerSzoveg: "kovacs epitovel" }],
+  ["Írd fel, hogy hívjam fel Tóth Gábort holnap", { szandek: "feladat_felvetel", cim: "Hívjam fel Tóth Gábort", napszo: "holnap" }],
 ];
 for (const [be, vart] of szandekok) eset(JSON.stringify(be), ertelmezSzoveg(be), vart);
 
@@ -70,6 +76,15 @@ eset(
   { tobb: 2 },
 );
 eset("üres → nincs", pk("   "), { nincs: true });
+const P2 = [{ nev: "Kovács Építő Kft." }, { nev: "Kovács Tüzép" }, { nev: "Tóth Gábor" }];
+const pk2 = (sz: string) => {
+  const r = partnerKereses(P2, sz) as Record<string, unknown>;
+  return "partner" in r ? { nev: (r.partner as { nev: string }).nev, biztos: r.biztos } : "tobb" in r ? { tobb: (r.tobb as { nev: string }[]).length } : { nincs: true };
+};
+eset("két Kovács: „Kovács Építővel” → a második szó dönt", pk2("kovacs epitovel"), { nev: "Kovács Építő Kft.", biztos: false });
+eset("két Kovács: „Kovács Tüzéptől” → a Tüzép", pk2("kovacs tuzeptol"), { nev: "Kovács Tüzép", biztos: false });
+eset("két Kovács: „Kovácssal” → döntetlen, kérdez", pk2("kovacssal"), { tobb: 2 });
+eset("Tóth Gáborhoz", pk2("toth gabor"), { nev: "Tóth Gábor", biztos: true });
 
 console.log("— csomagKereses —");
 const C = [{ nev: "Térkövezés" }, { nev: "Térkövezés bontással" }, { nev: "Térkő" }, { nev: "Mázolás" }];
@@ -98,6 +113,13 @@ eset(
   { tobb: ["Térkő szürke", "Térkő antik"] },
 );
 eset("burkolasra (nincs ilyen csomag → nincs, nem találgat)", ck("burkolasra"), { nincs: true });
+const C3 = [{ nev: "Térkövezés" }, { nev: "Kocsibeálló" }];
+const ck3 = (sz: string) => {
+  const r = csomagKereses(C3, sz) as Record<string, unknown>;
+  return "csomag" in r ? { nev: (r.csomag as { nev: string }).nev } : r;
+};
+eset("kocsibeallora → Kocsibeálló", ck3("kocsibeallora"), { nev: "Kocsibeálló" });
+eset("terkovezesre → Térkövezés", ck3("terkovezesre"), { nev: "Térkövezés" });
 
 console.log(hibak ? `\n${hibak} HIBA` : "\nMinden eset rendben");
 process.exit(hibak ? 1 : 0);

@@ -347,7 +347,10 @@ async function vegrehajt(
   const { data: partnerek } = await supabase
     .from("partnerek")
     .select("id, nev, kedvezmeny_szazalek")
-    .eq("archivalt", false);
+    .eq("archivalt", false)
+    // Ajánlatot ügyfélnek adunk: a beszállító (pl. Kovács Tüzép) nem jelölt —
+    // a kézi ajánlatűrlap partnerlistája is így szűr.
+    .eq("szallito", false);
   const kereses = partnerKereses(partnerek ?? [], ertelmezes.partnerSzoveg);
   if (!("partner" in kereses)) return partnerHiba(kereses, ertelmezes.partnerSzoveg);
   const partner = kereses.partner;
