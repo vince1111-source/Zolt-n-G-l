@@ -7,6 +7,23 @@ import { Card } from "@/components/ui/Card";
 import { gombElsodleges, gombMasodlagos, gombVeszelyes } from "@/components/ui/classes";
 import { MegerositoGomb } from "@/components/ui/MegerositoGomb";
 
+const ORA: Intl.DateTimeFormatOptions = { timeZone: "Europe/Budapest", hour: "2-digit", minute: "2-digit" };
+const NAP_ORA: Intl.DateTimeFormatOptions = { ...ORA, month: "short", day: "numeric" };
+
+/** Egy esemény ideje az adott napon: kezdőnapon "07:00 – szept. 23. 16:00", utána "folytatás". */
+function idoSzoveg(e: { kezdet: string; veg: string | null }, nap: string): string {
+  const ora = (iso: string) => new Date(iso).toLocaleTimeString("hu-HU", ORA);
+  const kezdoNap = budapestNapString(e.kezdet);
+  const vegNap = e.veg ? budapestNapString(e.veg) : kezdoNap;
+  if (nap === kezdoNap) {
+    if (!e.veg) return ora(e.kezdet);
+    return vegNap === kezdoNap
+      ? `${ora(e.kezdet)} – ${ora(e.veg)}`
+      : `${ora(e.kezdet)} – ${new Date(e.veg).toLocaleString("hu-HU", NAP_ORA)}`;
+  }
+  return nap === vegNap && e.veg ? `folytatás, ${ora(e.veg)}-ig` : "folytatás, egész nap";
+}
+
 export default async function Naptar({
   searchParams,
 }: PageProps<"/naptar">) {
@@ -21,17 +38,23 @@ export default async function Naptar({
   const { napok, elozoHet, kovetkezoHet, tol, ig } = hetTartomany(megjelolt);
 
   const supabase = await szerverKliens();
+  // A többnapos esemény (pl. háromnapos kivitelezés) minden érintett napon
+  // látszódjon — akkor is, ha az előző héten kezdődött. Eddig csak a kezdőnapon
+  // jelent meg "07:00 – 16:00"-ként, a többi nap szabadnak tűnt.
   const { data: esemenyek } = await supabase
     .from("naptar_esemenyek")
     .select("*, munkak(cim, partnerek(nev))")
-    .gte("kezdet", tol)
     .lt("kezdet", ig)
+    .or(`veg.gte."${tol}",and(veg.is.null,kezdet.gte."${tol}")`)
     .order("kezdet");
 
   const naponta = new Map<string, typeof esemenyek>();
   for (const e of esemenyek ?? []) {
-    const nap = budapestNapString(e.kezdet);
-    naponta.set(nap, [...(naponta.get(nap) ?? []), e]);
+    const kezdoNap = budapestNapString(e.kezdet);
+    const vegNap = e.veg ? budapestNapString(e.veg) : kezdoNap;
+    for (const nap of napok) {
+      if (nap >= kezdoNap && nap <= vegNap) naponta.set(nap, [...(naponta.get(nap) ?? []), e]);
+    }
   }
 
   return (
@@ -77,13 +100,7 @@ export default async function Naptar({
                       <Link href={`/naptar/${e.id}`} className="min-w-0 hover:underline">
                         <div className="font-medium truncate">{e.cim}</div>
                         <div className="text-muted">
-                          {new Date(e.kezdet).toLocaleTimeString("hu-HU", {
-                            timeZone: "Europe/Budapest",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                          {e.veg &&
-                            ` – ${new Date(e.veg).toLocaleTimeString("hu-HU", { timeZone: "Europe/Budapest", hour: "2-digit", minute: "2-digit" })}`}
+                          {idoSzoveg(e, nap)}
                           {e.munkak?.partnerek?.nev && ` · ${e.munkak.partnerek.nev}`}
                         </div>
                       </Link>
