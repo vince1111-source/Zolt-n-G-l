@@ -1301,7 +1301,92 @@ A felhasználói értékelés két legsúlyosabb pontja ("a hangos ajánlat hiá
   tulajdonos töltse ki valódi adatokkal.
 - **Ellenőrzés**: a tesztek zöldek, a build tiszta. ⚠ A panelt és a hangos
   ajánlatot bejelentkezve NEM kattintottuk végig — ehhez a felhasználó
-  belépése kell.
+  belépése kell. (Pótolva: lásd 2.15.)
+
+### 2.15 2026-09-10 — Minden gomb végigpróbálva élesben, javítások, helyes demóadatok
+
+Kérés: „próbálj végig minden gombot", „töltsük fel hasznos, helyes adatokkal".
+Élesen, Vince fiókjával, telefonméretben (375 px), a Browser panelben; ahol a
+panel rejtve volt, a kattintás JS-ből ment, és minden írást SQL-lel is
+visszaellenőriztünk.
+
+**Talált és javított hibák** (mind élesítve, commitok `47b2f3b`…`78fb5d9`):
+- **Naptár: a hét-nézet SOHA nem mutatott eseményt.** A „következő hét" a
+  vasárnapból visszaszámolt ugyanazon hétfő lett, a lekérdezés üres
+  tartományt kapott, a „Következő hét" gomb helyben maradt. Új, tesztelt
+  segéd: `hetTartomany()` (`lib/het.ts`, `het.teszt.mts` 14 eset),
+  budapesti éjfél határokkal. A többnapos esemény minden érintett napon
+  látszik („folytatás"); mentés után az esemény hetére vagy a munkához
+  ugrik (eddig mindig a mai hétre); a munkaválasztóban „Partner — helyszín".
+- **Visszavonhatatlan mellényúlások**: az inaktivált tétel/csomag, az
+  archivált partner és a késznek jelölt teendő eddig sehol nem volt
+  visszahozható (a csomag hibaüzenete mégis „aktiváld újra"-t kért). Most a
+  lista alján „Inaktív… / Archivált… / Elvégzett" szakasz visszaállító
+  gombbal, toasttal.
+- **Végleges törlés és visszavonás megerősítéssel**
+  (`components/ui/MegerositoGomb.tsx`): teendő, időpont, dokumentum, fotó,
+  munkatárs- és könyvelő-meghívás.
+- **Másolás**: tiltott vágólapnál csendben nem másolt — a régi
+  vágólap-tartalom mehetett volna az ügyfélnek. `lib/vagolap.ts` tartalék,
+  ha az sem megy, kijelölhető mező.
+- **Telefonos menü**: 375 px-en a Naptár és a Teendők kilógott; a Több menü
+  kilógott a képernyőből, és érintésre nem záródott.
+- **AI-ajánlat**: a jóváhagyó lap feltételezései (csomag, becsült kerület)
+  az ajánlaton is megmaradnak (`ajanlatok.feltetelezesek`) és látszanak; a
+  jóváhagyó lap hibánál kiírja az okát (eddig csendben visszaállt); nettó
+  sor. Partner-illesztés: két „Kovács" közül a mondat szavai döntenek
+  („Kovács Építővel"); AI-ajánlatnál a beszállító nem jelölt.
+- **Magyar kiírás**: mennyiség tizedesvesszővel, m²/m³ (jóváhagyó lap,
+  ajánlat, ügyfél-PDF, anyaglista; `format.teszt.mts`); „2026. október
+  10-ig"; „az AJ-…"; a munkaidő-jelzés az anyagot nem számolja; a teendő
+  lejártsága budapesti nap szerint; a cím-mezőkön `autocomplete="off"` (a
+  teendőcímekbe partnercímek kerültek a böngésző előzményeiből).
+- Elfogadott ajánlaton „Munka megnyitása".
+
+**Végigpróbálva, működik**: az AI-doboz mind a 6 mintamondata; jóváhagyó lap
+✕ / Mégsem / Jóváhagyom; offline sor (Most elküldöm, Törlöm a sorból); az
+ajánlat teljes életútja (kézi űrlap csomagból + sor hozzáadása/törlése,
+szerkesztés, másolat a mai árakon, küldés-panel — pipa nélkül blokkol —,
+elfogadás → munka + anyaglista, elutasítás, számla, fizetve); ügyfél-PDF
+belső adat nélkül, nyomtatás; munka (mentés, állapotok, anyaglista-másolás,
+fotó feltöltése és törlése a Storage-ból is, naptárba tétel); naptár (új,
+szerkesztés, törlés, lapozás); teendők (felvétel, kész, visszanyitás,
+törlés); árlista és csomag (új, szerkesztés, inaktiválás, visszakapcsolás);
+nagyker-árfrissítés (elvetés, illetve „átvezetem, az árrésem marad":
+Fugahomok 2000 → 2100 Ft, eladási 2400 → 2520 Ft); partner (új,
+szerkesztés, archiválás, visszaállítás, keresés + törlő gomb); dokumentum
+(rögzítés, törlés); cégadatok mentése; munkatárs meghívása és visszavonása
+eldobható címmel (Zoli meghívása érintetlen); napfény mód, felolvasás;
+mikrofon (a panel letiltja → helyes hibaüzenet).
+
+**Szándékosan nem nyomtuk meg**: Kilépés (utána nem lehetne visszalépni),
+logó feltöltése (a cég valódi arculata), könyvelő-meghívás (valódi e-mailt
+küld), naptár „Új link kérése" (leállítaná a meglévő feliratkozást),
+kísérőlevél (OpenAI-kulcs kell Vercelben; kulcs nélkül a napi összefoglaló
+helyesen eltűnik).
+
+**Demóadatok (vince kft), 2026-os árakkal**: 17 árlista-tétel a források
+sávjain belül (qjob.hu, swterko.hu, Colas Északkő, joszaki.hu, daibau.hu);
+két csomag rétegrenddel — Térkövezés (gyalogos: 15 cm zúzottkő 0/32, 4 cm
+ágyazat, 6 cm térkő) és Kocsibeálló (30 cm zúzottkő két rétegben, 8 cm
+térkő), a szegély a kerülethez arányos; nagyker a Tüzép beszerzési áraival;
+a valódinak tűnő partner-e-mailek `.example`-re cserélve. Demó-történet: 8
+ajánlat minden állapotban, 4 munka, 2 számla (egy nyitott → Kintlévőség), 5
+jövőbeli esemény, köztük a Kovács-kivitelezés 09-21–23. A „TESZT … —
+törölhető" sorokat a végén töröltük; az árfrissítés-javaslatok (a kapu
+naplója) megmaradtak.
+
+**Tanulságok**: (1) chainelt Bash-ben `cd webapp` után a `git add webapp/src`
+elbukik — kétszer megtörtént; mindig `git -C <repó>`. (2) Rejtett Browser
+panelen a kattintás és a képernyőkép időtúllép; a JS-kattintás megy, de az
+időzítők lassúak — egy hívás egy lépés, az eredményt a következő hívás
+olvassa. (3) Skálázott panelen a ref-kattintás mellé nyúlhat — nézd meg az
+URL-t.
+
+⚠ Nyitva: két lejárt, furcsa teendő („1112 Budapest, Fő út 5.",
+„Telephely", 08-31-i kézi) valószínűleg böngésző-előzményből — a tulajdonos
+zárja le, ha nem kell. A szerkesztés mentéskor minden tételt a mai
+árlista-áron számol újra (piszkozatnál szándékos, de a felület nem jelzi).
 ---
 
 ## 3. A sarkalatos szabályok
