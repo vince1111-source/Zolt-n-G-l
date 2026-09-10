@@ -401,7 +401,8 @@ async function vegrehajt(
     };
     return {
       allapot: "kerdes",
-      uzenet: `${csomagCel ? `A „${csomagCel}” alapján nem tudom eldönteni, melyik munka. ` : ""}Melyik munkára készüljön az ajánlat: ${m2Csomagok.map(cimke).join(" vagy ")}? Mondd újra a munka nevével együtt.`,
+      // A "mondd vagy írd be újra…" felszólítást az AI-doboz teszi hozzá — itt nem ismételjük.
+      uzenet: `${csomagCel ? `Nem tudom eldönteni, melyik munka („${csomagCel}”). ` : ""}Melyik munkára készüljön az ajánlat: ${m2Csomagok.map(cimke).join(" vagy ")}?`,
     };
   }
 
@@ -439,7 +440,7 @@ async function vegrehajt(
     );
     feltetelezesek.push(
       alapertelmezettCsomag
-        ? `${csomagCel ? `A „${csomagCel}” szóhoz nincs külön munkacsomag, ezért ` : ""}${hu.format(ertelmezes.m2)} m²-re a „${csomag.nev}” munkacsomaggal számoltam, mert ez az egyetlen munkacsomagod.`
+        ? `${csomagCel ? `Erre nincs külön munkacsomag („${csomagCel}”), ezért ` : ""}${hu.format(ertelmezes.m2)} m²-re a „${csomag.nev}” munkacsomaggal számoltam, mert ez az egyetlen munkacsomagod.`
         : `${hu.format(ertelmezes.m2)} m² „${csomag.nev}” munkacsomag alapján számoltam, a csomag tételarányaival.`,
     );
     if (vanKeruletesTetel(csomag.munkacsomag_tetelek)) {
