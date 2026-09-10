@@ -10,7 +10,7 @@ import { gombElsodleges, gombMasodlagos } from "@/components/ui/classes";
 const kezdoAllapot: AjanlatAllapot = {};
 
 export type Csomag = Tables<"munkacsomagok"> & {
-  munkacsomag_tetelek: { termek_id: string; mennyiseg_egysegre: number }[];
+  munkacsomag_tetelek: { termek_id: string; mennyiseg_egysegre: number; alap?: string | null }[];
 };
 
 export type KezdoSor = { termekId: string; mennyiseg: number; szorzo: number };
@@ -67,7 +67,13 @@ export function AjanlatForm({
   function csomagHozzaadasa() {
     if (!valasztottCsomag) return;
     const alap = Number(csomagMennyiseg.replace(",", "."));
-    const mind = csomagTetelBemenetek(valasztottCsomag.munkacsomag_tetelek, alap);
+    const mind = csomagTetelBemenetek(
+      valasztottCsomag.munkacsomag_tetelek.map((t) => ({
+        ...t,
+        mertekegyseg: termekek.find((x) => x.id === t.termek_id)?.mertekegyseg,
+      })),
+      alap,
+    );
     const ujak = mind.filter((u) => aktivIdk.has(u.termekId));
     const kimaradt = mind.length - ujak.length;
     setCsomagUzenet(

@@ -207,7 +207,14 @@ export async function ajanlatAllapotValtas(id: string, ujAllapot: "elfogadva" | 
  * javasolt sor létrehozása) marad — a többi már egy külön jóváhagyó
  * lépésre vár.
  */
-export async function ajanlatKikuldese(id: string) {
+export async function ajanlatKikuldese(id: string, adat?: FormData) {
+  // A panel 3. lépése: csak akkor jelöljük kiküldöttnek, ha a vállalkozó
+  // kipipálta, hogy TÉNYLEG elküldte (a rendszer maga nem küld e-mailt).
+  if (adat && adat.get("elkuldtem") !== "on") {
+    await flashUzenet("info", "Előbb küldd el az ügyfélnek, és pipáld be, hogy elküldted.");
+    revalidatePath(`/ajanlatok/${id}`);
+    return;
+  }
   const { felhasznalo } = await sajatCegVagyIranyitas();
   const supabase = await szerverKliens();
 
@@ -258,7 +265,7 @@ export async function ajanlatKikuldese(id: string) {
       .from("javasolt_muveletek")
       .update({ allapot: "elvetett", hiba_uzenet: "Az ajánlat időközben megváltozott vagy már kiküldték." })
       .eq("id", javaslat.id);
-    await flashUzenet("hiba", `Nem küldtem ki: ${ajanlat.sorszam} időközben megváltozott vagy már kiküldték.`);
+    await flashUzenet("hiba", `Nem jelöltem kiküldöttnek: ${ajanlat.sorszam} időközben megváltozott vagy már kiküldték.`);
     revalidatePath(`/ajanlatok/${id}`);
     return;
   }
@@ -268,7 +275,7 @@ export async function ajanlatKikuldese(id: string) {
     .update({ allapot: "vegrehajtott", vegrehajtva: most })
     .eq("id", javaslat.id);
 
-  await flashUzenet("siker", `Ajánlat kiküldve: ${ajanlat.sorszam}`);
+  await flashUzenet("siker", `Kiküldöttnek jelölve: ${ajanlat.sorszam}. Ha 3 napig nincs válasz, a Ma oldalon szólok.`);
   revalidatePath(`/ajanlatok/${id}`);
   revalidatePath("/ajanlatok");
 }

@@ -611,6 +611,7 @@ export type Database = {
       }
       munkacsomag_tetelek: {
         Row: {
+          alap: string
           csomag_id: string
           id: string
           mennyiseg_egysegre: number
@@ -618,6 +619,7 @@ export type Database = {
           termek_id: string
         }
         Insert: {
+          alap?: string
           csomag_id: string
           id?: string
           mennyiseg_egysegre: number
@@ -625,6 +627,7 @@ export type Database = {
           termek_id: string
         }
         Update: {
+          alap?: string
           csomag_id?: string
           id?: string
           mennyiseg_egysegre?: number

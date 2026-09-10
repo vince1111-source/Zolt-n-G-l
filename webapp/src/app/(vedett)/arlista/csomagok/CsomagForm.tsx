@@ -7,7 +7,8 @@ import { gombElsodleges } from "@/components/ui/classes";
 
 const kezdoAllapot: CsomagAllapot = {};
 
-type Sor = { kulcs: number; termekId: string; mennyiseg: string };
+type Alap = "terulet" | "kerulet";
+type Sor = { kulcs: number; termekId: string; mennyiseg: string; alap: Alap };
 
 /**
  * A `termekek` az aktív árlista PLUSZ a csomag által már hivatkozott
@@ -16,6 +17,10 @@ type Sor = { kulcs: number; termekId: string; mennyiseg: string };
  * ábécé első termékére (a böngésző kijelölési szabálya miatt ez történne,
  * ha a hivatkozott érték hiányozna az opciók közül). A mentést a szerver
  * (`csomagok/actions.ts`) inaktív tételnél névvel utasítja el.
+ *
+ * Soronként megadható, mihez arányos a tétel (0023): a területhez, vagy a
+ * területből becsült kerülethez — ez utóbbi a szegélyhez hasonló, a
+ * terület szélén futó tételeké.
  */
 export function CsomagForm({
   csomag,
@@ -25,7 +30,7 @@ export function CsomagForm({
   mentesCimke = "Csomag mentése",
 }: {
   csomag?: Tables<"munkacsomagok">;
-  kezdoTetelek?: { termek_id: string; mennyiseg_egysegre: number }[];
+  kezdoTetelek?: { termek_id: string; mennyiseg_egysegre: number; alap?: string | null }[];
   termekek: Tables<"termekek">[];
   action: (elozo: CsomagAllapot, adat: FormData) => Promise<CsomagAllapot>;
   mentesCimke?: string;
@@ -33,8 +38,13 @@ export function CsomagForm({
   const [allapot, formAction, folyamatban] = useActionState(action, kezdoAllapot);
   const [sorok, setSorok] = useState<Sor[]>(() =>
     kezdoTetelek?.length
-      ? kezdoTetelek.map((t, i) => ({ kulcs: i, termekId: t.termek_id, mennyiseg: String(t.mennyiseg_egysegre) }))
-      : [{ kulcs: 0, termekId: "", mennyiseg: "1" }],
+      ? kezdoTetelek.map((t, i) => ({
+          kulcs: i,
+          termekId: t.termek_id,
+          mennyiseg: String(t.mennyiseg_egysegre),
+          alap: t.alap === "kerulet" ? "kerulet" : "terulet",
+        }))
+      : [{ kulcs: 0, termekId: "", mennyiseg: "1", alap: "terulet" }],
   );
   const [egyseg, setEgyseg] = useState(csomag?.mertekegyseg ?? "m2");
   const aktivak = termekek.filter((t) => t.aktiv);
@@ -44,7 +54,7 @@ export function CsomagForm({
   }
 
   return (
-    <form action={formAction} className="flex flex-col gap-5 max-w-lg">
+    <form action={formAction} className="flex flex-col gap-5 max-w-2xl">
       <label>
         Csomag neve
         <input name="nev" required defaultValue={csomag?.nev ?? ""} placeholder="pl. Térkövezés" />
@@ -66,11 +76,18 @@ export function CsomagForm({
       </div>
 
       <div className="flex flex-col gap-3">
-        <div className="text-sm text-muted">
-          Tételek — mennyiség a csomag <strong>1 {egyseg}</strong>-ére vetítve (pl. 1 m²
-          térkövezéshez 1,05 m² térkő a vágási ráhagyással). Az ár mindig az árlista
-          aktuális árából jön. Az AI-doboz csak m² alapegységű csomaggal számol
-          („50 m² térkövezés”); fm/db csomagot a kézi űrlapon használhatsz.
+        <div className="text-sm text-muted flex flex-col gap-1">
+          <span>
+            Tételek — mennyiség a csomag <strong>1 {egyseg}</strong>-ére vetítve (pl. 1 m²
+            térkövezéshez 1,05 m² térkő a vágási ráhagyással). Az ár mindig az árlista
+            aktuális árából jön.
+          </span>
+          <span>
+            A <strong>kerülethez arányos</strong> tételeket, például a szegélyt, a rendszer a
+            területből becsült kerülettel számolja (négyzet alakot feltételezve), és ezt az
+            ajánlaton ki is írja. Zsákos, darabos tételeknél felfelé kerekít.
+          </span>
+          <span>Az AI-doboz csak m² alapegységű csomaggal számol („50 m² térkövezés”).</span>
         </div>
         {sorok.map((sor) => {
           const termek = termekek.find((t) => t.id === sor.termekId);
@@ -106,9 +123,24 @@ export function CsomagForm({
                   </span>
                 )}
               </label>
+              <label className="sm:w-40 sm:flex-none">
+                Mihez arányos?
+                <select
+                  name="tetel_alap"
+                  value={sor.alap}
+                  onChange={(e) => sorModositas(sor.kulcs, { alap: e.target.value === "kerulet" ? "kerulet" : "terulet" })}
+                >
+                  <option value="terulet">a területhez</option>
+                  <option value="kerulet">a kerülethez</option>
+                </select>
+              </label>
               <div className="flex gap-2 items-end">
                 <label className="flex-1 sm:w-36 sm:flex-none">
-                  {termek ? `${termek.mertekegyseg} / ${egyseg}` : "Mennyiség / egység"}
+                  {termek
+                    ? sor.alap === "kerulet"
+                      ? `${termek.mertekegyseg} / kerület-fm`
+                      : `${termek.mertekegyseg} / ${egyseg}`
+                    : "Mennyiség / egység"}
                   <input
                     name="tetel_mennyiseg"
                     type="number"
@@ -136,7 +168,10 @@ export function CsomagForm({
         <button
           type="button"
           onClick={() =>
-            setSorok((s) => [...s, { kulcs: Math.max(...s.map((x) => x.kulcs)) + 1, termekId: "", mennyiseg: "1" }])
+            setSorok((s) => [
+              ...s,
+              { kulcs: Math.max(...s.map((x) => x.kulcs)) + 1, termekId: "", mennyiseg: "1", alap: "terulet" },
+            ])
           }
           className="text-sm text-cta font-semibold self-start"
         >

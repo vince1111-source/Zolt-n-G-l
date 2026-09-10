@@ -13,8 +13,8 @@ import {
   type Ertelmezes,
 } from "@/lib/szandek";
 import { budapestMaDatum, budapestIdopontIso, napszoDatumma, budapestIdoString } from "@/lib/het";
-import { kintlevosegOsszesites } from "@/lib/mag";
-import { csomagTetelBemenetek } from "@/lib/munkacsomag";
+import { kintlevosegOsszesites, keruletBecsles } from "@/lib/mag";
+import { csomagTetelBemenetek, vanKeruletesTetel } from "@/lib/munkacsomag";
 import { ajanlatLejartE } from "@/lib/ajanlat-allapot";
 import { aiBekotve } from "@/lib/ai/openai";
 import { aiNaplozas, napiPlafonElerve } from "@/lib/ai/naplo";
@@ -363,11 +363,27 @@ async function vegrehajt(
   // tétel), és a feltételezés kimondja, hogy a csomagot nem találtuk.
   const { data: csomagok } = await supabase
     .from("munkacsomagok")
-    .select("id, nev, mertekegyseg, munkacsomag_tetelek(termek_id, mennyiseg_egysegre, termekek(nev, aktiv))")
+    .select("id, nev, mertekegyseg, munkacsomag_tetelek(termek_id, mennyiseg_egysegre, alap, termekek(nev, aktiv, mertekegyseg))")
     .eq("aktiv", true)
     .order("nev");
   const csomagCel = ertelmezes.leiras?.trim() ?? "";
-  const csomagTalalat = csomagCel ? csomagKereses(csomagok ?? [], csomagCel) : { nincs: true as const };
+  let csomagTalalat = csomagCel ? csomagKereses(csomagok ?? [], csomagCel) : { nincs: true as const };
+
+  // Ha a mondat NEM nevez meg munkacsomagot: egyetlen m²-alapú csomagnál
+  // azzal számolunk (a feltételezés kimondja), többnél rákérdezünk — nem
+  // találgatunk (CLAUDE.md 5.). Csomag nélkül marad a régi közelítés.
+  const m2Csomagok = (csomagok ?? []).filter((c) => M2_ALIASOK.has(norm(c.mertekegyseg)));
+  let alapertelmezettCsomag = false;
+  if (!csomagCel && m2Csomagok.length === 1) {
+    csomagTalalat = { csomag: m2Csomagok[0] };
+    alapertelmezettCsomag = true;
+  }
+  if (!csomagCel && m2Csomagok.length > 1) {
+    return {
+      allapot: "kerdes",
+      uzenet: `Melyik munkára készüljön az ajánlat: ${m2Csomagok.map((c) => c.nev).join(", ")}? Mondd a munka nevét a mondat végén.`,
+    };
+  }
 
   if ("tobb" in csomagTalalat) {
     return {
@@ -395,8 +411,20 @@ async function vegrehajt(
         uzenet: `A „${csomag.nev}” csomag inaktív tételre hivatkozik (${inaktivak.join(", ")}) — aktiváld újra az Árlistán, vagy vedd ki a csomagból, és próbáld újra.`,
       };
     }
-    tetelBemenetek = csomagTetelBemenetek(csomag.munkacsomag_tetelek, ertelmezes.m2);
-    feltetelezesek.push(`${hu.format(ertelmezes.m2)} m² „${csomag.nev}” munkacsomag alapján számoltam, a csomag tételarányaival.`);
+    tetelBemenetek = csomagTetelBemenetek(
+      csomag.munkacsomag_tetelek.map((t) => ({ ...t, mertekegyseg: t.termekek?.mertekegyseg })),
+      ertelmezes.m2,
+    );
+    feltetelezesek.push(
+      alapertelmezettCsomag
+        ? `${hu.format(ertelmezes.m2)} m²-re a „${csomag.nev}” munkacsomaggal számoltam, mert ez az egyetlen munkacsomagod.`
+        : `${hu.format(ertelmezes.m2)} m² „${csomag.nev}” munkacsomag alapján számoltam, a csomag tételarányaival.`,
+    );
+    if (vanKeruletesTetel(csomag.munkacsomag_tetelek)) {
+      feltetelezesek.push(
+        `A kerülethez arányos tételeket, például a szegélyt, ${keruletBecsles(ertelmezes.m2)} fm becsült kerülettel számoltam, négyzet alakú területet feltételezve. Ha más az alak, a piszkozatban módosítsd a mennyiséget.`,
+      );
+    }
   } else {
     // Nem tudjuk, pontosan melyik munkára gondolt a mondat — ezért az
     // árlista m²-ben árazott tételeit használjuk, ahogy a "feltételezések"

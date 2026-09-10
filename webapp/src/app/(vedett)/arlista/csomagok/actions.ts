@@ -11,7 +11,7 @@ type CsomagMezok = {
   nev: string;
   mertekegyseg: string;
   leiras: string | null;
-  tetelek: { termek_id: string; mennyiseg_egysegre: number; sorrend: number }[];
+  tetelek: { termek_id: string; mennyiseg_egysegre: number; sorrend: number; alap: "terulet" | "kerulet" }[];
 };
 
 function csomagMezokFormbol(adat: FormData): CsomagMezok | { hiba: string } {
@@ -21,12 +21,18 @@ function csomagMezokFormbol(adat: FormData): CsomagMezok | { hiba: string } {
 
   const termekIdk = adat.getAll("tetel_termek").map(String);
   const mennyisegek = adat.getAll("tetel_mennyiseg").map((m) => Number(String(m).replace(",", ".")));
-  if (termekIdk.length !== mennyisegek.length) {
+  const alapok = adat.getAll("tetel_alap").map(String);
+  if (termekIdk.length !== mennyisegek.length || (alapok.length > 0 && alapok.length !== termekIdk.length)) {
     return { hiba: "Az űrlap sorai nem párosíthatók — töltsd újra az oldalt." };
   }
 
   const tetelek = termekIdk
-    .map((termek_id, i) => ({ termek_id, mennyiseg_egysegre: mennyisegek[i], sorrend: i }))
+    .map((termek_id, i) => ({
+      termek_id,
+      mennyiseg_egysegre: mennyisegek[i],
+      sorrend: i,
+      alap: alapok[i] === "kerulet" ? ("kerulet" as const) : ("terulet" as const),
+    }))
     .filter((t) => t.termek_id);
 
   if (!tetelek.length) return { hiba: "Legalább egy tételt adj a csomaghoz." };

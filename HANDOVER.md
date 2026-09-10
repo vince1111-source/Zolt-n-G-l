@@ -1210,37 +1210,98 @@ tulajdonosnak (`sajat_szerep()` SECURITY DEFINER segéd, hogy a policy ne
 hivatkozzon rekurzívan a saját táblájára); élő tag törlése szándékosan
 nincs (külön döntés, mi legyen az adataival).
 
-**Vercel** — Vince csapata ("garntos", Hobby). ⚠ **A projekt még NINCS
-létrehozva**: a Vercel-eszközből indított `create_git_project` a GitHub-
-kapcsolatnál elbukott (a csapat projektlistája utána is üres) — Vince
-Vercel-fiókjában nincs telepítve a Vercel GitHub-alkalmazás a
-`vince1111-source` fiókra, ezért a repót nem látja. Ez egyszeri kézi
-lépés a Vercel felületén: Add New → Project → Import Git Repository →
-"Add GitHub Account" → `vince1111-source` engedélyezése → a
-`Zolt-n-G-l` repó importja (ág: `claude/projekt-folytatasa-p0titv`).
-Utána — vagy a varázslóban — ezek kellenek (a Vercel-eszköz env-változót
-nem tud írni, és kulcsot én nem írok be):
+**Vercel — ahogy ténylegesen élesedett (2026-09-10).** Projekt:
+`zolt-n-g-l-ppdl` a Vince-csapatban ("garntos", Hobby), cím:
+https://zolt-n-g-l-ppdl.vercel.app, a GitHub-repóból; production ág:
+`claude/projekt-folytatasa-p0titv` — minden push erre az ágra automatikusan
+élesedik. Buktatók, amikbe beleszaladtunk:
 
-1. Settings → General → Root Directory: `webapp`, és **„Include source
-   files outside of the Root Directory"** bepipálva (a `mag/` import miatt;
-   enélkül a build elbukik).
-2. Settings → Environment Variables: `NEXT_PUBLIC_SUPABASE_URL`,
-   `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `NEXT_PUBLIC_SITE_URL` (a Vercel-cím),
-   `OPENAI_API_KEY` (+ opcionálisan `OPENAI_MODELL_*`, `USD_HUF`,
-   `AI_NAPI_PLAFON`, `SUPABASE_SERVICE_ROLE_KEY` a könyvelő-meghíváshoz).
-   Utána Redeploy.
-3. Supabase → Authentication → URL Configuration: Site URL = a Vercel-cím,
-   és a Redirect URLs közé `https://<cím>/auth/confirm` — különben a
-   regisztrációs megerősítő link localhostra mutat.
-4. Hobby csomag: a szerverfüggvény-időkorlát rövid; az AI-hívások 1–5 mp,
-   beleférnek. Ha a napi összefoglaló megszakadna, ez az oka.
+- **Az első import „Other" presettel és `./` Root Directoryval futott**: a
+  Vercel a repó GYÖKERÉT tette ki statikus fájlként (404 a főoldalon, de a
+  `/HANDOVER.md`, `/CLAUDE.md` és a prototípus olvasható volt). Új
+  kiszivárgás nem volt, mert a GitHub-repó maga is nyilvános, és a teljes
+  git-előzményben kulcsot nem találtunk (OpenAI-kulcs, `sb_secret_`, JWT:
+  0). Javítás: Settings → Build and Deployment → Root Directory `webapp`,
+  Framework Preset Next.js, „Include files outside the root directory" BE (a
+  `mag/` import miatt), „Skip deployments" KI (különben egy csak `mag/`-ot
+  érintő push nem élesedne).
+- **A Vercel a `NEXT_PUBLIC_` kezdetű változókat nem engedi Secretként
+  menteni** — ezek Config típusúak (úgyis a böngészőbe kerülnek; az adatot
+  az RLS védi). Az `OPENAI_API_KEY` külön körben, Secretként; egyenleg
+  nélkül szándékosan kimaradhat: akkor a 0. réteg fut, és a felhasználó nem
+  lát angol nyelvű számlázási hibát.
+- **Élesben beállított változók**: `NEXT_PUBLIC_SUPABASE_URL`,
+  `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+  `NEXT_PUBLIC_SITE_URL=https://zolt-n-g-l-ppdl.vercel.app` (+
+  `OPENAI_API_KEY`, ha van egyenleg). A többi env-nek van kódbeli
+  alapértéke.
+- **A Claude-oldali Vercel-eszköz ennek a csapatnak a projektjeit és
+  build-naplóit NEM látja** (üres lista, 401) — az élesítést innen csak a
+  nyilvános címen, `curl`-lel lehet ellenőrizni. Egy korábbi, elbukott
+  eszközös próbálkozás hagyhatott egy üres `zolt-n-g-l` projektet a
+  csapatban; ha ott van, törölhető.
+- **Hobby csomag**: a Vercel feltételei szerint nem kereskedelmi
+  használatra szól; éles üzleti használathoz Pro kell. A
+  szerverfüggvény-időkorlát rövid; az AI-hívások beleférnek.
 
-**Zoli útja**: Vince a Cégprofilban meghívja Zoli e-mailjét → Zoli a
-Vercel-címen "Regisztráció" (saját jelszó) → megerősítő e-mail → belép, és
-a demócéget látja munkatársként. A "Ma" oldalon az AI-doboz és a mikrofon
-HTTPS-en már működik (a felhős átíráshoz és az 1. réteghez OpenAI-egyenleg
-kell — enélkül a 0. réteg fut).
+**Supabase — két kézi beállítás (Vince):** Authentication → URL
+Configuration: Site URL `https://zolt-n-g-l-ppdl.vercel.app`, Redirect URLs
+`https://zolt-n-g-l-ppdl.vercel.app/**`. Authentication → Sign In /
+Providers → „Allow new users to sign up" KI — ettől lesz „csak Zolinak": a
+cím nyilvános, de csak felvett fiók lép be, és nyílt regisztrációval senki
+nem nyithat korlátlan számú céget (a napi AI-plafon cégenként számol).
 
+**Zoli fiókja — miért nem önregisztrációval:** a Supabase beépített
+levélküldője CSAK a Supabase-csapat tagjainak kézbesít, óránként legfeljebb
+2 levelet (a dokumentációjukban ellenőrizve) — Zoli megerősítő e-mailje nem
+érkezne meg. Ezért a sorrend: (1) Vince a Cégadatok → Munkatársak alatt
+meghívja Zoli e-mailjét — ELŐSZÖR ezt, különben Zoli első belépéskor üres
+saját céget kap; (2) Supabase → Authentication → Users → Add user → Create
+new user, „Auto Confirm User" bepipálva, a jelszót Vince választja; (3) Zoli
+belép, a befejező oldalon "Csatlakozom: <cég>", és a demócégben dolgozik
+munkatársként. A fiókot és a jelszót a tulajdonos hozza létre, nem az AI.
+Hosszabb távon egyedi SMTP kell (pl. Resend), hogy az önregisztráció és a
+meghívó-levél is működjön.
+### 2.14 2026-09-10 — Zolinak: teljes hangos ajánlat, őszinte küldés, demóadatok
+
+A felhasználói értékelés két legsúlyosabb pontja ("a hangos ajánlat hiányos",
+"a Kiküldöm nem küld") és a demócég feltöltése.
+
+- **Kerülettel arányos csomagtétel** (`0023_munkacsomag_kerulet.sql`,
+  `lib/munkacsomag.ts`): a `munkacsomag_tetelek.alap` `terulet` (alap) vagy
+  `kerulet`. A szegély a kerülettel arányos, ami NEM egyenes arány a területtel
+  (50 m² → 30 fm, 800 m² → 115 fm); a becslés a mag `keruletBecsles`
+  függvénye (négyzet alak, 5 fm-re kerekítve), ugyanaz, mint a prototípusban.
+  Darabos egységnél (zsák, db, alkalom…) felfelé kerekít. Tesztek:
+  `src/lib/munkacsomag.teszt.mts`, 10 eset. A csomag-űrlapon soronként
+  „Mihez arányos?" választó.
+- **Alapértelmezett csomag az AI-dobozban**: ha a mondat nem nevez meg
+  csomagot, és pontosan egy m²-alapú csomag van, azzal számol, és ezt a
+  feltételezés kimondja; ha több van, RÁKÉRDEZ (5. szabály); ha nincs, marad a
+  régi közelítés. A kerület-becslés feltételezésként megjelenik az ajánlaton.
+- **„Kiküldöm" helyett „Küldés az ügyfélnek" panel**
+  (`ajanlatok/[id]/KuldesPanel.tsx`): 1. ügyfél-PDF, 2. e-mail a saját
+  levelezőből előre kitöltve (`mailto:`; a kísérőlevél, ha van, különben alap
+  szöveg) vagy szöveg másolása üzenethez, 3. kötelező pipa „Elküldtem az
+  ügyfélnek", és csak utána „Kiküldöttnek jelölöm" — ez megy a jóváhagyási
+  kapun. A pipát a szerver is ellenőrzi. A rendszer továbbra sem küld e-mailt
+  (V2). Napló: „Kiküldöttnek jelölve"; a toast a 3 napos utánkövetést
+  ígéri, ami a "Ma" oldalon már működik.
+- **Érvényesség**: piszkozatnál az ügyfél-dokumentum és a levél is a mai
+  naptól számított 30 napot mutatja — ugyanazt, amit a jelölés rögzít.
+- **Demóadatok a „vince kft"-ben** (Zoli ennek a munkatársa): +7
+  árlista-tétel (szegélykő, ágyazó homok, fugahomok, geotextília, gépi
+  tömörítés, kiszállás, konténer); „Térkövezés" munkacsomag 10 tétellel, a
+  `mag/anyagszukseglet.mjs` konstansaival (15 cm ágyazat ×1,25, 4 cm homok,
+  5% vágás, 2 kg/m² fugahomok), két kerület-tétellel; +3 kitalált partner
+  foglalt `.example` e-mail-címmel; a Kovács Építő e-mail-címe; 6
+  nagyker-tétel a Tüzéptől; a munka címe és határideje; 3 jövőbeli
+  naptár-esemény; 2 teendő. Az új partnereknél és a csomagnál „Demóadat"
+  jelölés. A cégadatokhoz (adószám, bankszámla) nem nyúltunk: azt a
+  tulajdonos töltse ki valódi adatokkal.
+- **Ellenőrzés**: a tesztek zöldek, a build tiszta. ⚠ A panelt és a hangos
+  ajánlatot bejelentkezve NEM kattintottuk végig — ehhez a felhasználó
+  belépése kell.
 ---
 
 ## 3. A sarkalatos szabályok

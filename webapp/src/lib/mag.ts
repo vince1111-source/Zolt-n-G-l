@@ -95,3 +95,8 @@ export function osszesitettMunkaido(
 export function percOraSzoveg(perc: number): string {
   return munkaidoMod.percOraSzoveg(perc);
 }
+
+/** Becsült kerület (fm) egy négyzet alakú területhez, 5 fm-re kerekítve — a szegélyhez. */
+export function keruletBecsles(m2: number): number {
+  return arkalkulacio.keruletBecsles(m2);
+}

@@ -13,7 +13,7 @@ export default async function CsomagSzerkesztes({
     supabase.from("munkacsomagok").select("*").eq("id", id).maybeSingle(),
     supabase
       .from("munkacsomag_tetelek")
-      .select("termek_id, mennyiseg_egysegre")
+      .select("termek_id, mennyiseg_egysegre, alap")
       .eq("csomag_id", id)
       .order("sorrend"),
     // Minden termék, nem csak az aktív: a csomag által hivatkozott inaktív

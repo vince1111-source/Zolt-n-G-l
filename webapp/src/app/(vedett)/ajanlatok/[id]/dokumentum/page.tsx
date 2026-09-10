@@ -4,6 +4,7 @@ import { szerverKliens } from "@/lib/supabase/server";
 import { sajatCegVagyIranyitas } from "@/lib/sajat-ceg";
 import { Ft } from "@/lib/format";
 import { NyomtatasGomb } from "./NyomtatasGomb";
+import { alapErvenyesseg } from "@/lib/ajanlat-szamitas";
 
 const datumHu = (iso: string) =>
   new Date(iso).toLocaleDateString("hu-HU", {
@@ -26,6 +27,10 @@ export default async function AjanlatDokumentum({
     .maybeSingle();
 
   if (!ajanlat || !ceg) notFound();
+
+  // Piszkozatnál az érvényesség a kiküldés napjától számít: ugyanazt írja a
+  // "Küldés az ügyfélnek" levele, és ugyanezt rögzíti a "Kiküldöttnek jelölöm".
+  const ervenyesIg = ajanlat.allapot === "piszkozat" ? alapErvenyesseg() : ajanlat.ervenyes_ig;
 
   const { data: tetelek } = await supabase
     .from("ajanlat_tetelek")
@@ -72,10 +77,10 @@ export default async function AjanlatDokumentum({
               {ajanlat.sorszam}
               <br />
               Kelt: {datumHu(ajanlat.kelt)}
-              {ajanlat.ervenyes_ig && (
+              {ervenyesIg && (
                 <>
                   <br />
-                  Érvényes: {datumHu(ajanlat.ervenyes_ig)}
+                  Érvényes: {datumHu(ervenyesIg)}
                 </>
               )}
             </div>
@@ -143,8 +148,8 @@ export default async function AjanlatDokumentum({
         <div className="mt-5 pt-4 border-t border-[#d9dde3] text-sm text-[#3c424e]">
           <p className="m-0">
             Fizetési határidő: {ajanlat.partnerek?.fizetesi_hatarido_nap ?? 15} nap.
-            {ajanlat.ervenyes_ig &&
-              ` Az ajánlat ${datumHu(ajanlat.ervenyes_ig)}-ig érvényes.`}
+            {ervenyesIg &&
+              ` Az ajánlat ${datumHu(ervenyesIg)}-ig érvényes.`}
           </p>
         </div>
 

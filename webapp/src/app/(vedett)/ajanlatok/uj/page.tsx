@@ -15,7 +15,7 @@ export default async function UjAjanlat() {
     supabase.from("termekek").select("*").eq("aktiv", true).order("nev"),
     supabase
       .from("munkacsomagok")
-      .select("*, munkacsomag_tetelek(termek_id, mennyiseg_egysegre)")
+      .select("*, munkacsomag_tetelek(termek_id, mennyiseg_egysegre, alap)")
       .eq("aktiv", true)
       .order("nev"),
   ]);

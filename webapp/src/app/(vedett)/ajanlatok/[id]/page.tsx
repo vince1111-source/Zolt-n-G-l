@@ -17,6 +17,9 @@ import {
 } from "../actions";
 import { KiseroLevel } from "@/components/KiseroLevel";
 import { aiBekotve } from "@/lib/ai/openai";
+import { KuldesPanel } from "./KuldesPanel";
+import { sajatCegVagyIranyitas } from "@/lib/sajat-ceg";
+import { alapErvenyesseg } from "@/lib/ajanlat-szamitas";
 
 export default async function AjanlatReszletei({
   params,
@@ -55,6 +58,35 @@ export default async function AjanlatReszletei({
     .maybeSingle();
 
   const lejart = ajanlatLejartE(ajanlat, budapestMaDatum());
+
+  // Küldés az ügyfélnek: a rendszer nem küld e-mailt (V2), de a vállalkozó
+  // saját levelezőjének és üzenetküldőjének előre kitöltött szöveget ad. Az
+  // érvényesség a kiküldés napjától számít (`alapErvenyesseg`), ahogy a
+  // "Kiküldöttnek jelölöm" rögzíti — a levél és a rendszer ne mondjon mást.
+  const { ceg, felhasznalo } = await sajatCegVagyIranyitas();
+  const megszolitas = ajanlat.partnerek?.kapcsolattarto?.trim() || ajanlat.partnerek?.nev || "";
+  const ervenyesSzoveg = new Date(alapErvenyesseg()).toLocaleDateString("hu-HU");
+  let levelTargy = `Árajánlat: ${ajanlat.sorszam}`;
+  let levelTorzs = [
+    `Tisztelt ${megszolitas}!`,
+    "",
+    `Mellékelten küldöm a(z) ${ajanlat.sorszam} számú árajánlatunkat, bruttó ${Ft(ajanlat.brutto)} összegben. Az ajánlat ${ervenyesSzoveg}-ig érvényes.`,
+    "",
+    "Kérdés esetén keressen bizalommal.",
+    "",
+    "Üdvözlettel:",
+    felhasznalo.nev,
+    ceg?.nev ?? "",
+  ].join("\r\n");
+  if (ajanlat.kisero_szoveg) {
+    const levelSorok = ajanlat.kisero_szoveg.split(/\r?\n/);
+    if (/^tárgy:/i.test(levelSorok[0] ?? "")) {
+      levelTargy = levelSorok[0].replace(/^tárgy:\s*/i, "").trim() || levelTargy;
+      levelTorzs = levelSorok.slice(1).join("\r\n").trim();
+    } else {
+      levelTorzs = ajanlat.kisero_szoveg.trim();
+    }
+  }
 
   // Csak akkor mutatjuk a becslést, ha legalább egy tételnél ténylegesen
   // meg van adva normaidő — máskülönben ez egy üres, felesleges doboz volna.
@@ -138,17 +170,17 @@ export default async function AjanlatReszletei({
         </div>
       )}
 
+      {ajanlat.allapot === "piszkozat" && (
+        <KuldesPanel
+          dokumentumHref={`/ajanlatok/${id}/dokumentum`}
+          email={ajanlat.partnerek?.email ?? null}
+          targy={levelTargy}
+          torzs={levelTorzs}
+          action={ajanlatKikuldese.bind(null, id)}
+        />
+      )}
+
       <div className="flex flex-wrap gap-2">
-        {ajanlat.allapot === "piszkozat" && (
-          <form action={ajanlatKikuldese.bind(null, id)}>
-            <button
-              type="submit"
-              className="bg-cta text-cta-ink font-bold rounded-full px-5 py-3"
-            >
-              Kiküldöm
-            </button>
-          </form>
-        )}
         {visszajelzesGombok[ajanlat.allapot]?.map(([cel, cimke]) => (
           <form key={cel} action={ajanlatAllapotValtas.bind(null, id, cel)}>
             <button
@@ -235,7 +267,7 @@ export default async function AjanlatReszletei({
           <div className="flex flex-col gap-1">
             {jovahagyasok.map((j) => {
               const muveletCimke =
-                j.tipus === "szamla_kiallitas" ? "Számla kiállítva" : "Kiküldve";
+                j.tipus === "szamla_kiallitas" ? "Számla kiállítva" : "Kiküldöttnek jelölve";
               return (
                 <div key={j.id} className="text-muted">
                   {j.vegrehajtva
