@@ -1178,6 +1178,7 @@ export type Database = {
     }
     Functions: {
       aktualis_ceg: { Args: never; Returns: string }
+      fuggo_meghivas: { Args: never; Returns: string }
       konyvelo_hozzaferes_igenylese: {
         Args: { p_email: string }
         Returns: string
@@ -1204,6 +1205,10 @@ export type Database = {
         Returns: string
       }
       sajat_nev_frissitese: { Args: { p_nev: string }; Returns: undefined }
+      sajat_szerep: {
+        Args: never
+        Returns: Database["public"]["Enums"]["felhasznalo_szerep"]
+      }
     }
     Enums: {
       adat_forras: "nav" | "foto" | "kezi" | "szamlazo_api" | "szimulalt"

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { szerverKliens } from "@/lib/supabase/server";
 import { sajatCegVagyIranyitas } from "@/lib/sajat-ceg";
+import { flashUzenet } from "@/lib/flash";
 
 export type CegprofilAllapot = { hiba?: string; siker?: boolean };
 
@@ -104,4 +105,53 @@ export async function naptarFeedTokenUjrageneralasa() {
 
   revalidatePath("/cegprofil");
   return {};
+}
+
+// ---------------------------------------------------------------------------
+// Munkatárs meghívása (0022): a tulajdonos felvesz egy e-mailt, a meghívott
+// a saját címével regisztrál, és a rendszer a megerősítés után ehhez a
+// céghez köti — nem jön létre neki üres saját cég, és senki nem ad kézbe
+// jelszót. Az írásjogot az RLS is a tulajdonosra szűkíti; az itteni
+// ellenőrzés a barátságos hibaüzenetért van.
+// ---------------------------------------------------------------------------
+
+export type MeghivasAllapot = { hiba?: string };
+
+export async function munkatarsMeghivasa(
+  _elozo: MeghivasAllapot,
+  adat: FormData,
+): Promise<MeghivasAllapot> {
+  const { ceg, felhasznalo } = await sajatCegVagyIranyitas();
+  if (!ceg) return { hiba: "Nem található a céged." };
+  if (felhasznalo.szerep !== "tulajdonos") return { hiba: "Csak a tulajdonos hívhat meg munkatársat." };
+
+  const email = String(adat.get("email") ?? "").trim().toLowerCase();
+  const nev = String(adat.get("nev") ?? "").trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { hiba: "Adj meg egy érvényes e-mail címet." };
+
+  const supabase = await szerverKliens();
+  const { error } = await supabase
+    .from("felhasznalok")
+    .insert({ ceg_id: ceg.id, nev: nev || email, email, szerep: "munkatars" });
+  if (error) {
+    return {
+      hiba:
+        error.code === "23505"
+          ? "Ez az e-mail már meg van hívva, vagy már tagja a cégnek."
+          : error.message,
+    };
+  }
+
+  await flashUzenet("siker", `Meghívva: ${email} — ha ezzel a címmel regisztrál, ide kerül.`);
+  revalidatePath("/cegprofil");
+  return {};
+}
+
+export async function meghivasVisszavonasa(id: string) {
+  const { felhasznalo } = await sajatCegVagyIranyitas();
+  if (felhasznalo.szerep !== "tulajdonos") return;
+  const supabase = await szerverKliens();
+  // Az RLS csak a még nem regisztrált (auth_user_id is null) sort engedi törölni.
+  await supabase.from("felhasznalok").delete().eq("id", id).is("auth_user_id", null);
+  revalidatePath("/cegprofil");
 }
