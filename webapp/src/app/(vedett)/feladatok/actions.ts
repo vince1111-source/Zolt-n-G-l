@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { szerverKliens } from "@/lib/supabase/server";
+import { flashUzenet } from "@/lib/flash";
 
 export type FeladatAllapot = { hiba?: string };
 
@@ -35,7 +36,29 @@ export async function feladatLetrehozasa(
 
 export async function feladatKeszre(id: string) {
   const supabase = await szerverKliens();
-  await supabase.from("feladatok").update({ allapot: "kesz" }).eq("id", id);
+  const { data } = await supabase
+    .from("feladatok")
+    .update({ allapot: "kesz" })
+    .eq("id", id)
+    .select("cim")
+    .maybeSingle();
+  if (data) {
+    await flashUzenet("siker", `Kész: ${data.cim}. Ha tévedés volt, lent az „Elvégzett” alatt visszanyithatod.`);
+  }
+  revalidatePath("/feladatok");
+  revalidatePath("/");
+}
+
+/** A "Kész" visszavonása — egy mellényúlás ne tüntessen el végleg egy teendőt. */
+export async function feladatVisszanyitasa(id: string) {
+  const supabase = await szerverKliens();
+  const { data } = await supabase
+    .from("feladatok")
+    .update({ allapot: "nyitott" })
+    .eq("id", id)
+    .select("cim")
+    .maybeSingle();
+  if (data) await flashUzenet("siker", `Újra nyitott: ${data.cim}`);
   revalidatePath("/feladatok");
   revalidatePath("/");
 }

@@ -1,16 +1,18 @@
 import { szerverKliens } from "@/lib/supabase/server";
 import { ListChecks } from "lucide-react";
 import { UjFeladatForm } from "./UjFeladatForm";
-import { feladatKeszre, feladatTorlese } from "./actions";
+import { feladatKeszre, feladatTorlese, feladatVisszanyitasa } from "./actions";
 import { budapestMaDatum } from "@/lib/het";
 import { Badge } from "@/components/ui/Badge";
-import { gombVeszelyes, kartya } from "@/components/ui/classes";
+import { gombMasodlagos, gombVeszelyes, kartya } from "@/components/ui/classes";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { MegerositoGomb } from "@/components/ui/MegerositoGomb";
 
+const ELVEGZETT_LIMIT = 15;
+
 export default async function Feladatok() {
   const supabase = await szerverKliens();
-  const [{ data: feladatok }, { data: partnerek }] = await Promise.all([
+  const [{ data: feladatok }, { data: partnerek }, { data: elvegzettek }] = await Promise.all([
     supabase
       .from("feladatok")
       .select("*, partnerek(nev)")
@@ -18,6 +20,14 @@ export default async function Feladatok() {
       .order("surgos", { ascending: false })
       .order("hatarido", { ascending: true, nullsFirst: false }),
     supabase.from("partnerek").select("*").eq("archivalt", false).order("nev"),
+    // A késznek jelöltek visszanyithatók: a "Kész" gomb mellényúlása ne
+    // tüntessen el végleg egy teendőt.
+    supabase
+      .from("feladatok")
+      .select("id, cim, partnerek(nev)")
+      .eq("allapot", "kesz")
+      .order("letrehozva", { ascending: false })
+      .limit(ELVEGZETT_LIMIT),
   ]);
 
   // Budapesti nap, nem UTC: éjfél után két óráig a tegnapi határidő
@@ -75,6 +85,32 @@ export default async function Feladatok() {
           );
         })}
       </div>
+
+      {!!elvegzettek?.length && (
+        <details className={`${kartya} p-4`}>
+          <summary className="cursor-pointer font-semibold">
+            Elvégzett ({elvegzettek.length === ELVEGZETT_LIMIT ? `utolsó ${ELVEGZETT_LIMIT}` : elvegzettek.length})
+          </summary>
+          <p className="text-sm text-muted mt-2">
+            Ha tévedésből jelölted késznek, itt visszanyithatod.
+          </p>
+          <div className="divide-y divide-line mt-2">
+            {elvegzettek.map((f) => (
+              <div key={f.id} className="py-3 flex flex-wrap items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium text-muted line-through">{f.cim}</div>
+                  {f.partnerek?.nev && <div className="text-sm text-muted">{f.partnerek.nev}</div>}
+                </div>
+                <form action={feladatVisszanyitasa.bind(null, f.id)}>
+                  <button type="submit" className={gombMasodlagos}>
+                    Visszanyitom
+                  </button>
+                </form>
+              </div>
+            ))}
+          </div>
+        </details>
+      )}
     </div>
   );
 }
